@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { toast, Toaster } from 'sonner'
-import type { PortalInvoice, PortalPaymentMethod, PortalWallet } from '@fp/domain'
+import {
+  DEFAULT_PORTAL_CONFIG,
+  type PortalInvoice,
+  type PortalPaymentMethod,
+  type PortalWallet,
+} from '@fp/domain'
 import { provenance } from '@ui/provenance'
 import {
   AddCardDialog,
@@ -41,6 +46,7 @@ export const CustomerPortalViewProvenance = provenance({
 export function CustomerPortalView(props: CustomerPortalViewProps) {
   const { data, actions, brandName, locale } = props
   const now = props.now ?? new Date()
+  const parts = props.parts ?? DEFAULT_PORTAL_CONFIG.parts
   const [paying, setPaying] = useState<PortalInvoice | null>(null)
   const [downloading, setDownloading] = useState<PortalInvoice | null>(null)
   const [topUp, setTopUp] = useState<PortalWallet | null>(null)
@@ -95,12 +101,14 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
       brandColor={props.brandColor}
       customer={data.customer}
       views={props.views}
+      {...(props.labels ? { labels: props.labels } : {})}
       view={props.view}
       onViewChange={actions.onViewChange}
     >
       {props.view === 'overview' ? (
         <PortalOverview
           brandName={brandName}
+          parts={parts}
           data={data}
           now={now}
           locale={locale}
@@ -123,6 +131,12 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
       {props.view === 'usage' ? (
         <PortalUsage
           data={data}
+          parts={parts}
+          ranges={props.ranges ?? DEFAULT_PORTAL_CONFIG.usage.ranges}
+          allowCustomRange={props.allowCustomRange ?? true}
+          groupKeys={props.groupKeys ?? []}
+          groupBy={props.groupBy ?? null}
+          onGroupByChange={actions.onGroupByChange ?? (() => undefined)}
           range={props.range}
           customRange={props.customRange}
           onRangeChange={actions.onRangeChange}
@@ -134,6 +148,7 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
       {props.view === 'credits' ? (
         <PortalCredits
           data={data}
+          parts={parts}
           walletId={wallet?.id ?? null}
           periodStart={periodStart}
           onWalletChange={actions.onWalletChange}

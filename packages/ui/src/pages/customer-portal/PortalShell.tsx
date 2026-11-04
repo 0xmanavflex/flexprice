@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import type { PortalCustomer, PortalView } from '@fp/domain'
+import { PORTAL_VIEW_LABEL, type PortalCustomer, type PortalView } from '@fp/domain'
 import { Avatar, AvatarFallback } from '@ui/components/primitives/avatar'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
@@ -17,18 +17,12 @@ export const PortalShellProvenance = provenance({
   note: 'Customer portal header, view tabs and footer, after the reference portal.',
 })
 
-const VIEW_LABEL: Record<PortalView, string> = {
-  overview: 'Overview',
-  usage: 'Usage',
-  credits: 'Credits',
-  invoices: 'Invoices',
-}
-
 export function PortalShell({
   brandName,
   brandColor,
   customer,
   views,
+  labels = PORTAL_VIEW_LABEL,
   view,
   onViewChange,
   children,
@@ -37,6 +31,8 @@ export function PortalShell({
   brandColor: string | null
   customer: Load<PortalCustomer>
   views: readonly PortalView[]
+  /** The merchant's name for each view. */
+  labels?: Record<PortalView, string>
   view: PortalView
   onViewChange: (view: PortalView) => void
   children: ReactNode
@@ -90,7 +86,7 @@ export function PortalShell({
                 value={v}
                 className="text-muted-foreground hover:text-foreground data-active:text-foreground after:bg-primary -mb-px h-auto flex-none rounded-none border-0 px-0 pt-1 pb-3 font-normal group-data-horizontal/tabs:after:bottom-0 focus-visible:ring-0 focus-visible:outline-none focus-visible:after:opacity-100"
               >
-                {VIEW_LABEL[v]}
+                {labels[v]}
               </TabsTrigger>
             ))}
           </TabsList>

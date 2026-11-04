@@ -332,6 +332,28 @@ describe('toCustomerPortalConfig', () => {
     })
   })
 
+  it('round-trips the usage properties and leaves them out when never set', () => {
+    const stored = {
+      ...live,
+      analytics_config: {
+        usage_properties: { enabled: true, allowed_keys: ['region'], hidden_keys: ['secret'] },
+      },
+    }
+    const config = toCustomerPortalConfig(stored)
+    expect(config.usageProperties).toEqual({
+      enabled: true,
+      allowedKeys: ['region'],
+      hiddenKeys: ['secret'],
+    })
+    expect(toCustomerPortalConfigRequest(config)['analytics_config']).toEqual(
+      stored.analytics_config,
+    )
+    // Never set: omitted, so the write's top-level merge keeps whatever is stored.
+    expect(toCustomerPortalConfigRequest(toCustomerPortalConfig(live))).not.toHaveProperty(
+      'analytics_config',
+    )
+  })
+
   it('omits a payload block a tab never had, rather than sending nulls', () => {
     const wire = toCustomerPortalConfigRequest(
       toCustomerPortalConfig({ sections: [{ id: 's', tabs: [{ id: '1', type: 'invoices' }] }] }),

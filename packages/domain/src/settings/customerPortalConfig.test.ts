@@ -11,6 +11,8 @@ import {
   withTabEnabled,
   withTabOrder,
   withUsageGraph,
+  withTabTypeEnabled,
+  withUsageProperties,
 } from './customerPortalConfig'
 
 /** A cut-down copy of the live default tree, with the parts that matter. */
@@ -77,6 +79,7 @@ function config(): CustomerPortalConfig {
         ],
       },
     ],
+    usageProperties: null,
   }
 }
 
@@ -190,5 +193,42 @@ describe('portalTabLabel', () => {
 
   it('makes something readable of a type from a newer deployment', () => {
     expect(portalTabLabel('payment_schedule')).toBe('payment schedule')
+  })
+})
+
+describe('withTabTypeEnabled', () => {
+  it('switches an existing tab of that type', () => {
+    const next = withTabTypeEnabled(config(), 'credits', 'wallet_balance', false)
+    expect(next.sections[0]?.tabs[0]?.enabled).toBe(false)
+    expect(next.sections[0]?.tabs).toHaveLength(1)
+  })
+
+  it('adds the tab, switched as asked, with an id no section uses', () => {
+    const next = withTabTypeEnabled(config(), 'credits', 'auto_topup', false)
+    const added = next.sections[0]?.tabs.at(-1)
+    const ids = config().sections.flatMap((s) => s.tabs.map((t) => t.id))
+    expect(added).toMatchObject({ type: 'auto_topup', enabled: false, order: 2 })
+    expect(ids).not.toContain(added?.id)
+    // Everything else rides through.
+    expect(next.sections[1]).toEqual(config().sections[1])
+  })
+})
+
+describe('withUsageProperties', () => {
+  it('starts from off with no keys when nothing is stored', () => {
+    expect(withUsageProperties(config(), { enabled: true }).usageProperties).toEqual({
+      enabled: true,
+      allowedKeys: [],
+      hiddenKeys: [],
+    })
+  })
+
+  it('patches what is stored', () => {
+    const on = withUsageProperties(config(), { enabled: true, hiddenKeys: ['secret'] })
+    expect(withUsageProperties(on, { allowedKeys: ['region'] }).usageProperties).toEqual({
+      enabled: true,
+      allowedKeys: ['region'],
+      hiddenKeys: ['secret'],
+    })
   })
 })

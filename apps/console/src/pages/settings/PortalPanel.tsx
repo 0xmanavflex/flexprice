@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import {
+  PORTAL_PROPERTY_KEY,
+  PORTAL_SECTION_PARTS,
   PORTAL_TAB_TYPE_LABEL,
   type CustomerPortalConfig,
   type PortalSection,
@@ -14,12 +17,15 @@ import {
   withSectionOrder,
   withTabEnabled,
   withTabOrder,
+  withTabTypeEnabled,
   withUsageGraph,
+  withUsageProperties,
 } from '@fp/domain'
 import {
   useCustomerPortalConfig,
   useResetCustomerPortalConfig,
   useUpdateCustomerPortalConfig,
+  useUsagePropertyKeys,
 } from '@fp/query'
 import {
   CheckboxRow,
@@ -213,6 +219,11 @@ function PortalForm({
                           withTabEnabled(current, section.id, tabId, enabled),
                         )
                       }
+                      onToggleType={(type, enabled) =>
+                        draft.update((current) =>
+                          withTabTypeEnabled(current, section.id, type, enabled),
+                        )
+                      }
                       onMetricCards={(tabId, patch) =>
                         draft.update((current) =>
                           withMetricCards(current, section.id, tabId, patch),
@@ -228,6 +239,13 @@ function PortalForm({
             </SortableList>
           )}
         </SettingsBlock>
+
+        <UsagePropertiesBlock
+          environmentId={environmentId}
+          value={draft.value.usageProperties}
+          busy={busy}
+          onChange={(patch) => draft.update((current) => withUsageProperties(current, patch))}
+        />
 
         <SettingsBlock
           label="Theme"
@@ -252,6 +270,122 @@ function PortalForm({
         </SettingsBlock>
       </Panel>
     </form>
+  )
+}
+
+/**
+ * `analytics_config.usage_properties`: whether customers may group their usage
+ * by an event property, and which keys they see. The server applies both lists
+ * when the portal asks for keys, so what is saved here is what customers get.
+ */
+function UsagePropertiesBlock({
+  environmentId,
+  value,
+  busy,
+  onChange,
+}: {
+  environmentId: string
+  value: CustomerPortalConfig['usageProperties']
+  busy: boolean
+  onChange: (patch: Partial<NonNullable<CustomerPortalConfig['usageProperties']>>) => void
+}) {
+  const enabled = value?.enabled ?? false
+  const suggestions = useUsagePropertyKeys(environmentId, enabled)
+  const seen = suggestions.data ?? []
+  const hint = (base: string) =>
+    seen.length > 0 ? `${base} Seen in the last 7 days: ${seen.slice(0, 8).join(', ')}.` : base
+
+  return (
+    <SettingsBlock label="Usage properties">
+      <div className="flex flex-col gap-4">
+        <CheckboxRow
+          checked={enabled}
+          disabled={busy}
+          onCheckedChange={(next) => onChange({ enabled: next })}
+        >
+          Customers can group their usage by event property
+        </CheckboxRow>
+        {enabled ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <KeysField
+              label="Only these keys"
+              hint={hint('Comma-separated. Empty shows every key.')}
+              keys={value?.allowedKeys ?? []}
+              busy={busy}
+              onChange={(allowedKeys) => onChange({ allowedKeys })}
+            />
+            <KeysField
+              label="Never these keys"
+              hint="Comma-separated. Hidden even when listed in the keys above."
+              keys={value?.hiddenKeys ?? []}
+              busy={busy}
+              onChange={(hiddenKeys) => onChange({ hiddenKeys })}
+            />
+          </div>
+        ) : null}
+      </div>
+    </SettingsBlock>
+  )
+}
+
+const parseKeys = (text: string): string[] => [
+  ...new Set(
+    text
+      .split(/[\s,]+/)
+      .map((key) => key.trim())
+      .filter(Boolean),
+  ),
+]
+
+/**
+ * A list of property keys typed as one comma-separated line. The text is kept
+ * as typed (a trailing comma is how the next key starts) and only follows the
+ * keys when they change from elsewhere, such as a reset.
+ */
+function KeysField({
+  label,
+  hint,
+  keys,
+  busy,
+  onChange,
+}: {
+  label: string
+  hint: string
+  keys: readonly string[]
+  busy: boolean
+  onChange: (keys: string[]) => void
+}) {
+  const [text, setText] = useState(() => keys.join(', '))
+  const joined = keys.join(',')
+  useEffect(() => {
+    setText((current) => (parseKeys(current).join(',') === joined ? current : keys.join(', ')))
+    // `joined` stands for `keys`: the array is a new object on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joined])
+  const invalid = parseKeys(text).filter((key) => !PORTAL_PROPERTY_KEY.test(key))
+
+  return (
+    <Field
+      label={label}
+      hint={hint}
+      {...(invalid.length > 0
+        ? { error: `${invalid.join(', ')}: letters, digits, _ and . only.` }
+        : {})}
+    >
+      {({ id, ...field }) => (
+        <Input
+          id={id}
+          disabled={busy}
+          placeholder="region, model"
+          value={text}
+          onChange={(event) => {
+            setText(event.target.value)
+            onChange(parseKeys(event.target.value))
+          }}
+          {...field}
+        />
+      )}
+    </Field>
   )
 }
 
@@ -340,6 +474,7 @@ function SectionRow({
   onToggle,
   onReorderTabs,
   onToggleTab,
+  onToggleType,
   onMetricCards,
   onUsageGraph,
 }: {
@@ -349,11 +484,17 @@ function SectionRow({
   onToggle: (enabled: boolean) => void
   onReorderTabs: (ids: string[]) => void
   onToggleTab: (tabId: string, enabled: boolean) => void
+  /** Hides a part the portal shows although the tree stores no tab for it. */
+  onToggleType: (type: string, enabled: boolean) => void
   onMetricCards: (tabId: string, patch: Partial<NonNullable<PortalTab['metricCards']>>) => void
   onUsageGraph: (tabId: string, patch: Partial<NonNullable<PortalTab['usageGraph']>>) => void
 }) {
   const tabs = orderedTabs(section)
   const name = section.label || `Section ${section.id}`
+  // Parts the portal shows for this section with no tab stored: listed so they can be hidden too.
+  const unstored = (PORTAL_SECTION_PARTS[section.id] ?? []).filter(
+    (type) => !section.tabs.some((tab) => tab.type === type),
+  )
 
   return (
     <div className="flex flex-col gap-2">
@@ -373,7 +514,9 @@ function SectionRow({
       </div>
 
       {tabs.length === 0 ? (
-        <p className="text-muted-foreground ml-9 text-xs">This section has no tabs.</p>
+        unstored.length > 0 ? null : (
+          <p className="text-muted-foreground ml-9 text-xs">This section has no tabs.</p>
+        )
       ) : (
         <SortableList
           ids={tabs.map((tab) => tab.id)}
@@ -487,6 +630,28 @@ function SectionRow({
           })}
         </SortableList>
       )}
+
+      {unstored.length > 0 ? (
+        <ul className={cx('ml-3 border-l pl-6', !section.enabled && SUBDUED)}>
+          {unstored.map((type) => {
+            const label = portalTabLabel(type)
+            return (
+              <li key={type} className="flex items-center gap-3 py-1.5 pl-9">
+                <span className="flex-1 text-sm">
+                  {label}
+                  <span className="text-muted-foreground ml-2 text-xs">shown by default</span>
+                </span>
+                <EyeToggle
+                  label={`${label} visibility`}
+                  on
+                  busy={busy}
+                  onChange={(enabled) => onToggleType(type, enabled)}
+                />
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
     </div>
   )
 }

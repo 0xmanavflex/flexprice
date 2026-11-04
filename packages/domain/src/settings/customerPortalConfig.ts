@@ -149,11 +149,29 @@ export const portalThemeSchema = z.object({
 })
 export type PortalTheme = z.infer<typeof portalThemeSchema>
 
+/** What the portal's own property-key route accepts: `properties.<key>`. */
+export const PORTAL_PROPERTY_KEY = /^[A-Za-z0-9_.]+$/
+
+/**
+ * `analytics_config.usage_properties`: whether customers may group their usage
+ * by event property, and by which keys. Off unless `enabled`; an empty
+ * `allowedKeys` means every key; `hiddenKeys` always lose. The server applies
+ * both lists, in the portal's own property-key route.
+ */
+export const portalUsagePropertiesSchema = z.object({
+  enabled: z.boolean(),
+  allowedKeys: z.array(z.string().regex(PORTAL_PROPERTY_KEY, 'Letters, digits, _ and . only.')),
+  hiddenKeys: z.array(z.string().regex(PORTAL_PROPERTY_KEY, 'Letters, digits, _ and . only.')),
+})
+export type PortalUsageProperties = z.infer<typeof portalUsagePropertiesSchema>
+
 export const customerPortalConfigSchema = z.object({
   /** The config format's own version, e.g. `1.0`. Echoed back, never edited. */
   version: z.string(),
   theme: portalThemeSchema,
   sections: z.array(portalSectionSchema),
+  /** Null when never set: the write then leaves the stored value alone. */
+  usageProperties: portalUsagePropertiesSchema.nullable(),
 })
 export type CustomerPortalConfig = z.infer<typeof customerPortalConfigSchema>
 
@@ -251,6 +269,89 @@ export function withUsageGraph(
   )
 }
 
+/**
+ * Shows or hides every tab of one type in a section, adding the tab when the
+ * section has none.
+ *
+ * The portal shows a part whose tab the stored tree lacks: the server's
+ * default tree has no payment methods or auto top-up tab, yet both appear. So
+ * hiding one has to store it, switched off, with an id the section does not
+ * use yet. That is a real tab the backend's struct holds, not a payload it
+ * would drop.
+ */
+export function withTabTypeEnabled(
+  config: CustomerPortalConfig,
+  sectionId: string,
+  type: string,
+  enabled: boolean,
+): CustomerPortalConfig {
+  return {
+    ...config,
+    sections: config.sections.map((section) => {
+      if (section.id !== sectionId) return section
+      if (section.tabs.some((tab) => tab.type === type)) {
+        return {
+          ...section,
+          tabs: section.tabs.map((tab) => (tab.type === type ? { ...tab, enabled } : tab)),
+        }
+      }
+      return {
+        ...section,
+        tabs: [
+          ...section.tabs,
+          {
+            id: nextTabId(config),
+            type,
+            order: section.tabs.reduce((max, tab) => Math.max(max, tab.order), 0) + 1,
+            enabled,
+            metricCards: null,
+            usageGraph: null,
+          },
+        ],
+      }
+    }),
+  }
+}
+
+/**
+ * The next free tab id. Ids are stringified integers; numbering past every
+ * section's, not just this one's, keeps them unique across the tree as V1's
+ * defaults are.
+ */
+function nextTabId(config: CustomerPortalConfig): string {
+  const ids = config.sections.flatMap((section) => section.tabs.map((tab) => Number(tab.id)))
+  return String(ids.reduce((max, id) => (Number.isFinite(id) ? Math.max(max, id) : max), 0) + 1)
+}
+
+/** Changes whether customers may group usage by property, and by which keys. */
+export function withUsageProperties(
+  config: CustomerPortalConfig,
+  patch: Partial<PortalUsageProperties>,
+): CustomerPortalConfig {
+  const current = config.usageProperties ?? { enabled: false, allowedKeys: [], hiddenKeys: [] }
+  return { ...config, usageProperties: { ...current, ...patch } }
+}
+
+/**
+ * The portal parts a section shows whether or not its tree stores their tab,
+ * by tab type: what the settings offer to hide when the tree has no tab yet.
+ */
+export const PORTAL_SECTION_PARTS: Record<string, readonly string[]> = {
+  overview: [
+    PortalTabType.WalletBalance,
+    PortalTabType.PaymentMethods,
+    PortalTabType.Subscriptions,
+  ],
+  usage: [
+    PortalTabType.MetricCards,
+    PortalTabType.UsageGraph,
+    PortalTabType.CurrentUsage,
+    PortalTabType.UsageBreakdown,
+  ],
+  credits: [PortalTabType.WalletBalance, PortalTabType.AutoTopup, PortalTabType.WalletTransactions],
+  invoices: [PortalTabType.Invoices],
+}
+
 /** Renumbers a section's tabs into the given id order, 1-based. */
 export function withTabOrder(
   config: CustomerPortalConfig,
@@ -318,5 +419,6 @@ export function emptyCustomerPortalConfig(): CustomerPortalConfig {
     version: '',
     theme: { primaryColor: '', secondaryColor: '', tertiaryColor: '' },
     sections: [],
+    usageProperties: null,
   }
 }

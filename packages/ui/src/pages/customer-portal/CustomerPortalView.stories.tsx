@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
-import { type PortalRange, type PortalView, money } from '@fp/domain'
+import {
+  DEFAULT_PORTAL_CONFIG,
+  type PortalParts,
+  type PortalRange,
+  type PortalView,
+  money,
+} from '@fp/domain'
 import { CustomerPortalView } from './CustomerPortalView'
 import { PortalNotice } from './PortalNotice'
 import {
@@ -28,31 +34,60 @@ function Portal({
   data = portalData,
   initialView = 'overview',
   brandColor = null,
+  views = ['overview', 'usage', 'credits', 'invoices'],
+  labels,
+  hidden = [],
+  ranges,
+  initialRange = '30d',
+  allowCustomRange,
+  groupKeys,
 }: {
   data?: CustomerPortalData
   initialView?: PortalView
   brandColor?: string | null
+  views?: PortalView[]
+  labels?: Record<PortalView, string>
+  /** Parts the merchant switched off. */
+  hidden?: (keyof PortalParts)[]
+  ranges?: PortalRange[]
+  initialRange?: PortalRange
+  allowCustomRange?: boolean
+  groupKeys?: string[]
 }) {
   const [view, setView] = useState<PortalView>(initialView)
-  const [range, setRange] = useState<PortalRange>('30d')
+  const [range, setRange] = useState<PortalRange>(initialRange)
+  const [groupBy, setGroupBy] = useState<string | null>(null)
+  const parts = { ...DEFAULT_PORTAL_CONFIG.parts }
+  for (const part of hidden) parts[part] = false
   const [invoiceId, setInvoiceId] = useState<string | null>(null)
   const detail = invoiceId ? portalInvoices.find((i) => i.id === invoiceId) : null
   return (
     <CustomerPortalView
       brandName="Massio"
       brandColor={brandColor}
-      views={['overview', 'usage', 'credits', 'invoices']}
+      views={views}
+      {...(labels ? { labels } : {})}
+      parts={parts}
+      {...(ranges ? { ranges } : {})}
+      {...(allowCustomRange !== undefined ? { allowCustomRange } : {})}
+      {...(groupKeys ? { groupKeys } : {})}
+      groupBy={groupBy}
       view={view}
       range={range}
       customRange={null}
       walletId={null}
       now={PORTAL_NOW}
       locale="en-US"
-      data={{ ...data, invoiceDetail: detail ? { status: 'ready', data: detail } : null }}
+      data={{
+        ...data,
+        invoiceDetail: detail ? { status: 'ready', data: detail } : null,
+        groupedSpend: groupBy ? { status: 'ready', data: groupedBy(groupBy) } : null,
+      }}
       actions={{
         ...noopPortalActions,
         onViewChange: setView,
         onRangeChange: setRange,
+        onGroupByChange: setGroupBy,
         onOpenInvoice: setInvoiceId,
         payInvoice,
         addCredits,
@@ -61,6 +96,17 @@ function Portal({
       }}
     />
   )
+}
+
+/** The fixture's spend as if split by a property: alternate features under two values. */
+function groupedBy(key: string) {
+  return {
+    ...portalSpend,
+    items: portalSpend.items.map((item, index) => ({
+      ...item,
+      group: `${key} ${index % 2 === 0 ? 'eu-west-1' : 'us-east-1'}`,
+    })),
+  }
 }
 
 const meta = {
@@ -394,6 +440,62 @@ export const Empty: Story = {
 
 export const Loading: Story = {
   args: { data: loadingPortalData },
+}
+
+/**
+ * The merchant hid saved cards and plans, and renamed Credits: Overview keeps
+ * its account summary, and the tab carries the merchant's name.
+ */
+export const MerchantHidesParts: Story = {
+  args: {
+    hidden: ['paymentMethods', 'subscriptions'],
+    labels: { ...DEFAULT_PORTAL_CONFIG.labels, credits: 'Wallet' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Growth plan · in 7 days')).toBeVisible()
+    await expect(canvas.queryByText('Visa •••• 4242')).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Subscriptions' })).toBeNull()
+    await expect(canvas.getByRole('tab', { name: 'Wallet' })).toBeVisible()
+  },
+}
+
+/**
+ * Usage as the merchant set it up: two presets, no calendar, no trend chart,
+ * and customers may group the breakdown by an event property.
+ */
+export const MerchantUsageSettings: Story = {
+  args: {
+    initialView: 'usage',
+    ranges: ['7d', 'last-month'],
+    initialRange: '7d',
+    allowCustomRange: false,
+    hidden: ['usageTrend'],
+    groupKeys: ['region'],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByRole('tab', { name: /7d|Last month/ })).toHaveLength(2)
+    await expect(canvas.queryByRole('tab', { name: 'Today' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Pick a date range' })).toBeNull()
+    await userEvent.click(canvas.getByRole('combobox', { name: 'Group by' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'By region' }))
+    await waitFor(() =>
+      expect(canvas.getByText('What you used and what it cost, by region')).toBeVisible(),
+    )
+    await expect(canvas.getByText('region eu-west-1')).toBeVisible()
+  },
+}
+
+/** The merchant hid the wallet's history and Auto top-up: the panel and Add credits stay. */
+export const MerchantCreditsSettings: Story = {
+  args: { initialView: 'credits', hidden: ['transactions', 'autoTopup'] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Add credits' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: /Auto top-up/ })).toBeNull()
+    await expect(canvas.queryByRole('tab', { name: 'All transactions' })).toBeNull()
+  },
 }
 
 /** The merchant's brand colour repaints the mark, the active tab and primary buttons. */

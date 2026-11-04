@@ -34,11 +34,83 @@ export type PortalView = 'overview' | 'usage' | 'credits' | 'invoices'
 
 export const PORTAL_VIEWS: readonly PortalView[] = ['overview', 'usage', 'credits', 'invoices']
 
+/**
+ * The parts of the portal a merchant can hide, one per tab type the settings
+ * store. Each page keeps its own layout; these only take a part out.
+ */
+export interface PortalParts {
+  /** Overview: the credit balance beside next billing and amount due (`wallet_balance`). */
+  creditBalance: boolean
+  /** Overview: saved cards (`payment_methods`). */
+  paymentMethods: boolean
+  /** Overview: the plans on the account (`subscriptions`). */
+  subscriptions: boolean
+  /** Usage: spend, change, largest cost and daily average (`metric_cards` with revenue on). */
+  spendSummary: boolean
+  /** Usage: the trend chart (`usage_graph`). */
+  usageTrend: boolean
+  /** Usage: allowances used this period (`current_usage`). */
+  usageQuota: boolean
+  /** Usage: the per-feature table (`usage_breakdown`). */
+  usageBreakdown: boolean
+  /** Credits: the wallet panel, its balance and its Add credits (`wallet_balance`). */
+  wallet: boolean
+  /** Credits: the Auto top-up control (`auto_topup`). */
+  autoTopup: boolean
+  /** Credits: top-ups and transaction history (`wallet_transactions`). */
+  transactions: boolean
+}
+
+export interface PortalUsageControls {
+  /** The ranges the Usage page offers, in the portal's own order. */
+  ranges: PortalRange[]
+  /** The range Usage opens on, one of `ranges`. */
+  defaultRange: PortalRange
+  /** Whether customers may pick their own dates on the calendar. */
+  customRange: boolean
+}
+
 export interface PortalConfig {
   /** The merchant's brand colour, a CSS colour, or null for the kit's own. */
   primaryColor: string | null
   /** The tabs to show, in order. */
   tabs: PortalView[]
+  /** Each tab's name: the merchant's section label, or the portal's own. */
+  labels: Record<PortalView, string>
+  parts: PortalParts
+  usage: PortalUsageControls
+}
+
+export const PORTAL_VIEW_LABEL: Record<PortalView, string> = {
+  overview: 'Overview',
+  usage: 'Usage',
+  credits: 'Credits',
+  invoices: 'Invoices',
+}
+
+const ALL_PARTS: PortalParts = {
+  creditBalance: true,
+  paymentMethods: true,
+  subscriptions: true,
+  spendSummary: true,
+  usageTrend: true,
+  usageQuota: true,
+  usageBreakdown: true,
+  wallet: true,
+  autoTopup: true,
+  transactions: true,
+}
+
+/** Usage opens on 30 days unless the settings say otherwise. */
+export const DEFAULT_PORTAL_RANGE: PortalRange = '30d'
+
+/** The settings' preset names (`usage_graph.date_presets`) as the portal's ranges. */
+const PRESET_RANGE: Record<string, PortalRange> = {
+  today: 'today',
+  last_7_days: '7d',
+  last_30_days: '30d',
+  current_month: 'this-month',
+  last_month: 'last-month',
 }
 
 /** Section ids the console's portal settings use, by tab. */
@@ -56,6 +128,11 @@ const SECTION_VIEW: Record<string, PortalView> = {
 /**
  * `GET /config`: a setting whose `value` is the portal config. No setting
  * (404, or no sections) means the defaults: every tab, the kit's colours.
+ *
+ * A part is hidden only when its section stores that tab type and every copy
+ * of it is switched off. A tab the stored tree does not have stays shown: the
+ * server's default tree has no payment methods or auto top-up tab, and a
+ * portal that has never been configured must not lose them.
  */
 export function toPortalConfig(wire: unknown): PortalConfig {
   const value = record(record(wire)['value'])
@@ -64,21 +141,91 @@ export function toPortalConfig(wire: unknown): PortalConfig {
   // The config switches tabs on and off; the order is the portal's own:
   // Overview, Usage, Credits, Invoices: whatever order the sections are stored in.
   const enabled = new Set<PortalView>()
+  const seen = new Set<PortalView>()
+  const labels = { ...PORTAL_VIEW_LABEL }
+  const tabsOf = new Map<PortalView, Record<string, unknown>[]>()
   for (const section of sections) {
-    const tab = SECTION_VIEW[text(section['id']).toLowerCase()]
-    if (tab && section['enabled'] !== false) enabled.add(tab)
+    const view = SECTION_VIEW[text(section['id']).toLowerCase()]
+    if (!view) continue
+    seen.add(view)
+    if (section['enabled'] !== false) enabled.add(view)
+    const label = text(section['label']).trim()
+    if (label) labels[view] = label
+    tabsOf.set(view, [...(tabsOf.get(view) ?? []), ...list(section['tabs'])])
   }
+  const shown = PORTAL_VIEWS.filter((v) => !seen.has(v) || enabled.has(v))
+  // A portal with every section off would be a blank page: Overview stays.
   const tabs =
-    sections.length > 0
-      ? PORTAL_VIEWS.filter((v) => v === 'overview' || enabled.has(v))
-      : [...PORTAL_VIEWS]
+    sections.length === 0 ? [...PORTAL_VIEWS] : shown.length > 0 ? shown : ['overview' as const]
+
+  /** Shown unless the view stores tabs of one of these types and none is on. */
+  const on = (
+    view: PortalView,
+    types: readonly string[],
+    also?: (tab: Record<string, unknown>) => boolean,
+  ) => {
+    const matching = (tabsOf.get(view) ?? []).filter((t) => types.includes(text(t['type'])))
+    return (
+      matching.length === 0 || matching.some((t) => t['enabled'] !== false && (also?.(t) ?? true))
+    )
+  }
+
   return {
     primaryColor: isCssColor(primary) ? primary : null,
     tabs,
+    labels,
+    parts: {
+      creditBalance: on('overview', ['wallet_balance']),
+      paymentMethods: on('overview', ['payment_methods']),
+      subscriptions: on('overview', ['subscriptions']),
+      // The summary is the customer's spend: V1's revenue card.
+      spendSummary: on(
+        'usage',
+        ['metric_cards'],
+        (t) => record(t['metric_cards'])['show_revenue_metric'] !== false,
+      ),
+      usageTrend: on('usage', ['usage_graph']),
+      usageQuota: on('usage', ['current_usage']),
+      usageBreakdown: on('usage', ['usage_breakdown']),
+      wallet: on('credits', ['wallet_balance']),
+      autoTopup: on('credits', ['auto_topup']),
+      transactions: on('credits', ['wallet_transactions']),
+    },
+    usage: usageControls(tabsOf.get('usage') ?? []),
   }
 }
 
-export const DEFAULT_PORTAL_CONFIG: PortalConfig = { primaryColor: null, tabs: [...PORTAL_VIEWS] }
+/** The Usage page's ranges, from its first usage graph's presets. */
+function usageControls(tabs: Record<string, unknown>[]): PortalUsageControls {
+  const graph = record(tabs.find((t) => text(t['type']) === 'usage_graph')?.['usage_graph'])
+  const presets = Array.isArray(graph['date_presets']) ? graph['date_presets'] : []
+  const wanted = new Set(presets.map((p) => PRESET_RANGE[text(p)]).filter(Boolean))
+  // No presets, or none this portal knows: every range, rather than none.
+  const ranges =
+    wanted.size > 0
+      ? PORTAL_RANGES.map((r) => r.id).filter((r) => wanted.has(r))
+      : PORTAL_RANGES.map((r) => r.id)
+  const preferred = PRESET_RANGE[text(graph['default_preset'])]
+  const defaultRange =
+    preferred && ranges.includes(preferred)
+      ? preferred
+      : ranges.includes(DEFAULT_PORTAL_RANGE)
+        ? DEFAULT_PORTAL_RANGE
+        : (ranges[0] ?? DEFAULT_PORTAL_RANGE)
+  return { ranges, defaultRange, customRange: graph['allow_custom_date_range'] !== false }
+}
+
+export const DEFAULT_PORTAL_CONFIG: PortalConfig = {
+  primaryColor: null,
+  tabs: [...PORTAL_VIEWS],
+  labels: { ...PORTAL_VIEW_LABEL },
+  parts: { ...ALL_PARTS },
+  usage: {
+    ranges: ['today', '7d', '30d', 'this-month', 'last-month'],
+    defaultRange: DEFAULT_PORTAL_RANGE,
+    customRange: true,
+  },
+}
 
 /* ---- Subscriptions -------------------------------------------------------- */
 
@@ -701,8 +848,15 @@ export interface PortalSpend {
   items: PortalSpendItem[]
 }
 
-/** `POST /analytics/revenue`: what usage has cost, per feature, largest first. */
-export function toPortalSpend(wire: unknown): PortalSpend {
+/**
+ * `POST /analytics/revenue`: what usage has cost, per feature, largest first.
+ *
+ * With `groupBy` (an event property key, asked for as `group_by:
+ * ["properties.<key>"]`), the API answers one item per feature and value; each
+ * row is then that feature within that value, and `group` is the value, so the
+ * breakdown groups by it rather than by feature group.
+ */
+export function toPortalSpend(wire: unknown, groupBy?: string): PortalSpend {
   const body = record(wire)
   const items = list(body['items'])
   const currency = (text(body['currency']) || text(items[0]?.['currency']) || 'USD').toUpperCase()
@@ -715,10 +869,12 @@ export function toPortalSpend(wire: unknown): PortalSpend {
     const feature = record(item['feature'])
     const price = record(item['price'])
     const featureId = text(item['feature_id']) || text(feature['id'])
+    const propertyValue = groupBy ? text(record(item['properties'])[groupBy]) : ''
+    const rowKey = groupBy ? `${propertyValue}\u0000${featureId}` : featureId
     const cost = decimalText(item['total_cost']) || '0'
     const flat =
       text(price['billing_model']).toUpperCase() === 'FLAT_FEE' && decimalText(price['amount'])
-    const existing = merged.get(featureId)
+    const existing = merged.get(rowKey)
     const points = list(item['points'])
       .map((p) => ({
         at: date(p['timestamp']),
@@ -730,7 +886,7 @@ export function toPortalSpend(wire: unknown): PortalSpend {
       // One feature priced twice (a plan and an add-on): one row, summed exactly.
       const sum = decimalSum([existing.cost.amount, cost])
       const usage = decimalSum([existing.usage, decimalText(item['total_usage']) || '0'])
-      merged.set(featureId, {
+      merged.set(rowKey, {
         ...existing,
         usage,
         cost: money(sum, currency),
@@ -742,10 +898,12 @@ export function toPortalSpend(wire: unknown): PortalSpend {
       })
       continue
     }
-    merged.set(featureId, {
+    merged.set(rowKey, {
       featureId,
       name: text(item['name']) || text(feature['name']) || 'Usage',
-      group: text(record(item['group'])['name']) || null,
+      group: groupBy
+        ? propertyValue || NO_PROPERTY_VALUE
+        : text(record(item['group'])['name']) || null,
       unit: text(item['unit_plural']) || text(item['unit']) || text(feature['unit_plural']) || '',
       usage: decimalText(item['total_usage']) || '0',
       cost: money(cost, currency),
@@ -762,6 +920,19 @@ export function toPortalSpend(wire: unknown): PortalSpend {
     total: money(totalText, currency),
     items: [...merged.values()].sort((a, b) => Number(b.cost.amount) - Number(a.cost.amount)),
   }
+}
+
+/** The group for usage that carries no value for the chosen property. */
+export const NO_PROPERTY_VALUE = 'No value'
+
+/**
+ * `POST /analytics/properties`: the event property keys this customer may
+ * group usage by. The server applies the merchant's allowed and hidden keys,
+ * and answers none when grouping is off.
+ */
+export function toPortalPropertyKeys(wire: unknown): string[] {
+  const keys = record(wire)['keys']
+  return Array.isArray(keys) ? [...new Set(keys.map(text).filter(Boolean))] : []
 }
 
 /** Cost over usage, to eight places: a tiered price's effective rate. Null with no usage. */

@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react'
 import {
+  type PortalParts,
   type PortalTopUp,
   type PortalTransactionDirection,
   type PortalWallet,
@@ -47,6 +48,8 @@ export const PortalCreditsProvenance = provenance({
 
 export interface PortalCreditsProps {
   data: CustomerPortalData
+  /** Which of the wallet panel, Auto top-up and history the merchant shows. */
+  parts: Pick<PortalParts, 'wallet' | 'autoTopup' | 'transactions'>
   walletId: string | null
   /** The current billing period's start: "Added since …" and "Used since …". */
   periodStart: Date | null
@@ -86,51 +89,53 @@ function Wallet(props: PortalCreditsProps & { wallets: PortalWallet[]; wallet: P
 
   return (
     <div className="flex flex-col gap-5">
-      <WalletPanel {...props} wallets={wallets} wallet={wallet} />
-      <Section
-        title={view === 'topups' ? 'Top-ups' : 'Transaction history'}
-        description={
-          view === 'topups'
-            ? 'Every credit added, what is left of it, and when it expires.'
-            : 'Every credit added to and used from this wallet'
-        }
-        flush
-        action={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {view === 'transactions' ? (
-              <Tabs value={kind} onValueChange={(value) => setKind(value as typeof kind)}>
-                <TabsList aria-label="Show" className="bg-muted/60 h-9 rounded-lg p-1">
-                  <TabsTrigger value="all" className="h-7 px-3 text-[13px] font-normal">
-                    All
+      {props.parts.wallet ? <WalletPanel {...props} wallets={wallets} wallet={wallet} /> : null}
+      {props.parts.transactions ? (
+        <Section
+          title={view === 'topups' ? 'Top-ups' : 'Transaction history'}
+          description={
+            view === 'topups'
+              ? 'Every credit added, what is left of it, and when it expires.'
+              : 'Every credit added to and used from this wallet'
+          }
+          flush
+          action={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {view === 'transactions' ? (
+                <Tabs value={kind} onValueChange={(value) => setKind(value as typeof kind)}>
+                  <TabsList aria-label="Show" className="bg-muted/60 h-9 rounded-lg p-1">
+                    <TabsTrigger value="all" className="h-7 px-3 text-[13px] font-normal">
+                      All
+                    </TabsTrigger>
+                    <TabsTrigger value="in" className="h-7 px-3 text-[13px] font-normal">
+                      Added
+                    </TabsTrigger>
+                    <TabsTrigger value="out" className="h-7 px-3 text-[13px] font-normal">
+                      Used
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              ) : null}
+              <Tabs value={view} onValueChange={(value) => setView(value as typeof view)}>
+                <TabsList aria-label="View" className="bg-muted/60 h-9 rounded-lg p-1">
+                  <TabsTrigger value="topups" className="h-7 px-3 text-[13px] font-normal">
+                    Top-ups
                   </TabsTrigger>
-                  <TabsTrigger value="in" className="h-7 px-3 text-[13px] font-normal">
-                    Added
-                  </TabsTrigger>
-                  <TabsTrigger value="out" className="h-7 px-3 text-[13px] font-normal">
-                    Used
+                  <TabsTrigger value="transactions" className="h-7 px-3 text-[13px] font-normal">
+                    All transactions
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
-            ) : null}
-            <Tabs value={view} onValueChange={(value) => setView(value as typeof view)}>
-              <TabsList aria-label="View" className="bg-muted/60 h-9 rounded-lg p-1">
-                <TabsTrigger value="topups" className="h-7 px-3 text-[13px] font-normal">
-                  Top-ups
-                </TabsTrigger>
-                <TabsTrigger value="transactions" className="h-7 px-3 text-[13px] font-normal">
-                  All transactions
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        }
-      >
-        {view === 'topups' ? (
-          <TopUps topUps={data.topUps} wallet={wallet} locale={locale} />
-        ) : (
-          <Transactions {...props} kind={kind} />
-        )}
-      </Section>
+            </div>
+          }
+        >
+          {view === 'topups' ? (
+            <TopUps topUps={data.topUps} wallet={wallet} locale={locale} />
+          ) : (
+            <Transactions {...props} kind={kind} />
+          )}
+        </Section>
+      ) : null}
     </div>
   )
 }
@@ -145,6 +150,7 @@ function WalletPanel({
   onAddCredits,
   onAutoTopup,
   locale,
+  parts,
 }: PortalCreditsProps & { wallets: PortalWallet[]; wallet: PortalWallet }) {
   const money = (value: PortalWallet['balance']) => (
     <Money value={value} {...(locale ? { locale } : {})} />
@@ -197,13 +203,15 @@ function WalletPanel({
         </div>
         {wallet.active ? (
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="h-8 px-3" onClick={onAutoTopup}>
-              <span
-                className={cn('size-1.5 rounded-full', on ? 'bg-success' : 'bg-muted-foreground')}
-                aria-hidden="true"
-              />
-              Auto top-up {on ? 'on' : 'off'}
-            </Button>
+            {parts.autoTopup ? (
+              <Button variant="outline" className="h-8 px-3" onClick={onAutoTopup}>
+                <span
+                  className={cn('size-1.5 rounded-full', on ? 'bg-success' : 'bg-muted-foreground')}
+                  aria-hidden="true"
+                />
+                Auto top-up {on ? 'on' : 'off'}
+              </Button>
+            ) : null}
             <Button className="h-8 px-3.5" onClick={onAddCredits}>
               <PlusIcon aria-hidden="true" />
               Add credits

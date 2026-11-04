@@ -12,6 +12,7 @@ import {
   type AuthSource,
   type WebhookDashboard,
   deleteSetting,
+  fetchUsagePropertyKeys,
   fetchWebhookDashboard,
   getSetting,
   putSetting,
@@ -322,6 +323,19 @@ export function toCustomerPortalConfig(value: unknown): CustomerPortalConfig {
       tertiaryColor: str(theme, 'tertiary_color'),
     },
     sections: list(wire['sections']).map(toPortalSection),
+    usageProperties: toUsageProperties(record(wire['analytics_config'])['usage_properties']),
+  }
+}
+
+function toUsageProperties(value: unknown): CustomerPortalConfig['usageProperties'] {
+  if (value === undefined || value === null) return null
+  const wire = record(value)
+  const keys = (v: unknown) =>
+    list(v).filter((key): key is string => typeof key === 'string' && key.length > 0)
+  return {
+    enabled: bool(wire, 'enabled'),
+    allowedKeys: keys(wire['allowed_keys']),
+    hiddenKeys: keys(wire['hidden_keys']),
   }
 }
 
@@ -369,6 +383,19 @@ export function toCustomerPortalConfigRequest(
           : {}),
       })),
     })),
+    // Omitted when never set: the write merges top-level keys, so the stored
+    // value (if any) stays as it is.
+    ...(config.usageProperties
+      ? {
+          analytics_config: {
+            usage_properties: {
+              enabled: config.usageProperties.enabled,
+              allowed_keys: [...config.usageProperties.allowedKeys],
+              hidden_keys: [...config.usageProperties.hiddenKeys],
+            },
+          },
+        }
+      : {}),
   }
 }
 
@@ -1067,6 +1094,41 @@ export function useWebhookDashboard(
     enabled: enabledFor(environmentId),
     staleTime: 0,
     gcTime: 60_000,
+  })
+}
+
+/** How far back the portal settings look for property keys to suggest. */
+const PROPERTY_KEY_WINDOW_MS = 7 * 86_400_000
+
+/**
+ * Event property keys seen in the last seven days, most seen first: what the
+ * customer portal settings suggest for the keys customers may group usage by.
+ * Off until `enabled`, so a closed switch costs no request.
+ */
+export function useUsagePropertyKeys(
+  environmentId: string | null,
+  enabled: boolean,
+): UseQueryResult<string[]> {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+
+  return useQuery({
+    queryKey: queryKeys.settings.usagePropertyKeys(environmentId ?? ''),
+    queryFn: async () => {
+      const token = await requireToken(auth)
+      const end = new Date()
+      const wire = record(
+        await fetchUsagePropertyKeys(serverURL, token, environmentId as string, {
+          start: new Date(end.getTime() - PROPERTY_KEY_WINDOW_MS),
+          end,
+        }),
+      )
+      return list(wire['keys']).filter(
+        (key): key is string => typeof key === 'string' && key.length > 0,
+      )
+    },
+    enabled: enabled && enabledFor(environmentId),
+    staleTime: 5 * 60_000,
   })
 }
 

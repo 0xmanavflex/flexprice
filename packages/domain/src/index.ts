@@ -668,6 +668,11 @@ export {
   withTabEnabled,
   withTabOrder,
   withUsageGraph,
+  withTabTypeEnabled,
+  withUsageProperties,
+  PORTAL_PROPERTY_KEY,
+  PORTAL_SECTION_PARTS,
+  portalUsagePropertiesSchema,
   EXTERNAL_TAX_PROVIDERS,
   TAX_PROVIDER_LABEL,
   TaxProvider,
@@ -692,6 +697,7 @@ export type {
   PortalTab,
   PortalTheme,
   PortalUsageGraph,
+  PortalUsageProperties,
   RolloutToSubscriptionsAction,
   SamlConfig,
   SamlConfigDraft,
@@ -984,7 +990,10 @@ export type {
 } from './selfBilling'
 export {
   DEFAULT_PORTAL_CONFIG,
+  DEFAULT_PORTAL_RANGE,
+  NO_PROPERTY_VALUE,
   PORTAL_RANGES,
+  PORTAL_VIEW_LABEL,
   PORTAL_VIEWS,
   billingCadence,
   creditsAfter,
@@ -1008,6 +1017,7 @@ export {
   toPortalInvoice,
   toPortalInvoices,
   toPortalPaymentMethods,
+  toPortalPropertyKeys,
   toPortalQuotas,
   toPortalSpend,
   toPortalSubscriptions,
@@ -1018,6 +1028,8 @@ export {
 } from './customerPortal'
 export type {
   PortalConfig,
+  PortalParts,
+  PortalUsageControls,
   PortalCooldown,
   PortalCooldownUnit,
   PortalCustomer,

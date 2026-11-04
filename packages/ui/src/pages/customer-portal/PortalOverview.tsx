@@ -1,6 +1,7 @@
 import {
   gatewayLabel,
   type PortalGateway,
+  type PortalParts,
   type PortalInvoice,
   type PortalPaymentMethod,
   type PortalSubscription,
@@ -63,6 +64,8 @@ export const PortalOverviewProvenance = provenance({
 
 export interface PortalOverviewProps {
   brandName: string | null
+  /** Which of the credit balance, saved cards and plans the merchant shows. */
+  parts: Pick<PortalParts, 'creditBalance' | 'paymentMethods' | 'subscriptions'>
   data: CustomerPortalData
   now: Date
   locale: string | undefined
@@ -89,8 +92,8 @@ export function PortalOverview(props: PortalOverviewProps) {
     <div className="flex flex-col gap-6">
       {attention ? <PaymentAlert invoice={attention} {...props} /> : null}
       <AccountSummary {...props} />
-      <PaymentMethods {...props} />
-      <Subscriptions {...props} />
+      {props.parts.paymentMethods ? <PaymentMethods {...props} /> : null}
+      {props.parts.subscriptions ? <Subscriptions {...props} /> : null}
     </div>
   )
 }
@@ -151,7 +154,15 @@ function CellSkeleton() {
 }
 
 /** Next billing and amount due coupled in one block; credit balance on its own. Three equal columns. */
-function AccountSummary({ data, now, locale, onGoTo, onPay, onAddCredits }: PortalOverviewProps) {
+function AccountSummary({
+  data,
+  parts,
+  now,
+  locale,
+  onGoTo,
+  onPay,
+  onAddCredits,
+}: PortalOverviewProps) {
   const money = (value: Parameters<typeof Money>[0]['value']) => (
     <Money value={value} {...(locale ? { locale } : {})} />
   )
@@ -174,8 +185,14 @@ function AccountSummary({ data, now, locale, onGoTo, onPay, onAddCredits }: Port
   const wallet = wallets.find((w) => w.active)
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <section className="bg-background grid rounded-xl border sm:col-span-2 sm:grid-cols-2 sm:divide-x">
+    <div className={parts.creditBalance ? 'grid gap-4 sm:grid-cols-3' : 'grid gap-4'}>
+      <section
+        className={
+          parts.creditBalance
+            ? 'bg-background grid rounded-xl border sm:col-span-2 sm:grid-cols-2 sm:divide-x'
+            : 'bg-background grid rounded-xl border sm:grid-cols-2 sm:divide-x'
+        }
+      >
         {data.subscriptions.status !== 'ready' ? (
           <CellSkeleton />
         ) : (
@@ -244,38 +261,40 @@ function AccountSummary({ data, now, locale, onGoTo, onPay, onAddCredits }: Port
           )}
         </div>
       </section>
-      <section className="bg-background rounded-xl border">
-        {data.wallets.status !== 'ready' ? (
-          <CellSkeleton />
-        ) : (
-          <SummaryCell
-            icon={<WalletIcon />}
-            label={wallet && isNegativeMoney(wallet.balance) ? 'Credits owed' : 'Credit balance'}
-            value={
-              wallet ? (
-                isNegativeMoney(wallet.balance) ? (
-                  // Below zero is money owed: said in the warning tone, as a positive figure.
-                  <span className="text-warning-foreground dark:text-warning">
-                    {money(absoluteMoney(wallet.balance))}
-                  </span>
+      {parts.creditBalance ? (
+        <section className="bg-background rounded-xl border">
+          {data.wallets.status !== 'ready' ? (
+            <CellSkeleton />
+          ) : (
+            <SummaryCell
+              icon={<WalletIcon />}
+              label={wallet && isNegativeMoney(wallet.balance) ? 'Credits owed' : 'Credit balance'}
+              value={
+                wallet ? (
+                  isNegativeMoney(wallet.balance) ? (
+                    // Below zero is money owed: said in the warning tone, as a positive figure.
+                    <span className="text-warning-foreground dark:text-warning">
+                      {money(absoluteMoney(wallet.balance))}
+                    </span>
+                  ) : (
+                    money(wallet.balance)
+                  )
                 ) : (
-                  money(wallet.balance)
+                  <span className="text-muted-foreground">No credits</span>
                 )
-              ) : (
-                <span className="text-muted-foreground">No credits</span>
-              )
-            }
-            hint={
-              wallet
-                ? isNegativeMoney(wallet.balance)
-                  ? `${formatNumber(wallet.credits.replace(/^-/, ''), locale)} credits used beyond the balance. Add credits to cover them.`
-                  : `${formatNumber(wallet.credits, locale)} credits`
-                : 'Credits aren’t set up on your account'
-            }
-            action={wallet ? { label: 'Add credits', run: onAddCredits } : undefined}
-          />
-        )}
-      </section>
+              }
+              hint={
+                wallet
+                  ? isNegativeMoney(wallet.balance)
+                    ? `${formatNumber(wallet.credits.replace(/^-/, ''), locale)} credits used beyond the balance. Add credits to cover them.`
+                    : `${formatNumber(wallet.credits, locale)} credits`
+                  : 'Credits aren’t set up on your account'
+              }
+              action={wallet ? { label: 'Add credits', run: onAddCredits } : undefined}
+            />
+          )}
+        </section>
+      ) : null}
     </div>
   )
 }

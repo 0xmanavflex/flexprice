@@ -20,13 +20,12 @@ export interface PortalLocation {
   region: RegionId | null
   apiOrigin: string
   view: PortalView
-  range: PortalRange
+  /** null: the range the merchant's settings open Usage on. */
+  range: PortalRange | null
   /** A calendar range on the Usage tab, `[start, end)` in local days; it replaces `range`. */
   customRange: { start: Date; end: Date } | null
   invoiceId: string | null
 }
-
-const DEFAULT_RANGE: PortalRange = '30d'
 
 export function parsePortalLocation(
   pathname: string,
@@ -52,7 +51,7 @@ export function parsePortalLocation(
     region,
     apiOrigin,
     view: view as PortalView,
-    range: PORTAL_RANGES.some((r) => r.id === range) ? (range as PortalRange) : DEFAULT_RANGE,
+    range: PORTAL_RANGES.some((r) => r.id === range) ? (range as PortalRange) : null,
     customRange: readDays(params.get('from'), params.get('to')),
     invoiceId: params.get('invoice') || null,
   }
@@ -68,7 +67,7 @@ export function portalHref(location: Omit<PortalLocation, 'apiOrigin'>, basePath
   if (location.view === 'usage' && location.customRange) {
     params.set('from', dayText(location.customRange.start))
     params.set('to', dayText(new Date(location.customRange.end.getTime() - 1)))
-  } else if (location.view === 'usage' && location.range !== DEFAULT_RANGE) {
+  } else if (location.view === 'usage' && location.range !== null) {
     params.set('range', location.range)
   }
   if (location.invoiceId) params.set('invoice', location.invoiceId)

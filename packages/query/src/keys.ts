@@ -289,6 +289,9 @@ export const queryKeys = {
     /** The Svix portal handoff. Environment-scoped like the rest. */
     webhookDashboard: (environmentId: string) =>
       ['settings', environmentId, 'webhookDashboard'] as const,
+    /** Event property keys seen lately: suggestions for the customer portal's grouping. */
+    usagePropertyKeys: (environmentId: string) =>
+      ['settings', environmentId, 'usagePropertyKeys'] as const,
   },
   /**
    * The Svix webhook portal. Environment-scoped, because each environment is
