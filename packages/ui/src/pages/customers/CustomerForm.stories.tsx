@@ -139,6 +139,35 @@ export const Edit: Story = {
   },
 }
 
+/** An address without a domain ending is refused under the field, and the save waits for a real one. */
+export const InvalidEmail: Story = {
+  args: {
+    mode: 'edit',
+    customerName: 'Acme Corp',
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
+    defaultValue: { externalId: 'acme', name: 'Acme Corp', email: 'billing@acme.test' },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const email = canvas.getByRole('textbox', { name: /^email/i })
+    await userEvent.clear(email)
+    await userEvent.type(email, 'billing@acme')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
+    await expect(await canvas.findByText('Enter a valid email address')).toBeInTheDocument()
+    await expect(email).toHaveAttribute('aria-invalid', 'true')
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+
+    await userEvent.type(email, '.test ')
+    await waitFor(() => expect(canvas.queryByText('Enter a valid email address')).toBeNull())
+    await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'billing@acme.test' }),
+      ),
+    )
+  },
+}
+
 /**
  * Billing configuration is set while creating, not only after.
  *

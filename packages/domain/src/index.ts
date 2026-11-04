@@ -339,6 +339,7 @@ export {
   isCustomerQueryFiltered,
   CUSTOMER_FILTERS,
   createCustomerSchema,
+  customerEmailSchema,
   editCustomerSchema,
   emptyCustomer,
   customerToEdit,
@@ -1026,6 +1027,7 @@ export {
   toPortalWallet,
   toPortalWalletTransactions,
   toPortalWallets,
+  withPortalAutoTopup,
   walletFlows,
 } from './customerPortal'
 export type {

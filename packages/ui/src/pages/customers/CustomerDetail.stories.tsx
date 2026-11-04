@@ -449,6 +449,20 @@ export const EditsInline: Story = {
   },
 }
 
+/** An email the API would refuse is caught in place, under the field, and nothing is saved. */
+export const InlineEmailInvalid: Story = {
+  args: { initialTab: 'information', onUpdateField: fn(async () => undefined) },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit customer details' }))
+    const email = canvas.getByRole('textbox', { name: 'Email' })
+    await userEvent.clear(email)
+    await userEvent.type(email, 'billing@acme.c{Enter}')
+    await expect(await canvas.findByText('Enter a valid email address')).toBeVisible()
+    await expect(args.onUpdateField).not.toHaveBeenCalled()
+  },
+}
+
 /** The customer card edits in place with one Save; billing details stays the stepped page. */
 export const HeaderEditInPlace: Story = {
   args: {

@@ -205,6 +205,16 @@ export const CUSTOMER_FILTERS: readonly ListFilterSpec[] = [
 const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} characters or fewer`)
 
 /**
+ * A customer's email as the API takes it (`omitempty,email`): blank, or an
+ * address. Trimmed first, so a pasted trailing space is not a format error.
+ * The create/edit form and the detail page's in-place edit both check with it.
+ */
+export const customerEmailSchema = z
+  .string()
+  .trim()
+  .pipe(z.union([z.literal(''), z.email('Enter a valid email address')]))
+
+/**
  * A customer draft: what V1's drawer collects, plus the timezone and metadata
  * the backend accepts. `externalId` and `name` are the only required fields.
  * Optional text fields are `''` when blank (a form's natural empty), and the
@@ -218,7 +228,7 @@ export const createCustomerSchema = z.object({
   // it collects a value the save then rejects, with a server message about a
   // field the person has already stopped looking at.
   name: z.string().trim().min(1, 'Enter a name').max(255, 'Use 255 characters or fewer'),
-  email: z.union([z.literal(''), z.email('Enter a valid email address')]).optional(),
+  email: customerEmailSchema.optional(),
   phone: optionalText(20).optional(),
   timezone: optionalText(100).optional(),
   /**

@@ -52,6 +52,7 @@ import {
   toPortalWalletTransactions,
   toPortalWallets,
   walletFlows,
+  withPortalAutoTopup,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 
@@ -449,6 +450,7 @@ export function useSetDefaultPortalPaymentMethod(auth: PortalAuth) {
 }
 
 export function useUpdatePortalAutoTopup(auth: PortalAuth) {
+  const queryClient = useQueryClient()
   return usePortalAction<{
     walletId: string
     enabled: boolean
@@ -462,6 +464,14 @@ export function useUpdatePortalAutoTopup(auth: PortalAuth) {
       ...(credits ? { amount: credits } : {}),
       ...(cooldown ? { cooldown } : {}),
     })
+    // Show what was saved at once: the refetch that follows is not awaited, and
+    // until it answers the old settings would read "off" (or "on") still.
+    queryClient.setQueryData<PortalWallet[]>(
+      queryKeys.customerPortal.part(auth.apiOrigin, auth.token, 'wallets'),
+      (wallets) =>
+        wallets &&
+        withPortalAutoTopup(wallets, walletId, { enabled, threshold, credits, cooldown }),
+    )
     // Saved, nothing to open.
     return null
   })

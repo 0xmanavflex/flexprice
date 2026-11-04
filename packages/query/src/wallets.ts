@@ -445,12 +445,14 @@ function updateWallet(client: ReturnType<typeof useFlexprice>, walletId: string,
 
 export function useUpdateAutoTopup(walletId: string) {
   const client = useFlexprice()
-  const invalidate = useInvalidateWallets()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (draft: AutoTopup) =>
       updateWallet(client, walletId, toUpdateAutoTopupRequest(draft)),
-    onSuccess: invalidate,
+    // Awaited: the save settles once the wallets are read again, so the
+    // summary and a reopened dialog show the saved settings, never the old ones.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.wallets.all() }),
   })
 }
 

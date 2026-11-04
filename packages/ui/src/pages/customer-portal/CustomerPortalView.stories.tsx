@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import {
@@ -19,6 +19,7 @@ import {
   portalData,
   portalInvoices,
   portalSpend,
+  portalWallets,
 } from './fixtures'
 import type { CustomerPortalData } from './types'
 
@@ -441,6 +442,60 @@ export const AutoTopup: Story = {
         cooldown: null,
       }),
     )
+  },
+}
+
+const staleWallets = portalWallets.map((w) => ({
+  ...w,
+  autoTopup: w.autoTopup && { ...w.autoTopup, enabled: false },
+}))
+
+/**
+ * The wallets as a refetch delivers them: `first` now, the fixture (auto
+ * top-up on) a moment later, as when the list on screen predates a save.
+ */
+function LateWallets({ first }: { first: CustomerPortalData['wallets'] }) {
+  const [fresh, setFresh] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setFresh(true), 400)
+    return () => clearTimeout(timer)
+  }, [])
+  return (
+    <Portal
+      initialView="credits"
+      data={{ ...portalData, wallets: fresh ? portalData.wallets : first }}
+    />
+  )
+}
+
+/** Auto top-up is on when the wallets load: the button and the dialog's switch say so at once. */
+export const AutoTopupLoadsOn: Story = {
+  render: () => <LateWallets first={{ status: 'loading' }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: /Auto top-up on/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Auto top-up' })
+    await expect(within(dialog).getByRole('switch', { name: /Enable auto top-up/ })).toBeChecked()
+  },
+}
+
+/**
+ * Opened on a stale list (off), then the wallets are read again (on): the
+ * switch follows the loaded settings instead of the copy it opened with.
+ */
+export const AutoTopupFollowsLoadedWallet: Story = {
+  render: () => <LateWallets first={{ status: 'ready', data: staleWallets }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /Auto top-up off/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Auto top-up' })
+    await waitFor(() =>
+      expect(within(dialog).getByRole('switch', { name: /Enable auto top-up/ })).toBeChecked(),
+    )
+    // Behind the modal (hidden from the accessibility tree), the button reads on too.
+    await expect(
+      canvas.getByRole('button', { name: /Auto top-up on/, hidden: true }),
+    ).toBeInTheDocument()
   },
 }
 

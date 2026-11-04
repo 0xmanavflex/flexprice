@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_CUSTOMER_QUERY,
   createCustomerSchema,
+  customerEmailSchema,
   emptyCustomer,
   isCustomerQueryFiltered,
 } from './customer'
@@ -69,6 +70,21 @@ describe('createCustomerSchema', () => {
     expect(parse({ ...valid(), email: '' }).success).toBe(true)
     expect(failedFields({ ...valid(), email: 'not-an-address' })).toContain('email')
     expect(parse({ ...valid(), email: 'ops@acme.test' }).success).toBe(true)
+  })
+
+  it.each(['a@b', 'a@b.c', 'dinesh@gmail', 'a@@b.co', 'a b@c.co', 'a@b..co', 'a@b.co.'])(
+    'refuses %s as an email, on the form and in place',
+    (email) => {
+      expect(failedFields({ ...valid(), email })).toContain('email')
+      expect(customerEmailSchema.safeParse(email).success).toBe(false)
+    },
+  )
+
+  it('trims an email before checking it, and saves it trimmed', () => {
+    const result = parse({ ...valid(), email: '  ops@acme.test ' })
+    expect(result.success && result.data.email).toBe('ops@acme.test')
+    expect(customerEmailSchema.safeParse('   ').success).toBe(true)
+    expect(customerEmailSchema.safeParse('Enter a valid email address').success).toBe(false)
   })
 
   it('takes a two-letter country code, or none', () => {
