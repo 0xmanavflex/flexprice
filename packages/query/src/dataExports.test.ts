@@ -56,18 +56,26 @@ describe('toDataExportFilter', () => {
 })
 
 describe('fetchDataExports', () => {
-  it('narrows the page by search and keeps the server total', async () => {
-    const listScheduledTasks = vi.fn().mockResolvedValue({
-      items: [
-        { id: 'a', entityType: 'events', jobConfig: { bucket: 'alpha' } },
-        { id: 'b', entityType: 'invoice', jobConfig: { bucket: 'beta' } },
-      ],
-      pagination: { total: 9 },
-    })
+  it('searches every export, not one page, and counts the matches', async () => {
+    const rows = Array.from({ length: 30 }, (_, index) => ({
+      id: `x${index}`,
+      entityType: 'events',
+      jobConfig: { bucket: index === 27 ? 'beta' : `alpha-${index}` },
+    }))
+    const listScheduledTasks = vi.fn(
+      async ({ limit, offset }: { limit: number; offset: number }) => ({
+        items: rows.slice(offset, offset + limit),
+        pagination: { total: rows.length },
+      }),
+    )
     const client = { scheduledTasks: { listScheduledTasks } } as unknown as Flexprice
     const page = await fetchDataExports(client, { ...DEFAULT_DATA_EXPORT_QUERY, search: 'BET' })
-    expect(page.exports.map((row) => row.id)).toEqual(['b'])
-    expect(page.total).toBe(9)
+    expect(page.exports.map((row) => row.id)).toEqual(['x27'])
+    expect(page.total).toBe(1)
+
+    const second = await fetchDataExports(client, { ...DEFAULT_DATA_EXPORT_QUERY, page: 2 })
+    expect(second.exports.map((row) => row.id)).toEqual(['x25', 'x26', 'x27', 'x28', 'x29'])
+    expect(second.total).toBe(30)
   })
 })
 

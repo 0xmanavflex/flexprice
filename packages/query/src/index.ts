@@ -608,6 +608,7 @@ export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
 export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
 export type { UsageSyncPage, UsageSyncWire, UsageSyncEntryWire } from './usageSyncs'
 export {
+  fetchAllDataExports,
   fetchDataExports,
   toCreateDataExportRequest,
   toCreateS3ConnectionRequest,

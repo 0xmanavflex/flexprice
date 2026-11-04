@@ -57,7 +57,7 @@ export interface DataExportQuery {
   pageSize: number
   /** Only this connection's exports; empty for every connection. */
   connectionId?: string
-  /** Narrows the returned page by bucket, prefix or entity. */
+  /** Narrows every export by bucket, prefix or entity (the endpoint has no search). */
   search: string
   /** Server-side: `enabled` on `GET /tasks/scheduled`. */
   state: ExportState
