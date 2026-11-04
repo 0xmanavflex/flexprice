@@ -427,6 +427,22 @@ export const ExpandingKeepsCount: Story = {
   },
 }
 
+/** A search that matches only a debit's source line keeps the debit with it, never an orphaned line. */
+export const SearchKeepsSourcesWithTheirDebit: Story = {
+  render: () => (
+    <WalletLedgerTable transactions={[SPLIT_DEBIT, WITH_BREAKDOWN, BARE_TOP_UP]} now={NOW} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: /expand manual debit/i }))
+    await userEvent.type(canvas.getByPlaceholderText('Search transactions…'), 'credit memo')
+    // The credit memo top-up, and the debit that drew from it with its lines.
+    await expect(await canvas.findByText(/of 2 transactions/)).toBeInTheDocument()
+    await expect(canvas.getByText('Manual debit')).toBeInTheDocument()
+    await expect(canvas.getByText('From Credit memo')).toBeInTheDocument()
+  },
+}
+
 /** A 30-credit top-up whose last 10 credits lapsed: 20 consumed, 10 expired, not 100% consumed. */
 const EXPIRED_TOP_UP: WalletTransaction = {
   id: 'wtx_expired_topup',

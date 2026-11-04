@@ -182,26 +182,36 @@ export function DetailTable<T extends object>({
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase()
-    let next = rows
+    // Filters, search and sort act on whole records: a record with the child
+    // rows beneath it (`isChild`). A child is never matched, kept or moved on
+    // its own, so it can neither stand alone nor land under another record.
+    let groups = rows.reduce<T[][]>((out, row) => {
+      const last = out[out.length - 1]
+      if (last && isChild?.(row)) last.push(row)
+      else out.push([row])
+      return out
+    }, [])
     for (const spec of specs) {
       const chosen = selected[spec.id] ?? []
-      if (chosen.length > 0) next = next.filter((row) => chosen.includes(spec.value(row)))
+      if (chosen.length > 0) groups = groups.filter(([head]) => chosen.includes(spec.value(head!)))
     }
     if (needle) {
-      next = next.filter((row) => {
-        const haystack = searchText
+      const matches = (row: T) =>
+        (searchText
           ? searchText(row)
           : `${plainText(row)} ${columns.map((column) => column.text?.(row) ?? '').join(' ')}`
-        return haystack.toLowerCase().includes(needle)
-      })
+        )
+          .toLowerCase()
+          .includes(needle)
+      groups = groups.filter((group) => group.some(matches))
     }
     const sorting = sortState ? columns.find((column) => column.key === sortState.field) : null
     const by = sorting?.sortBy ?? sorting?.text
     if (sortState && by) {
       const sign = sortState.direction === 'asc' ? 1 : -1
-      next = [...next].sort((a, b) => {
-        const left = by(a)
-        const right = by(b)
+      groups = [...groups].sort(([a], [b]) => {
+        const left = by(a!)
+        const right = by(b!)
         return (
           sign *
           (typeof left === 'number' && typeof right === 'number'
@@ -210,8 +220,8 @@ export function DetailTable<T extends object>({
         )
       })
     }
-    return next
-  }, [rows, columns, search, specs, selected, searchText, sortState])
+    return groups.flat()
+  }, [rows, columns, search, specs, selected, searchText, sortState, isChild])
 
   if (rows.length === 0 && empty && !isLoading) {
     return (
