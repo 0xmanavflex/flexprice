@@ -1,3 +1,5 @@
+import { type PricingSchema, creditRatesToCurrency, normalisePricingSchema } from './pricingSchema'
+
 /**
  * The worked pricings behind Create with AI's five templates, ported verbatim
  * from V1 (`src/api/ai/templates.ts`).
@@ -6,7 +8,8 @@
  * unchanged creates exactly this schema. That keeps the templates working, and
  * identical every time, even where the AI parse is not configured. The objects
  * are in the parser's wire shape (snake_case), so `normalisePricingSchema`
- * reads them as it reads a parse.
+ * reads them as it reads a parse; use `pricingTemplateSchema`, which also
+ * turns credit-priced usage rates into currency.
  */
 
 // ============================================
@@ -70,7 +73,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Memory (credits per GB-hour)',
+          display_name: 'Memory (per GB-hour)',
         },
         {
           feature_key: 'cpu_vcpu_hours',
@@ -80,7 +83,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'CPU (credits per vCPU-hour)',
+          display_name: 'CPU (per vCPU-hour)',
         },
         {
           feature_key: 'egress_gb',
@@ -90,7 +93,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Egress (credits per GB)',
+          display_name: 'Egress (per GB)',
         },
         {
           feature_key: 'storage_gb_months',
@@ -100,7 +103,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Storage (credits per GB-month)',
+          display_name: 'Storage (per GB-month)',
         },
       ],
     },
@@ -118,7 +121,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Memory (credits per GB-hour)',
+          display_name: 'Memory (per GB-hour)',
         },
         {
           feature_key: 'cpu_vcpu_hours',
@@ -128,7 +131,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'CPU (credits per vCPU-hour)',
+          display_name: 'CPU (per vCPU-hour)',
         },
         {
           feature_key: 'egress_gb',
@@ -138,7 +141,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Egress (credits per GB)',
+          display_name: 'Egress (per GB)',
         },
         {
           feature_key: 'storage_gb_months',
@@ -148,7 +151,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Storage (credits per GB-month)',
+          display_name: 'Storage (per GB-month)',
         },
       ],
     },
@@ -166,7 +169,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Memory (credits per GB-hour)',
+          display_name: 'Memory (per GB-hour)',
         },
         {
           feature_key: 'cpu_vcpu_hours',
@@ -176,7 +179,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'CPU (credits per vCPU-hour)',
+          display_name: 'CPU (per vCPU-hour)',
         },
         {
           feature_key: 'egress_gb',
@@ -186,7 +189,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Egress (credits per GB)',
+          display_name: 'Egress (per GB)',
         },
         {
           feature_key: 'storage_gb_months',
@@ -196,7 +199,7 @@ const railwaySchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Storage (credits per GB-month)',
+          display_name: 'Storage (per GB-month)',
         },
       ],
     },
@@ -635,7 +638,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Contact search (credits)',
+          display_name: 'Contact search',
         },
         {
           feature_key: 'email_unlock',
@@ -645,7 +648,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Email unlock (credits)',
+          display_name: 'Email unlock',
         },
         {
           feature_key: 'phone_reveal',
@@ -655,7 +658,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Phone reveal (credits)',
+          display_name: 'Phone reveal',
         },
         {
           feature_key: 'contact_export',
@@ -665,7 +668,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Contact export (credits)',
+          display_name: 'Contact export',
         },
       ],
     },
@@ -683,7 +686,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Contact search (credits)',
+          display_name: 'Contact search',
         },
         {
           feature_key: 'email_unlock',
@@ -693,7 +696,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Email unlock (credits)',
+          display_name: 'Email unlock',
         },
         {
           feature_key: 'phone_reveal',
@@ -703,7 +706,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Phone reveal (credits)',
+          display_name: 'Phone reveal',
         },
         {
           feature_key: 'contact_export',
@@ -713,7 +716,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Contact export (credits)',
+          display_name: 'Contact export',
         },
       ],
     },
@@ -731,7 +734,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Contact search (credits)',
+          display_name: 'Contact search',
         },
         {
           feature_key: 'email_unlock',
@@ -741,7 +744,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Email unlock (credits)',
+          display_name: 'Email unlock',
         },
         {
           feature_key: 'phone_reveal',
@@ -751,7 +754,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Phone reveal (credits)',
+          display_name: 'Phone reveal',
         },
         {
           feature_key: 'contact_export',
@@ -761,7 +764,7 @@ const apolloSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Contact export (credits)',
+          display_name: 'Contact export',
         },
       ],
     },
@@ -911,7 +914,7 @@ const vapiSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Hosting calls (credits per minute)',
+          display_name: 'Hosting calls (per minute)',
         },
         {
           feature_key: 'vapi_hosting_sms_messages',
@@ -921,7 +924,7 @@ const vapiSchema = {
           billing_model: 'flat_fee',
           package_size: null,
           filter_values: null,
-          display_name: 'Hosting SMS/chat (credits per message)',
+          display_name: 'Hosting SMS/chat (per message)',
         },
       ],
     },
@@ -951,3 +954,15 @@ export const PRICING_TEMPLATE_SCHEMAS = {
 } as const
 
 export type PricingTemplateId = keyof typeof PRICING_TEMPLATE_SCHEMAS
+
+/**
+ * A template as the schema to review and create.
+ *
+ * Railway, Apollo and Vapi write their usage rates in credits and say on each
+ * plan's grant what a credit is worth; prices are created in currency, so each
+ * rate is converted first (Vapi hosting: 5 credits at $0.01 is $0.05 a minute).
+ * Created as written, the rate would bill 5 credits as $5.
+ */
+export function pricingTemplateSchema(id: PricingTemplateId): PricingSchema {
+  return creditRatesToCurrency(normalisePricingSchema(PRICING_TEMPLATE_SCHEMAS[id]))
+}

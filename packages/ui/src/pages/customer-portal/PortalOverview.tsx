@@ -69,6 +69,8 @@ export interface PortalOverviewProps {
   data: CustomerPortalData
   now: Date
   locale: string | undefined
+  /** The tabs the merchant shows; a link to a hidden one is left out. */
+  views: readonly PortalView[]
   onGoTo: (view: PortalView) => void
   onPay: (invoice: PortalInvoice) => void
   onViewInvoice: (invoice: PortalInvoice) => void
@@ -159,10 +161,12 @@ function AccountSummary({
   parts,
   now,
   locale,
+  views,
   onGoTo,
   onPay,
   onAddCredits,
 }: PortalOverviewProps) {
+  const canGo = (view: PortalView) => views.includes(view)
   const money = (value: Parameters<typeof Money>[0]['value']) => (
     <Money value={value} {...(locale ? { locale } : {})} />
   )
@@ -211,7 +215,11 @@ function AccountSummary({
                 ? `${next.planName} plan · ${relativeDays(next.periodEnd, now)}`
                 : 'You’re not on a plan yet'
             }
-            action={next ? { label: 'See usage so far', run: () => onGoTo('usage') } : undefined}
+            action={
+              next && canGo('usage')
+                ? { label: 'See usage so far', run: () => onGoTo('usage') }
+                : undefined
+            }
           />
         )}
         <div className="border-t sm:border-t-0">
@@ -231,7 +239,7 @@ function AccountSummary({
               }
               tone={overdue ? 'danger' : 'muted'}
               action={
-                due.count + due.others > 1
+                due.count + due.others > 1 && canGo('invoices')
                   ? { label: 'See unpaid invoices', run: () => onGoTo('invoices') }
                   : firstPayable
                     ? { label: 'Pay now', run: () => onPay(firstPayable) }
@@ -253,7 +261,7 @@ function AccountSummary({
               }
               hint={invoices.length ? 'Every invoice is paid' : 'No invoices yet'}
               action={
-                invoices.length
+                invoices.length && canGo('invoices')
                   ? { label: 'View invoices', run: () => onGoTo('invoices') }
                   : undefined
               }

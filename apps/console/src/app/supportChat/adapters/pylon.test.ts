@@ -144,6 +144,21 @@ describe('pylon adapter', () => {
     expect(globals().Pylon?.q).toContainEqual(['hideChatBubble'])
   })
 
+  it('hides the bubble while a modal is open and brings it back after', () => {
+    const adapter = createPylonAdapter('app-123', fetchEmailHash)
+    adapter.setLauncherHidden?.(true)
+    adapter.setLauncherHidden?.(false)
+
+    expect(globals().Pylon?.q).toEqual([['hideChatBubble'], ['showChatBubble']])
+  })
+
+  it('never brings back a bubble hidden by configuration', () => {
+    const adapter = createPylonAdapter('app-123', fetchEmailHash, true)
+    adapter.setLauncherHidden?.(false)
+
+    expect(globals().Pylon?.q ?? []).not.toContainEqual(['showChatBubble'])
+  })
+
   it('rejects an app id containing characters outside the allowed set', async () => {
     const adapter = createPylonAdapter('app-123/../evil', fetchEmailHash)
 

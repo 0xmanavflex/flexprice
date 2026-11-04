@@ -112,6 +112,7 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
           data={data}
           now={now}
           locale={locale}
+          views={props.views}
           onGoTo={actions.onViewChange}
           onPay={pay}
           onViewInvoice={openInvoice}

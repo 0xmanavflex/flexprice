@@ -11,8 +11,8 @@ import { provenance } from '@ui/provenance'
  */
 export const ValuesInputProvenance = provenance({
   source: 'composition',
-  composes: ['ui/input'],
-  note: 'Input-styled field holding removable value chips.',
+  composes: [],
+  note: 'A field styled like ui/input, holding removable value chips and a bare input.',
 })
 
 export interface ValuesInputProps {

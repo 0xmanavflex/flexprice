@@ -401,16 +401,3 @@
     animation: none;
   }
 }
-
-/*
- * Support chat (Pylon, loaded by the console). The bubble stays bottom-right,
- * where it covers the primary action of a right-hand sheet (Connect, Save).
- * A z-index cannot lower it: each of Pylon's wrappers is fixed or relative at
- * z-index 2147480002, so the bubble's own z-index only ranks it inside them.
- * So it is hidden while a sheet or dialog is open, and comes back on close.
- * An open chat window is left alone.
- */
-body:has([data-slot='sheet-content'], [data-slot='dialog-content'])
-  .PylonChat-bubbleFrameContainer {
-  visibility: hidden !important;
-}

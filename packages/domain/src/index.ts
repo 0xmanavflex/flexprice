@@ -861,6 +861,7 @@ export {
 
 export {
   AI_SETUP_METADATA,
+  creditRatesToCurrency,
   normalisePricingSchema,
   pricingSchemaProblems,
   pricingSchemaTotals,
@@ -874,7 +875,7 @@ export type {
   PricingSchema,
   PricingUsageCharge,
 } from './pricingSchema'
-export { PRICING_TEMPLATE_SCHEMAS } from './pricingTemplates'
+export { PRICING_TEMPLATE_SCHEMAS, pricingTemplateSchema } from './pricingTemplates'
 export type { PricingTemplateId } from './pricingTemplates'
 export { GEMINI_PRICING_SCHEMA, SYSTEM_PROMPT, buildPricingPrompt } from './pricingPrompt'
 
@@ -1148,3 +1149,4 @@ export {
   type TaxIdentifier,
 } from './billingEntity'
 export { DOCS } from './docsLinks'
+export { eventPropertyNames, expressionProblem } from './featureExpression'

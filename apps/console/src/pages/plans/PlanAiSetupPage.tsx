@@ -3,7 +3,7 @@ import {
   PRICING_TEMPLATE_SCHEMAS,
   type PricingSchema,
   type PricingTemplateId,
-  normalisePricingSchema,
+  pricingTemplateSchema,
 } from '@fp/domain'
 import { useApplyPricingSchema, useParsePricing } from '@fp/query'
 import type { ApplyStep } from '@fp/query'
@@ -81,7 +81,7 @@ export function PlanAiSetupPage({ onDone }: PlanAiSetupPageProps) {
             setTemplateDrafting(true)
             templateTimer.current = setTimeout(() => {
               setTemplateDrafting(false)
-              setSchema(normalisePricingSchema(PRICING_TEMPLATE_SCHEMAS[templateId]))
+              setSchema(pricingTemplateSchema(templateId))
             }, TEMPLATE_DRAFT_MS)
             return
           }

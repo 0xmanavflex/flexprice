@@ -5,6 +5,7 @@ import { createSupportChatAdapter } from './adapters'
 import { SUPPORT_CHAT_FLOW, getActiveSupportChatProvider } from './config'
 import { OPEN_SUPPORT_CHAT_EVENT, type SupportChatProvider } from './models'
 import { useSupportChat } from './useSupportChat'
+import { useModalOpen } from './useModalOpen'
 
 /** Mounted only when a provider is configured. */
 function SupportChatImpl({ provider }: { provider: SupportChatProvider }) {
@@ -23,12 +24,19 @@ function SupportChatImpl({ provider }: { provider: SupportChatProvider }) {
   )
   useSupportChat(adapter, flow)
 
-  // Nothing of our own to draw: the provider's launcher, bottom-left, opens it.
+  // The launcher sits bottom-right, where a sheet keeps its primary action:
+  // hide it while a sheet or dialog is open, and bring it back on close.
+  const modalOpen = useModalOpen()
+  useEffect(() => {
+    adapter.setLauncherHidden?.(modalOpen)
+  }, [adapter, modalOpen])
+
+  // Nothing of our own to draw: the provider's launcher, bottom-right, opens it.
   return null
 }
 
 /**
- * Boots the support chat. The provider's own launcher stays in the bottom-left
+ * Boots the support chat. The provider's own launcher stays in the bottom-right
  * corner and opens it; ⌘K and the idle auto-open still work. Nothing is
  * mounted when no provider is enabled or its app id is missing: as V1.
  */

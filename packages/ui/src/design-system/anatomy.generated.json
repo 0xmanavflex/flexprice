@@ -639,7 +639,6 @@
         "CustomerWalletView",
         "DashboardHome",
         "EventDetailSheet",
-        "FeatureForm",
         "FilterSelect",
         "InvoiceStatusPill",
         "LedgerRow",
@@ -1303,7 +1302,6 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "FeatureForm",
         "UsageTermsFields",
         "WebhookEventTypePicker"
       ],
@@ -3711,8 +3709,6 @@
       "file": "src/pages/product-catalog/products/FeatureForm.tsx",
       "layer": "surface",
       "composes": [
-        "ArrowUpRightIcon",
-        "CheckboxRow",
         "Field",
         "FormCard",
         "FormDisclosure",

@@ -131,6 +131,39 @@ export const Overview: Story = {
       'aria-selected',
       'true',
     )
+    await expect(canvas.getByRole('button', { name: 'See usage so far' })).toBeVisible()
+  },
+}
+
+/** Usage and Invoices switched off: the summary links nowhere it can't open; paying stays. */
+export const OverviewWithoutUsageOrInvoices: Story = {
+  args: { views: ['overview', 'credits'] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Growth plan · in 7 days')).toBeVisible()
+    await expect(canvas.queryByRole('tab', { name: 'Usage' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'See usage so far' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'See unpaid invoices' })).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Pay now' })).toBeVisible()
+  },
+}
+
+/** Paid up with Invoices switched off: no "View invoices" link. */
+export const PaidUpWithoutInvoices: Story = {
+  args: {
+    views: ['overview', 'usage', 'credits'],
+    data: {
+      ...portalData,
+      invoices: {
+        status: 'ready',
+        data: portalInvoices.map((i) => ({ ...i, status: 'paid' as const })),
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('All paid up')).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'View invoices' })).toBeNull()
   },
 }
 
