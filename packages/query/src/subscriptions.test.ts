@@ -126,8 +126,11 @@ describe('toSubscriptionFilter', () => {
 describe('the contract search', () => {
   const contract = { id: 'sub_1', customerId: 'cus_1', customer: { name: 'QA Module' } }
   const fakeClient = (customers: { id: string }[]) => {
-    const queryCustomer = vi.fn(async () => ({ items: customers }))
-    const querySubscription = vi.fn(async () => ({ items: [contract], pagination: { total: 1 } }))
+    const queryCustomer = vi.fn(async (_filter: unknown) => ({ items: customers }))
+    const querySubscription = vi.fn(async (_filter: unknown) => ({
+      items: [contract],
+      pagination: { total: 1 },
+    }))
     const client = {
       customers: { queryCustomer },
       subscriptions: { querySubscription },
