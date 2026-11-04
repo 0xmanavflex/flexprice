@@ -4,6 +4,7 @@ import {
   currencySymbol,
   compareMoney,
   formatMoney,
+  formatUnitAmount,
   isNegativeMoney,
   isZeroMoney,
   money,
@@ -32,6 +33,19 @@ describe('money', () => {
     expect(() => money('1.00', '   ')).toThrow(InvalidMoneyError)
     expect(moneyOr('1.00', '')).toEqual({ amount: '1.00', currency: 'USD' })
     expect(moneyOr('1.00', '  ')).toEqual({ amount: '1.00', currency: 'USD' })
+  })
+})
+
+describe('formatUnitAmount', () => {
+  it('keeps a sub-cent rate and names its currency', () => {
+    expect(formatUnitAmount('0.0005', 'usd')).toBe('$0.0005')
+    expect(formatUnitAmount('0.0002', 'USD')).toBe('$0.0002')
+    expect(formatUnitAmount('12', 'USD')).toBe('$12.00')
+  })
+
+  it('falls back to the raw text when it cannot format', () => {
+    expect(formatUnitAmount('', 'USD')).toBe('USD')
+    expect(formatUnitAmount('2.4', '')).toBe('2.4')
   })
 })
 

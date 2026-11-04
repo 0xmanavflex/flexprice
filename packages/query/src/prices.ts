@@ -55,6 +55,13 @@ export interface ChargeWire {
   displayName?: string | undefined
   trialPeriodDays?: number | undefined
   priceUnitType?: string | undefined
+  /** The custom unit's code, on a CUSTOM price (`price_unit`). */
+  priceUnit?: string | undefined
+  /** The amount in that unit (`price_unit_amount`); `amount` is its currency equivalent. */
+  priceUnitAmount?: string | undefined
+  /** The bands in that unit (`price_unit_tiers`); `tiers` are their currency equivalents. */
+  priceUnitTiers?: TierWire[] | undefined
+  /** Only ever on a request; kept as a fallback for a response that echoes it. */
   priceUnitConfig?: { priceUnit?: string } | undefined
   startDate?: Date | undefined
   endDate?: Date | undefined
@@ -143,6 +150,11 @@ export function toCharge(wire: ChargeWire): Charge {
         }
       : null
 
+  const customUnit =
+    wire.priceUnitType === 'CUSTOM'
+      ? wire.priceUnit || wire.priceUnitConfig?.priceUnit || undefined
+      : undefined
+
   return {
     id: wire.id ?? '',
     type,
@@ -166,8 +178,21 @@ export function toCharge(wire: ChargeWire): Charge {
     description: wire.description ?? '',
     displayName: wire.displayName ?? '',
     ...(wire.trialPeriodDays ? { trialPeriodDays: wire.trialPeriodDays } : {}),
-    ...(wire.priceUnitType === 'CUSTOM' && wire.priceUnitConfig?.priceUnit
-      ? { priceUnit: wire.priceUnitConfig.priceUnit }
+    /*
+     * A custom-unit price: the response carries the unit as `price_unit` and
+     * the amount in it as `price_unit_amount` (`price_unit_config` exists only
+     * on a request). Reading only the config lost the unit, so a 2.4 QAU price
+     * showed as its $3 equivalent and its edit form fell back to "None
+     * (currency)".
+     */
+    ...(customUnit
+      ? {
+          priceUnit: customUnit,
+          ...(wire.priceUnitAmount ? { priceUnitAmount: wire.priceUnitAmount } : {}),
+          ...(Array.isArray(wire.priceUnitTiers) && wire.priceUnitTiers.length > 0
+            ? { priceUnitTiers: wire.priceUnitTiers.map(toTier) }
+            : {}),
+        }
       : {}),
     startDate: wire.startDate ?? null,
     endDate: wire.endDate ?? null,

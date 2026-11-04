@@ -43,8 +43,9 @@ const usage: Charge = {
   billingCadence: 'RECURRING',
   tierMode: TierMode.Slab,
   tiers: [
-    { upTo: 30, unitAmount: '$0.0450' },
-    { upTo: null, unitAmount: '$0.0400' },
+    // As the API sends them: bare decimals, in the price's currency.
+    { upTo: 30, unitAmount: '0.045' },
+    { upTo: null, unitAmount: '0.04' },
   ],
   transformQuantity: null,
   bucketSize: null,
@@ -95,10 +96,16 @@ export const PackageBand: Story = {
     charge: {
       ...usage,
       tiers: [
-        { upTo: 1000, unitAmount: '$0.0000' },
-        { upTo: null, unitAmount: '$1,000', transformQuantity: { divideBy: 100, round: 'up' } },
+        { upTo: 1000, unitAmount: '0.0005' },
+        { upTo: null, unitAmount: '1000', transformQuantity: { divideBy: 100, round: 'up' } },
       ],
     },
+  },
+  // Each band names its currency, a sub-cent rate included (QA #37).
+  play: async ({ canvasElement }) => {
+    const screen = within(canvasElement.ownerDocument.body)
+    await expect(await screen.findByText('$0.0005')).toBeInTheDocument()
+    await expect(screen.getByText('$1,000.00 per 100 units')).toBeInTheDocument()
   },
 }
 

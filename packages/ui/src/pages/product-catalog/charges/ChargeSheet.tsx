@@ -10,6 +10,8 @@ import {
   type ChargeHistory,
   ChargeSection,
   CommitmentType,
+  chargeAmountLabel,
+  chargePricedTiers,
   InvoiceCadence,
   PriceType,
   PriceWindowSize,
@@ -222,10 +224,22 @@ function Box({
  * range is built from the one before rather than stored.
  */
 function TierRows({ charge }: { charge: Charge }) {
-  return <TierList tiers={charge.tiers} />
+  return (
+    <TierList
+      tiers={chargePricedTiers(charge)}
+      amount={(value) => chargeAmountLabel(charge, value)}
+    />
+  )
 }
 
-function TierList({ tiers }: { tiers: Charge['tiers'] }) {
+/** With `amount`, each band's rate and flat fee read in the charge's terms ("$0.0005", "2.4 QAU"). */
+function TierList({
+  tiers,
+  amount = (value) => value,
+}: {
+  tiers: Charge['tiers']
+  amount?: (value: string) => string
+}) {
   let floor = 0
   return (
     <ul className="divide-border/60 divide-y rounded-md border text-[13px]">
@@ -238,9 +252,11 @@ function TierList({ tiers }: { tiers: Charge['tiers'] }) {
               {from.toLocaleString()} – {tier.upTo === null ? '∞' : tier.upTo.toLocaleString()}
             </span>
             <span className="tabular-nums">
-              {tier.unitAmount}
+              {amount(tier.unitAmount)}
               {tier.transformQuantity?.divideBy ? ` ${tierUnitLabel(tier)}` : ''}
-              {tier.flatAmount && Number(tier.flatAmount) > 0 ? ` + ${tier.flatAmount}` : ''}
+              {tier.flatAmount && Number(tier.flatAmount) > 0
+                ? ` + ${amount(tier.flatAmount)}`
+                : ''}
             </span>
           </li>
         )
@@ -463,7 +479,7 @@ export function ChargeSheet({
             {detail?.overriddenFrom ? (
               <p className="text-muted-foreground text-xs">Plan price {detail.overriddenFrom}</p>
             ) : null}
-            {charge.tiers.length > 0 ? <TierRows charge={charge} /> : null}
+            {chargePricedTiers(charge).length > 0 ? <TierRows charge={charge} /> : null}
             <Facts
               items={[
                 ['Model', modelLabel(charge)],

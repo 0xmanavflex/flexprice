@@ -19,6 +19,7 @@
  *: `priceOverride` imports them from here rather than keeping a second copy.
  */
 import { z } from 'zod'
+import { formatUnitAmount } from './money'
 
 /** Decimal string, as the API sends and expects. Never a float. */
 const decimal = z
@@ -291,6 +292,30 @@ export function tierUnitLabel(tier: Tier): string {
 }
 
 /**
+ * The bands a charge is priced in: its custom unit's when it has one, else
+ * its currency's. A custom-unit charge carries both, and the unit's are the
+ * ones it was set with.
+ */
+export function chargePricedTiers(
+  charge: Pick<Charge, 'tiers' | 'priceUnit' | 'priceUnitTiers'>,
+): Tier[] {
+  return charge.priceUnit && charge.priceUnitTiers?.length ? charge.priceUnitTiers : charge.tiers
+}
+
+/**
+ * One of a charge's amounts as a label, in what the charge is priced in:
+ * "2.4 QAU" for a custom unit, "$0.0005" for a currency.
+ */
+export function chargeAmountLabel(
+  charge: Pick<Charge, 'currency' | 'priceUnit'>,
+  amount: string,
+): string {
+  return charge.priceUnit
+    ? `${amount} ${charge.priceUnit}`
+    : formatUnitAmount(amount, charge.currency)
+}
+
+/**
  * Tier bands must climb, and end open.
  *
  * Both failures are silent otherwise: overlapping bands bill the wrong amount,
@@ -376,6 +401,10 @@ export interface Charge {
   trialPeriodDays?: number | null
   /** The custom price unit (e.g. `TOK`) the charge is denominated in; absent for plain currency. */
   priceUnit?: string | null
+  /** With `priceUnit`: the amount in that unit (`"2.4"`); `amount` is its currency equivalent. */
+  priceUnitAmount?: string | null
+  /** With `priceUnit`: the bands in that unit; `tiers` are their currency equivalents. */
+  priceUnitTiers?: Tier[]
   /** When this version of the charge took effect; null when the API did not say. */
   startDate: Date | null
   /**
@@ -567,12 +596,15 @@ export function chargeToDraft(charge: Charge): CreateCharge {
       : {}),
   }
 
+  // A custom-unit charge is edited in its unit (2.4 QAU), not the currency it converts to.
+  const amount = charge.priceUnit && charge.priceUnitAmount ? charge.priceUnitAmount : charge.amount
+
   switch (charge.billingModel) {
     case BillingModel.Package:
       return {
         ...base,
         billingModel: BillingModel.Package,
-        amount: charge.amount || '0',
+        amount: amount || '0',
         divideBy: charge.transformQuantity?.divideBy ?? 1,
       }
     case BillingModel.Tiered:
@@ -580,10 +612,10 @@ export function chargeToDraft(charge: Charge): CreateCharge {
         ...base,
         billingModel: BillingModel.Tiered,
         tierMode: charge.tierMode ?? TierMode.Volume,
-        tiers: charge.tiers,
+        tiers: charge.priceUnit && charge.priceUnitTiers ? charge.priceUnitTiers : charge.tiers,
       }
     case BillingModel.FlatFee:
-      return { ...base, billingModel: BillingModel.FlatFee, amount: charge.amount || '0' }
+      return { ...base, billingModel: BillingModel.FlatFee, amount: amount || '0' }
   }
 }
 
