@@ -20,14 +20,17 @@ export function toCreditNoteDocument(
       : undefined
   const date = (value: Date) =>
     new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(value)
+  // Finalized, else created: V1 dates every memo by its creation, so a memo
+  // that was never finalized is not left without a date.
+  const issued = note.finalizedAt ?? note.createdAt
   return {
     id: note.id,
     number: note.number,
     status: note.status,
     currency: note.amount.currency,
     amount: note.amount.amount,
-    issuedAt: note.finalizedAt
-      ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(note.finalizedAt)
+    issuedAt: issued
+      ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(issued)
       : null,
     creditTo: {
       name: note.customerName || note.customerId || '—',

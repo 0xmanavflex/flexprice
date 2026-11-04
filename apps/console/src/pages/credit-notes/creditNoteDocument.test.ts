@@ -36,6 +36,18 @@ describe('credit memo document mapping', () => {
     expect(toCreditNoteDocument(note, { ...invoice, currency: 'EUR' }).invoiceTotal).toBeUndefined()
     expect(toCreditNoteDocument(note, { ...invoice, lines: [] }).lines[0]?.invoiced).toBeNull()
   })
+  it('dates a memo by its creation when it has no finalized date', () => {
+    const created = new Date('2026-10-09T12:00:00Z')
+    const format = (value: Date) =>
+      new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
+    const unfinalized = { ...note, finalizedAt: null, createdAt: created }
+    expect(toCreditNoteDocument(unfinalized).issuedAt).toBe(format(created))
+    const finalized = new Date('2026-10-12T12:00:00Z')
+    expect(toCreditNoteDocument({ ...unfinalized, finalizedAt: finalized }).issuedAt).toBe(
+      format(finalized),
+    )
+    expect(toCreditNoteDocument({ ...unfinalized, createdAt: null }).issuedAt).toBeNull()
+  })
   it('does not infer successful refunds from finalization', () => {
     const document = toCreditNoteDocument({ ...note, type: 'refund', refundStatus: 'FAILED' })
     expect(document.settlement).toBe('unknown')

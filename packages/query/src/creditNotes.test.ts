@@ -59,6 +59,8 @@ describe('fetchCreditNotes', () => {
       search: 'glob',
     })
     expect(seen[0]).toContain('/creditnotes?limit=25&offset=25&credit_note_status=VOIDED')
+    // The Customer and Invoice columns read the embedded records.
+    expect(new URL(seen[0]!).searchParams.get('expand')).toBe('invoice,customer')
     expect(page.creditNotes.map((n) => n.number)).toEqual(['CN-2'])
     expect(page.total).toBe(40)
     vi.unstubAllGlobals()
