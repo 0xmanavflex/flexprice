@@ -10,6 +10,7 @@ import {
   PlusIcon,
 } from '@ui/icons'
 import {
+  DOCS,
   COST_SHEET_SORT_LABEL,
   COST_SHEET_STATUS_LABEL,
   type CostSheet,
@@ -78,19 +79,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Cost against revenue',
     description: 'How measuring what usage costs you turns into a margin you can watch.',
-    href: 'https://docs.flexprice.io/docs/ai-cost-tracking/overview',
+    href: DOCS.costTracking,
     icon: <TrendingUpIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Recording usage costs',
     description: 'Getting the per-unit costs in, so there is something to compare against.',
-    href: 'https://docs.flexprice.io/docs/ai-cost-tracking/ingesting-ai-usage',
+    href: DOCS.costIngestAiUsage,
     icon: <ScrollTextIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Cost sheets in the API',
     description: 'The create endpoint, and the shape of a sheet and its prices.',
-    href: 'https://docs.flexprice.io/api-reference/costs/create-costsheet',
+    href: DOCS.apiCreateCostSheet,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
 ]

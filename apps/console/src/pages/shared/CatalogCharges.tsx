@@ -5,6 +5,7 @@ import {
   toUpdatePriceRequest,
   useCreateBulkPrices,
   usePriceHistory,
+  useTerminatePrice,
   useUpdatePrice,
 } from '@fp/query'
 import { AddChargeDialog, ChargeTable } from '@fp/ui/pages'
@@ -43,6 +44,7 @@ export function CatalogCharges({
   const navigate = useNavigate()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
+  const terminate = useTerminatePrice()
   const [target, setTarget] = useState<Charge | null>(null)
   const [form, setForm] = useState<'add' | Charge | null>(null)
   const editing = form !== null && form !== 'add' ? form : null
@@ -76,6 +78,7 @@ export function CatalogCharges({
         onAdd={() => setForm('add')}
         onEdit={(charge) => setForm(charge)}
         onTerminate={(charge) => setTarget(charge)}
+        onDeleteUpcoming={(versionId) => terminate.mutateAsync({ id: versionId })}
       />
       <AddChargeDialog
         open={form !== null}

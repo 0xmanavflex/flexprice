@@ -9,7 +9,7 @@ describe('parsePortalLocation', () => {
       region: 'us',
       apiOrigin: 'https://us.api.flexprice.io',
       view: 'overview',
-      range: '30d',
+      range: null,
       customRange: null,
       invoiceId: null,
     })
@@ -32,8 +32,8 @@ describe('parsePortalLocation', () => {
     expect(parsePortalLocation(path, search, urls)).toBeNull()
   })
 
-  it('falls back to the default range for an unknown one', () => {
-    expect(parsePortalLocation('/us/usage', '?range=year', urls)?.range).toBe('30d')
+  it('leaves an unknown range to the settings’ default', () => {
+    expect(parsePortalLocation('/us/usage', '?range=year', urls)?.range).toBeNull()
   })
 })
 
@@ -78,7 +78,7 @@ describe('portalHref', () => {
     })
     expect(
       portalHref(
-        { region: 'us', view: 'overview', range: '30d', customRange: null, invoiceId: null },
+        { region: 'us', view: 'overview', range: null, customRange: null, invoiceId: null },
         '',
       ),
     ).toBe('/us')
@@ -143,7 +143,7 @@ describe('a region-less link (this deployment’s own portal)', () => {
   it('round-trips through portalHref', () => {
     expect(
       portalHref(
-        { region: null, view: 'overview', range: '30d', customRange: null, invoiceId: null },
+        { region: null, view: 'overview', range: null, customRange: null, invoiceId: null },
         '/p',
       ),
     ).toBe('/p')

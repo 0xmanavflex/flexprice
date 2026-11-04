@@ -2,6 +2,7 @@ import { integrationColumn, type IntegrationMappings } from '../../shared/integr
 import { useMemo } from 'react'
 import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon, PlusIcon } from '@ui/icons'
 import {
+  DOCS,
   DRAFT_INVOICE_NUMBER_LABEL,
   DEFAULT_INVOICE_QUERY,
   type Invoice,
@@ -82,19 +83,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Raising a one-off invoice',
     description: 'Billing something that is not on a contract.',
-    href: 'https://docs.flexprice.io/api-reference/invoices/create-one-off-invoice',
+    href: DOCS.apiCreateOneOffInvoice,
     icon: <ReceiptIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Recording a payment',
     description: 'Marking an invoice settled when the money arrived elsewhere.',
-    href: 'https://docs.flexprice.io/api-reference/invoices/update-invoice-payment-status',
+    href: DOCS.apiUpdateInvoicePaymentStatus,
     icon: <WalletIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Invoice numbering and due dates',
     description: 'Prefixes, sequences and the payment terms new invoices inherit.',
-    href: 'https://docs.flexprice.io/docs/settings/settings#invoice-configuration',
+    href: DOCS.invoiceSettings,
     icon: <SettingsIcon aria-hidden className="size-4" />,
   },
 ]

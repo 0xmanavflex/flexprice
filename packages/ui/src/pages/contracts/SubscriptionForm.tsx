@@ -4,6 +4,8 @@ import { Controller, type FieldErrors, type Resolver, type UseFormRegister } fro
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   CalendarIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   CoinsIcon,
   KeyRoundIcon,
   LayersIcon,
@@ -1161,11 +1163,6 @@ export function SubscriptionForm({
     ),
     phases: values.planId ? (
       <div className="flex flex-col gap-5">
-        <OtherCadences
-          selection={selection}
-          optedIn={values.optedInChargeIds}
-          onChange={(next) => set('optedInChargeIds', next)}
-        />
         <PhasesStep
           phases={values.phases}
           starts={starts}
@@ -1187,6 +1184,11 @@ export function SubscriptionForm({
           meters={meters}
           priceUnits={priceUnits}
           planLabel={planLabel}
+        />
+        <OtherCadences
+          selection={selection}
+          optedIn={values.optedInChargeIds}
+          onChange={(next) => set('optedInChargeIds', next)}
         />
         <AddonsSection
           selected={values.addons}
@@ -1483,6 +1485,9 @@ function CloseSubForm({ label, onClick }: { label: string; onClick: () => void }
   )
 }
 
+/** How many other-cadence prices show before "Show all". */
+const OTHER_CADENCES_SHOWN = 5
+
 /**
  * Charges the contract does not bill by default: those at another cadence that
  * fits (which can be opted in, as V1's "additional plan prices"), and those it
@@ -1497,16 +1502,40 @@ function OtherCadences({
   optedIn: string[]
   onChange: (next: string[]) => void
 }) {
+  const [expanded, setExpanded] = useState(false)
   const optedInCharges = selection.attached.filter((charge) => optedIn.includes(charge.id))
   const offered = [...optedInCharges, ...selection.optional]
   if (offered.length === 0 && selection.excluded.length === 0) return null
   const why = (reason: 'currency' | 'cadence') =>
     reason === 'currency' ? 'another currency' : "a cadence this contract can't bill"
+  const offeredIds = offered.map((charge) => charge.id)
+  const allOn = offeredIds.every((id) => optedIn.includes(id))
+  // Every price at once, or none: the list can run to a dozen switches.
+  const bulk =
+    offered.length > 1 ? (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          onChange(
+            allOn
+              ? optedIn.filter((id) => !offeredIds.includes(id))
+              : [...optedIn, ...offeredIds.filter((id) => !optedIn.includes(id))],
+          )
+        }
+      >
+        {allOn ? <XIcon aria-hidden /> : <PlusIcon aria-hidden />}
+        {allOn ? 'Clear all' : 'Add all'}
+      </Button>
+    ) : null
+  const hidden = offered.length - OTHER_CADENCES_SHOWN
+  const shown = expanded || hidden <= 0 ? offered : offered.slice(0, OTHER_CADENCES_SHOWN)
   return (
-    <FormCard title="Charges at other cadences" status="optional">
+    <FormCard title="Charges at other cadences" status="optional" adornment={bulk}>
       {offered.length > 0 ? (
         <ul className="divide-y">
-          {offered.map((charge) => {
+          {shown.map((charge) => {
             const on = optedIn.includes(charge.id)
             const name = chargeName(charge)
             return (
@@ -1533,6 +1562,20 @@ function OtherCadences({
               </li>
             )
           })}
+          {hidden > 0 ? (
+            <li className="px-5 py-3 sm:px-6">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((value) => !value)}
+              >
+                {expanded ? <ChevronUpIcon aria-hidden /> : <ChevronDownIcon aria-hidden />}
+                {expanded ? 'Show less' : `Show all (${offered.length})`}
+              </Button>
+            </li>
+          ) : null}
         </ul>
       ) : null}
       {selection.excluded.length > 0 ? (

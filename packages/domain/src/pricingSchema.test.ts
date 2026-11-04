@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { normalisePricingSchema, pricingSchemaProblems, pricingSchemaTotals } from './pricingSchema'
+import {
+  creditRatesToCurrency,
+  normalisePricingSchema,
+  pricingSchemaProblems,
+  pricingSchemaTotals,
+} from './pricingSchema'
 
 /** A minimal wire body in the shape the parser answers with. */
 const WIRE = {
@@ -117,6 +122,56 @@ describe('normalisePricingSchema', () => {
     })
     expect(schema.creditGrants[0]).toMatchObject({ cadence: 'recurring', period: 'monthly' })
     expect(schema.creditGrants[1]).toMatchObject({ cadence: 'onetime', period: null })
+  })
+
+  it("keeps a grant's conversion rate, and a parse's usage rates as written", () => {
+    const wire = {
+      ...WIRE,
+      credit_grants: [
+        {
+          plan_name: 'Starter',
+          name: 'Rated',
+          credits: 10,
+          cadence: 'onetime',
+          conversion_rate: 0.01,
+        },
+      ],
+    }
+    const schema = normalisePricingSchema(wire)
+    expect(schema.creditGrants[0]?.conversionRate).toBe(0.01)
+    expect(schema.plans[0]?.usageCharges[0]?.amountPerUnit).toBe(
+      normalisePricingSchema(WIRE).plans[0]?.usageCharges[0]?.amountPerUnit,
+    )
+    const unrated = normalisePricingSchema({
+      ...WIRE,
+      credit_grants: [
+        { plan_name: 'Starter', name: 'Free', credits: 10, cadence: 'onetime', conversion_rate: 0 },
+      ],
+    })
+    expect(unrated.creditGrants[0]?.conversionRate).toBeNull()
+  })
+
+  it('converts credit-priced usage rates with the plan grant rate', () => {
+    const schema = creditRatesToCurrency(
+      normalisePricingSchema({
+        ...WIRE,
+        credit_grants: [
+          {
+            plan_name: 'Starter',
+            name: 'Rated',
+            credits: 10,
+            cadence: 'onetime',
+            conversion_rate: 0.01,
+          },
+        ],
+      }),
+    )
+    const original = normalisePricingSchema(WIRE).plans[0]?.usageCharges[0]?.amountPerUnit ?? NaN
+    expect(schema.plans[0]?.usageCharges[0]?.amountPerUnit).toBeCloseTo(original * 0.01, 12)
+    // No grant with a rate: nothing to convert with.
+    expect(creditRatesToCurrency(normalisePricingSchema(WIRE))).toEqual(
+      normalisePricingSchema(WIRE),
+    )
   })
 
   it('coerces a usage charge away from one-time, which it cannot be', () => {

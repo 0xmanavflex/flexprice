@@ -317,6 +317,11 @@ export interface SubscriptionDetailViewProps {
   onEndCharge?:
     ((line: SubscriptionLine, draft: EndContractCharge) => Promise<void> | void) | undefined
   /**
+   * Deletes a line item version that has not started. The API clears the end
+   * date on the version billing now.
+   */
+  onDeleteUpcomingLine?: ((lineId: string) => Promise<unknown>) | undefined
+  /**
    * Quantity (and flat-fee price) changes on fixed charges. Both are needed: the
    * change is always previewed before it is confirmed.
    */
@@ -508,6 +513,7 @@ export function SubscriptionDetailView({
   onAddCharge,
   onEditCharge,
   onEndCharge,
+  onDeleteUpcomingLine,
   onPreviewQuantity,
   onChangeQuantity,
   meters = [],
@@ -1159,6 +1165,9 @@ export function SubscriptionDetailView({
                           ? { onTerminate: (charge: Charge) => endCharge(charge) }
                           : {})}
                         removeLabel="End charge"
+                        {...(onDeleteUpcomingLine
+                          ? { onDeleteUpcoming: onDeleteUpcomingLine }
+                          : {})}
                         extraActions={chargeExtras}
                         variant="summary"
                         {...(openCharge ? { onOpenCharge: openCharge } : {})}
@@ -1679,6 +1688,7 @@ export function SubscriptionDetailView({
               ? { onTerminate: (charge: Charge) => endCharge(charge) }
               : {})}
             removeLabel="End charge"
+            {...(onDeleteUpcomingLine ? { onDeleteUpcoming: onDeleteUpcomingLine } : {})}
             {...(openCharge ? { onOpenCharge: openCharge } : {})}
             {...(chargeHistory ? { history: chargeHistory } : {})}
             extraActions={chargeExtras}

@@ -43,16 +43,30 @@ export const getPortalIntegrations = (auth: PortalAuth) => get(auth, '/integrati
 
 /** Allowances used this period, per feature — `GET /usage`. */
 export const getPortalUsageSummary = (auth: PortalAuth) => get(auth, '/usage')
-/** Spend per feature over a window, with points — `POST /analytics/revenue`. */
+/**
+ * Spend per feature over a window, with points — `POST /analytics/revenue`.
+ * `groupBy`, an event property key, splits each feature by that property's value.
+ */
 export const getPortalUsageAnalytics = (
   auth: PortalAuth,
   window: { start: Date; end: Date; windowSize: 'HOUR' | 'DAY' },
+  groupBy?: string,
 ) =>
   post(auth, '/analytics/revenue', {
     start_time: window.start.toISOString(),
     end_time: window.end.toISOString(),
     window_size: window.windowSize,
     expand: ['price', 'feature'],
+    ...(groupBy ? { group_by: [`properties.${groupBy}`] } : {}),
+  })
+/**
+ * The event property keys this customer may group usage by —
+ * `POST /analytics/properties`. Empty unless the merchant switched grouping on.
+ */
+export const getPortalPropertyKeys = (auth: PortalAuth, window: { start: Date; end: Date }) =>
+  post(auth, '/analytics/properties', {
+    start_time: window.start.toISOString(),
+    end_time: window.end.toISOString(),
   })
 
 export const getPortalSubscriptions = (auth: PortalAuth, page = 1, limit = 50) =>

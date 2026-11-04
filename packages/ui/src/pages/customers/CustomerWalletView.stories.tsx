@@ -117,20 +117,6 @@ const SPLIT_DEBIT: WalletTransaction = {
   ],
 }
 
-/** A debit naming a top-up that is not in the loaded ledger. */
-const DEBIT_FROM_UNLOADED: WalletTransaction = {
-  id: 'wtx_unloaded_debit',
-  direction: 'out',
-  reason: 'Invoice payment',
-  description: '',
-  credits: '55',
-  amount: money('27.50', 'USD'),
-  createdAt: new Date('2026-09-26T00:00:00Z'),
-  creditsAvailable: null,
-  expiresAt: null,
-  drawnFrom: [{ topUpId: 'wtx_archived_0f3a9c', credits: '55' }],
-}
-
 const asyncOk = () => fn(async () => undefined)
 
 const meta = {
@@ -379,67 +365,15 @@ export const LedgerColumns: Story = {
   },
 }
 
-/** Debits show beside top-ups; a debit opens to the top-ups it drew from. */
-export const ExpandsDebit: Story = {
+/** Debits show beside top-ups as rows of their own, with nothing to open. */
+export const DebitIsOneRow: Story = {
   args: { transactions: [SPLIT_DEBIT, WITH_BREAKDOWN, BARE_TOP_UP] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    // The debit is a row of its own, not hidden under a top-up.
     await expect(await canvas.findByText('Manual debit')).toBeInTheDocument()
     await expect(canvas.getByText('−670')).toBeInTheDocument()
+    await expect(canvas.queryByRole('button', { name: /expand/i })).toBeNull()
     await expect(canvas.queryByText('From Subscription grant')).toBeNull()
-    await userEvent.click(canvas.getByRole('button', { name: /expand manual debit/i }))
-    await expect(await canvas.findByText('From Subscription grant')).toBeInTheDocument()
-    await expect(canvas.getByText('From Credit memo')).toBeInTheDocument()
-    // The open debit says how many lines sit under it.
-    await expect(canvas.getByText('Drew from 2 top-ups')).toBeInTheDocument()
-    await expect(canvas.getByText('−640')).toBeInTheDocument()
-    await expect(canvas.getByText('−30')).toBeInTheDocument()
-    // Top-ups do not expand.
-    await expect(canvas.queryByRole('button', { name: /expand subscription grant/i })).toBeNull()
-    await userEvent.click(canvas.getByRole('button', { name: /collapse manual debit/i }))
-    await expect(canvas.queryByText('From Subscription grant')).toBeNull()
-  },
-}
-
-/** A source top-up outside the loaded ledger still shows, by its id. */
-export const DebitFromUnloadedTopUp: Story = {
-  args: { transactions: [DEBIT_FROM_UNLOADED, BARE_TOP_UP] },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: /expand invoice payment/i }))
-    await expect(await canvas.findByText('From a top-up')).toBeInTheDocument()
-    await expect(canvas.getByText('Top-up …0f3a9c')).toBeInTheDocument()
-  },
-}
-
-/** Opening a debit adds lines under it, not transactions: the count stays. */
-export const ExpandingKeepsCount: Story = {
-  render: () => (
-    <WalletLedgerTable transactions={[SPLIT_DEBIT, WITH_BREAKDOWN, BARE_TOP_UP]} now={NOW} />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(await canvas.findByText(/1 - 3 of 3 transactions/)).toBeInTheDocument()
-    await userEvent.click(canvas.getByRole('button', { name: /expand manual debit/i }))
-    await expect(await canvas.findByText('From Subscription grant')).toBeInTheDocument()
-    await expect(canvas.getByText(/1 - 3 of 3 transactions/)).toBeInTheDocument()
-  },
-}
-
-/** A search that matches only a debit's source line keeps the debit with it, never an orphaned line. */
-export const SearchKeepsSourcesWithTheirDebit: Story = {
-  render: () => (
-    <WalletLedgerTable transactions={[SPLIT_DEBIT, WITH_BREAKDOWN, BARE_TOP_UP]} now={NOW} />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: /expand manual debit/i }))
-    await userEvent.type(canvas.getByPlaceholderText('Search transactions…'), 'credit memo')
-    // The credit memo top-up, and the debit that drew from it with its lines.
-    await expect(await canvas.findByText(/of 2 transactions/)).toBeInTheDocument()
-    await expect(canvas.getByText('Manual debit')).toBeInTheDocument()
-    await expect(canvas.getByText('From Credit memo')).toBeInTheDocument()
   },
 }
 

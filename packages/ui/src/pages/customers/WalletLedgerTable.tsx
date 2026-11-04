@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { type WalletTransaction, formatMoney, money } from '@fp/domain'
-import { ChevronDownIcon, ChevronRightIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { DetailTable } from '../shared/DetailTable'
@@ -8,7 +6,7 @@ import { DetailTable } from '../shared/DetailTable'
 export const WalletLedgerTableProvenance = provenance({
   source: 'composition',
   composes: ['pages/shared/DetailTable'],
-  note: 'DetailTable over a wallet’s transactions: top-ups and debits as signed credits, remaining, consumed bar and expiry on top-ups, and each debit opening to the top-ups it drew from.',
+  note: 'DetailTable over a wallet’s transactions: top-ups and debits as signed credits, remaining, consumed bar and expiry on top-ups.',
 })
 
 /** An expiry this close is called out in amber. */
@@ -75,18 +73,9 @@ function shareOf(total: WalletTransaction['amount'], part: number, whole: number
   return Number.isFinite(value) ? formatMoney(money(value.toFixed(2), total.currency)) : '—'
 }
 
-/** One top-up a debit drew from: the API's `consumption_breakdown` line, with the top-up when loaded. */
-interface DebitSource {
-  topUpId: string
-  credits: string
-  topUp: WalletTransaction | undefined
-}
-
 type LedgerRow =
   | { kind: 'topup'; id: string; tx: WalletTransaction }
   | { kind: 'debit'; id: string; tx: WalletTransaction }
-  /** `tx` is the debit, so the row sorts and searches with it. */
-  | { kind: 'source'; id: string; tx: WalletTransaction; source: DebitSource }
 
 /** Ids and request dumps. They stay searchable and stay off the row. */
 function looksTechnical(text: string): boolean {
@@ -134,25 +123,6 @@ export function expiredByTopUp(transactions: readonly WalletTransaction[]): Map<
     }
   }
   return out
-}
-
-const hasBreakdown = (tx: WalletTransaction) => (tx.drawnFrom?.length ?? 0) > 0
-
-/** An open debit's line: how many top-ups the lines under it come from. */
-function drewFrom(tx: WalletTransaction): string {
-  const count = tx.drawnFrom?.length ?? 0
-  return `Drew from ${count} ${count === 1 ? 'top-up' : 'top-ups'}`
-}
-
-/** "Added Sep 24, 2026 · expires Dec 1, 2026": which top-up a debit drew from. */
-function sourceLine(topUp: WalletTransaction | undefined, topUpId: string): string {
-  if (!topUp) return `Top-up …${topUpId.slice(-6)}`
-  return [
-    topUp.createdAt ? `added ${formatDay(topUp.createdAt)}` : '',
-    topUp.expiresAt ? `expires ${formatDay(topUp.expiresAt)}` : 'never expires',
-  ]
-    .filter(Boolean)
-    .join(' · ')
 }
 
 function ConsumedBar({
@@ -220,9 +190,7 @@ function Expires({ date, now }: { date: Date | null; now: Date }) {
 
 /**
  * The wallet's one ledger, newest first: top-ups and debits side by side. A
- * top-up carries remaining, consumed and expiry. A debit opens to the top-ups
- * it drew from, read from its own `consumption_breakdown`, so it needs no
- * other page of the ledger.
+ * top-up carries remaining, consumed and expiry.
  */
 export function WalletLedgerTable({
   transactions,
@@ -236,31 +204,13 @@ export function WalletLedgerTable({
   const ordered = [...transactions].sort(
     (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
   )
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
-  const toggle = (id: string) =>
-    setOpen((current) => {
-      const next = new Set(current)
-      if (!next.delete(id)) next.add(id)
-      return next
-    })
-
-  const byId = new Map(ordered.map((tx) => [tx.id, tx]))
-  const rows: LedgerRow[] = ordered.flatMap((tx): LedgerRow[] =>
-    tx.direction === 'out'
-      ? [
-          { kind: 'debit', id: tx.id, tx },
-          ...(open.has(tx.id)
-            ? (tx.drawnFrom ?? []).map((line, index): LedgerRow => ({
-                kind: 'source',
-                id: `${tx.id}:${line.topUpId}:${index}`,
-                tx,
-                source: { ...line, topUp: byId.get(line.topUpId) },
-              }))
-            : []),
-        ]
-      : [{ kind: 'topup', id: tx.id, tx }],
-  )
-  const anyBreakdown = ordered.some(hasBreakdown)
+  // One row per transaction. A debit does not open to the top-ups it drew
+  // from: that breakdown is off for now.
+  const rows: LedgerRow[] = ordered.map((tx): LedgerRow => ({
+    kind: tx.direction === 'out' ? 'debit' : 'topup',
+    id: tx.id,
+    tx,
+  }))
   const expiredOf = expiredByTopUp(ordered)
   /** The share of a top-up drawn down by usage: neither left nor lapsed. */
   const consumedShare = (tx: WalletTransaction) => {
@@ -270,7 +220,6 @@ export function WalletLedgerTable({
     return Math.max(0, total - left - (expiredOf.get(tx.id) ?? 0)) / total
   }
 
-  /** Sources sort and search with their debit, so they stay beneath it. */
   const sortKey = (pick: (tx: WalletTransaction) => number) => (row: LedgerRow) => pick(row.tx)
 
   return (
@@ -280,64 +229,21 @@ export function WalletLedgerTable({
         label="Transactions"
         noun={noun}
         rows={rows}
-        // The lines a debit opens to are not transactions of their own.
-        isChild={(row) => row.kind === 'source'}
         empty="No transactions yet."
         searchText={(row) =>
-          row.kind === 'source'
-            ? `${row.tx.reason} ${row.source.topUp?.reason ?? ''} ${row.source.topUpId}`
-            : `${row.tx.reason} ${detailLine(row.tx)} ${row.tx.description} ${row.tx.reference?.id ?? ''}`
+          `${row.tx.reason} ${detailLine(row.tx)} ${row.tx.description} ${row.tx.reference?.id ?? ''}`
         }
         columns={[
           {
             key: 'transaction',
             header: 'Transaction',
             width: 280,
-            cell: (row) =>
-              row.kind === 'source' ? (
-                // A rule down the left ties every line a debit drew from to it,
-                // so it is plain where that debit's group ends and the next row
-                // begins.
-                <div className="border-border ml-3 flex min-w-0 items-center gap-2 border-l-2 pl-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm">
-                      {'From '}
-                      {row.source.topUp?.reason || 'a top-up'}
-                    </p>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {sourceLine(row.source.topUp, row.source.topUpId)}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex min-w-0 items-center gap-2">
-                  {row.kind === 'debit' && hasBreakdown(row.tx) ? (
-                    <button
-                      type="button"
-                      aria-expanded={open.has(row.tx.id)}
-                      aria-label={`${open.has(row.tx.id) ? 'Collapse' : 'Expand'} ${row.tx.reason || 'debit'}`}
-                      onClick={() => toggle(row.tx.id)}
-                      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex size-6 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-3"
-                    >
-                      {open.has(row.tx.id) ? (
-                        <ChevronDownIcon className="size-4" aria-hidden="true" />
-                      ) : (
-                        <ChevronRightIcon className="size-4" aria-hidden="true" />
-                      )}
-                    </button>
-                  ) : anyBreakdown ? (
-                    <span className="size-6 shrink-0" aria-hidden="true" />
-                  ) : null}
-                  <div className="min-w-0">
-                    <p className="truncate text-sm">{row.tx.reason || '—'}</p>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {row.kind === 'debit' && open.has(row.tx.id)
-                        ? drewFrom(row.tx)
-                        : detailLine(row.tx)}
-                    </p>
-                  </div>
-                </div>
-              ),
+            cell: (row) => (
+              <div className="min-w-0">
+                <p className="truncate text-sm">{row.tx.reason || '—'}</p>
+                <p className="text-muted-foreground truncate text-xs">{detailLine(row.tx)}</p>
+              </div>
+            ),
           },
           {
             key: 'credits',
@@ -345,12 +251,7 @@ export function WalletLedgerTable({
             width: 130,
             sortBy: sortKey((tx) => Number(tx.credits)),
             cell: (row) =>
-              row.kind === 'source' ? (
-                <p className="text-muted-foreground text-sm tabular-nums">
-                  {'−'}
-                  {formatCredits(row.source.credits)}
-                </p>
-              ) : row.kind === 'debit' ? (
+              row.kind === 'debit' ? (
                 <div>
                   <p className="text-destructive-foreground dark:text-destructive text-sm font-medium tabular-nums">
                     {'−'}
@@ -396,17 +297,6 @@ export function WalletLedgerTable({
             width: 150,
             sortBy: sortKey((tx) => consumedShare(tx) ?? -1),
             cell: (row) => {
-              if (row.kind === 'source') {
-                // How much of that top-up this one debit took.
-                const total = Number(row.source.topUp?.credits)
-                const used = Number(row.source.credits)
-                return row.source.topUp ? (
-                  <ConsumedBar
-                    share={total > 0 && Number.isFinite(used) ? used / total : null}
-                    label="of the top-up"
-                  />
-                ) : null
-              }
               if (row.kind === 'debit') return null
               const expired = row.tx.expiresAt !== null && daysUntil(row.tx.expiresAt, now) < 0
               const lapsed = expiredOf.get(row.tx.id) ?? 0
@@ -434,8 +324,7 @@ export function WalletLedgerTable({
       />
       {ordered.length === 0 ? null : (
         <p className="text-muted-foreground border-t px-6 py-3 text-xs">
-          Usage draws on the top-up that expires soonest, among those it is allowed to use. Open a
-          debit to see which top-ups it drew from.
+          Usage draws on the top-up that expires soonest, among those it is allowed to use.
         </p>
       )}
     </>

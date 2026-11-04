@@ -1,4 +1,5 @@
 import type {
+  PortalParts,
   PortalCustomer,
   PortalGateway,
   PortalInvoice,
@@ -43,6 +44,8 @@ export interface CustomerPortalData {
   topUps: Load<{ items: PortalTopUp[]; total: number }>
   /** The invoice open in the sheet, with its lines; null when none is open. */
   invoiceDetail: Load<PortalInvoice> | null
+  /** `spend` split by the chosen event property; null when usage is not grouped. */
+  groupedSpend?: Load<PortalSpend> | null
 }
 
 /**
@@ -55,6 +58,8 @@ export interface CustomerPortalActions {
   onRangeChange: (range: PortalRange) => void
   /** A range picked on the calendar, `[start, end)` in local days. */
   onCustomRange: (start: Date, end: Date) => void
+  /** Group the usage breakdown by an event property key, or by feature (null). */
+  onGroupByChange?: (key: string | null) => void
   onWalletChange: (walletId: string) => void
   onShowMoreTransactions: () => void
   onShowMoreTopUps: () => void
@@ -90,7 +95,19 @@ export interface CustomerPortalViewProps {
   /** A CSS colour for the brand mark and primary buttons. */
   brandColor: string | null
   views: readonly PortalView[]
+  /** Each view's tab name; the portal's own names when absent. */
+  labels?: Record<PortalView, string>
+  /** The parts the merchant shows; every part when absent. */
+  parts?: PortalParts
   view: PortalView
+  /** The ranges Usage offers; every range when absent. */
+  ranges?: readonly PortalRange[]
+  /** Whether customers may pick their own dates; true when absent. */
+  allowCustomRange?: boolean
+  /** Event property keys usage may be grouped by; none hides the control. */
+  groupKeys?: readonly string[]
+  /** The key the breakdown is grouped by, or null for by feature. */
+  groupBy?: string | null
   range: PortalRange
   /** A calendar range, which replaces `range` when set. */
   customRange: { start: Date; end: Date } | null

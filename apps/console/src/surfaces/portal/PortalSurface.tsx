@@ -13,6 +13,7 @@ import {
   usePortalInvoicePdf,
   usePortalInvoices,
   usePortalPaymentMethods,
+  usePortalPropertyKeys,
   usePortalQuotas,
   usePortalSpend,
   usePortalSubscriptions,
@@ -136,9 +137,17 @@ function Portal({
   navigate: (next: PortalLocation, mode?: 'push' | 'replace') => void
 }) {
   const [walletId, setWalletId] = useState<string | null>(null)
+  const [groupBy, setGroupBy] = useState<string | null>(null)
 
   const customer = usePortalCustomer(auth)
   const config = usePortalConfig(auth)
+  const usageControls = config.data?.usage
+  // The merchant's presets: a range they do not offer, or none in the address, opens on their default.
+  const range: PortalRange =
+    location.range && (usageControls?.ranges.includes(location.range) ?? true)
+      ? location.range
+      : (usageControls?.defaultRange ?? '30d')
+  const customRange = usageControls?.customRange === false ? null : location.customRange
   const gateways = usePortalGateways(auth)
   const subscriptions = usePortalSubscriptions(auth)
   const invoices = usePortalInvoices(auth)
@@ -147,16 +156,29 @@ function Portal({
   const quotas = usePortalQuotas(auth)
   // One window per range per day: a re-render must not move the window and refetch.
   const today = new Date().toDateString()
-  const customStart = location.customRange?.start.getTime() ?? null
-  const customEnd = location.customRange?.end.getTime() ?? null
+  const customStart = customRange?.start.getTime() ?? null
+  const customEnd = customRange?.end.getTime() ?? null
   const span = useMemo(
     () =>
       customStart !== null && customEnd !== null
         ? { start: new Date(customStart), end: new Date(customEnd) }
-        : portalRangeWindow(location.range, new Date(today)),
-    [location.range, customStart, customEnd, today],
+        : portalRangeWindow(range, new Date(today)),
+    [range, customStart, customEnd, today],
   )
   const spend = usePortalSpend(auth, span.start, span.end)
+  // Only the Usage view groups, and only by keys the merchant lets customers see (the server filters).
+  const onUsage = location.view === 'usage'
+  const propertyKeys = usePortalPropertyKeys(auth, span.start, span.end, onUsage)
+  const groupKeys = propertyKeys.data ?? []
+  // A key that is not in this window's usage would put everything under "No value".
+  const effectiveGroupBy = groupBy && groupKeys.includes(groupBy) ? groupBy : null
+  const groupedSpend = usePortalSpend(
+    auth,
+    span.start,
+    span.end,
+    onUsage && effectiveGroupBy !== null,
+    effectiveGroupBy,
+  )
   // The same length of time just before, for "↑ 12% vs the 30 days before".
   const previousStart = useMemo(
     () => new Date(span.start.getTime() - (span.end.getTime() - span.start.getTime())),
@@ -202,7 +224,7 @@ function Portal({
   }, [customer.data])
 
   const views = config.data?.tabs ?? ['overview', 'usage', 'credits', 'invoices']
-  const view: PortalView = views.includes(location.view) ? location.view : 'overview'
+  const view: PortalView = views.includes(location.view) ? location.view : (views[0] ?? 'overview')
 
   // An expired or revoked token fails every call the same way; the customer call decides.
   if (isAuthError(customer.error)) return <Expired />
@@ -213,6 +235,7 @@ function Portal({
       navigate({ ...location, range, customRange: null }, 'replace'),
     onCustomRange: (start, end) =>
       navigate({ ...location, customRange: { start, end } }, 'replace'),
+    onGroupByChange: setGroupBy,
     onWalletChange: (id) => {
       setWalletId(id)
     },
@@ -275,9 +298,19 @@ function Portal({
       brandName={null}
       brandColor={config.data?.primaryColor ?? null}
       views={views}
+      {...(config.data
+        ? {
+            labels: config.data.labels,
+            parts: config.data.parts,
+            ranges: config.data.usage.ranges,
+            allowCustomRange: config.data.usage.customRange,
+          }
+        : {})}
+      groupKeys={groupKeys}
+      groupBy={effectiveGroupBy}
       view={view}
-      range={location.range}
-      customRange={location.customRange}
+      range={range}
+      customRange={customRange}
       walletId={wallet?.id ?? null}
       data={{
         customer: load(customer),
@@ -294,6 +327,7 @@ function Portal({
         flows: load(flows),
         topUps: load(topUps),
         invoiceDetail: location.invoiceId ? load(invoiceDetail) : null,
+        groupedSpend: effectiveGroupBy ? load(groupedSpend) : null,
       }}
       actions={actions}
     />

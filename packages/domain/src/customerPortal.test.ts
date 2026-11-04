@@ -15,8 +15,10 @@ import {
   totalDue,
   unitPriceLabel,
   toPortalActionUrl,
+  DEFAULT_PORTAL_CONFIG,
   toPortalConfig,
   toPortalCustomer,
+  toPortalPropertyKeys,
   toPortalGateways,
   toPortalInvoices,
   toPortalPaymentMethods,
@@ -44,7 +46,7 @@ describe('customer and config', () => {
     expect(toPortalCustomer({ external_id: 'acme' }).initials).toBe('AC')
   })
 
-  it('keeps the portal’s own tab order whatever the stored order, and overview always', () => {
+  it('keeps the portal’s own tab order whatever the stored order', () => {
     const config = toPortalConfig({
       value: {
         sections: [
@@ -69,8 +71,105 @@ describe('customer and config', () => {
         ],
       },
     })
-    expect(config).toEqual({ primaryColor: '#0f3d3e', tabs: ['overview', 'credits', 'invoices'] })
-    expect(toPortalConfig(null).tabs).toEqual(['overview', 'usage', 'credits', 'invoices'])
+    expect(config.primaryColor).toBe('#0f3d3e')
+    expect(config.tabs).toEqual(['overview', 'credits', 'invoices'])
+    expect(toPortalConfig(null)).toEqual(DEFAULT_PORTAL_CONFIG)
+  })
+
+  it('hides Overview when its section is off, unless nothing else is left', () => {
+    const sections = (overview: boolean, usage: boolean) => ({
+      value: {
+        sections: [
+          { id: 'overview', enabled: overview },
+          { id: 'usage', enabled: usage },
+          { id: 'credits', enabled: false },
+          { id: 'invoices', enabled: false },
+        ],
+      },
+    })
+    expect(toPortalConfig(sections(false, true)).tabs).toEqual(['usage'])
+    expect(toPortalConfig(sections(false, false)).tabs).toEqual(['overview'])
+  })
+
+  it('names each tab with the merchant’s section label', () => {
+    const config = toPortalConfig({
+      value: { sections: [{ id: 'credits', label: 'Wallet', enabled: true }, { id: 'usage' }] },
+    })
+    expect(config.labels).toEqual({
+      overview: 'Overview',
+      usage: 'Usage',
+      credits: 'Wallet',
+      invoices: 'Invoices',
+    })
+  })
+
+  it('hides a part only when its tab is stored and switched off', () => {
+    const config = toPortalConfig({
+      value: {
+        sections: [
+          {
+            id: 'overview',
+            enabled: true,
+            tabs: [
+              { id: '9', type: 'wallet_balance', enabled: true },
+              { id: '10', type: 'subscriptions', enabled: false },
+            ],
+          },
+          {
+            id: 'usage',
+            enabled: true,
+            tabs: [
+              {
+                id: '1',
+                type: 'metric_cards',
+                enabled: true,
+                metric_cards: { show_revenue_metric: false },
+              },
+              { id: '2', type: 'usage_graph', enabled: false },
+            ],
+          },
+          {
+            id: 'credits',
+            enabled: true,
+            tabs: [{ id: '7', type: 'wallet_transactions', enabled: false }],
+          },
+        ],
+      },
+    })
+    expect(config.parts).toEqual({
+      creditBalance: true,
+      // No payment methods tab stored: the server's default tree has none.
+      paymentMethods: true,
+      subscriptions: false,
+      spendSummary: false,
+      usageTrend: false,
+      usageQuota: true,
+      usageBreakdown: true,
+      wallet: true,
+      autoTopup: true,
+      transactions: false,
+    })
+  })
+
+  it('offers the usage graph’s presets and opens on its default', () => {
+    const graph = (usage_graph: Record<string, unknown>) =>
+      toPortalConfig({
+        value: {
+          sections: [{ id: 'usage', tabs: [{ id: '2', type: 'usage_graph', usage_graph }] }],
+        },
+      }).usage
+    expect(
+      graph({
+        date_presets: ['last_month', 'last_7_days', 'someday'],
+        default_preset: 'last_7_days',
+        allow_custom_date_range: false,
+      }),
+    ).toEqual({ ranges: ['7d', 'last-month'], defaultRange: '7d', customRange: false })
+    // A default outside the presets falls to the first offered.
+    expect(graph({ date_presets: ['today'], default_preset: 'last_month' }).defaultRange).toBe(
+      'today',
+    )
+    expect(graph({})).toEqual(DEFAULT_PORTAL_CONFIG.usage)
   })
 
   it('drops a brand colour that is not a colour', () => {
@@ -611,6 +710,34 @@ describe('usage', () => {
     // Priced twice: the effective rate, marked as an average.
     expect(spend.items[0]!.unitCost?.amount).toBe('0.0002')
     expect(spend.items[0]!.unitCostIsAverage).toBe(true)
+  })
+
+  it('grouped by a property, splits each feature by its value', () => {
+    const spend = toPortalSpend(
+      {
+        currency: 'usd',
+        items: [
+          { feature_id: 'f1', name: 'API calls', total_cost: '6', properties: { region: 'eu' } },
+          { feature_id: 'f1', name: 'API calls', total_cost: '4', properties: { region: 'us' } },
+          { feature_id: 'f2', name: 'Storage', total_cost: '1', properties: {} },
+        ],
+      },
+      'region',
+    )
+    expect(spend.items.map((i) => [i.group, i.name, i.cost.amount])).toEqual([
+      ['eu', 'API calls', '6'],
+      ['us', 'API calls', '4'],
+      ['No value', 'Storage', '1'],
+    ])
+    expect(spend.total.amount).toBe('11')
+  })
+
+  it('reads the property keys a customer may group by', () => {
+    expect(toPortalPropertyKeys({ keys: ['region', '', 'region', 'model'] })).toEqual([
+      'region',
+      'model',
+    ])
+    expect(toPortalPropertyKeys(null)).toEqual([])
   })
 
   it('gives a tiered price a unit price too: cost over usage', () => {

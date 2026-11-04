@@ -29,6 +29,7 @@ import {
   useEntitlements,
   usePriceHistory,
   usePrices,
+  useTerminatePrice,
   useUpdateCreditGrant,
   useUpdateEntitlement,
   useUpdatePrice,
@@ -108,6 +109,7 @@ export function CatalogChargesSection({
   const navigate = useNavigate()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
+  const terminate = useTerminatePrice()
   const [form, setForm] = useState<'add' | Charge | null>(null)
   const [terminating, setTerminating] = useState<Charge | null>(null)
 
@@ -150,6 +152,7 @@ export function CatalogChargesSection({
         onAdd={() => setForm('add')}
         onEdit={(charge) => setForm(charge)}
         onTerminate={(charge) => setTerminating(charge)}
+        onDeleteUpcoming={(versionId) => terminate.mutateAsync({ id: versionId })}
       />
 
       <AddChargeDialog

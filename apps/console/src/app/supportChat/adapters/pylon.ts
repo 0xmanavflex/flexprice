@@ -16,6 +16,7 @@ const PylonCommand = {
   OnShow: 'onShow',
   OnHide: 'onHide',
   HideChatBubble: 'hideChatBubble',
+  ShowChatBubble: 'showChatBubble',
 } as const
 
 const PYLON_WIDGET_BASE_URL = 'https://widget.usepylon.com/widget'
@@ -141,6 +142,14 @@ export function createPylonAdapter(
     show(): void {
       if (disposed || typeof window === 'undefined') return
       pylonWindow().Pylon?.(PylonCommand.Show)
+    },
+
+    setLauncherHidden(hidden: boolean): void {
+      // A bubble hidden by configuration stays hidden.
+      if (disposed || hideChatBubble || typeof window === 'undefined') return
+      const target = pylonWindow()
+      installQueueStub(target)
+      target.Pylon?.(hidden ? PylonCommand.HideChatBubble : PylonCommand.ShowChatBubble)
     },
 
     subscribe(next: SupportChatVisibilityHandlers): () => void {

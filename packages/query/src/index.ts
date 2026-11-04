@@ -511,6 +511,7 @@ export {
   useUpdateBonusCreditsConfig,
   useCustomerOnboarding,
   useCustomerPortalConfig,
+  useUsagePropertyKeys,
   useInvoiceConfig,
   useResetCustomCurrencyConfig,
   useResetCustomerOnboarding,
@@ -632,6 +633,15 @@ export {
 } from './dataExports'
 export type { DataExportPage, DataExportWire, ExportRunWire, S3ConnectionWire } from './dataExports'
 export {
+  toCreateEventImportRequest,
+  toEventImport,
+  toEventImportFilter,
+  useCreateEventImport,
+  useEventImport,
+  useEventImports,
+} from './eventImports'
+export type { EventImportPage, EventImportUpload, EventImportWire } from './eventImports'
+export {
   useConnections,
   fetchIntegrations,
   toIntegrationConnection,
@@ -742,6 +752,7 @@ export {
   useAddPortalPaymentMethod,
   usePayPortalInvoice,
   usePortalConfig,
+  usePortalPropertyKeys,
   usePortalCustomer,
   usePortalGateways,
   usePortalInvoice,

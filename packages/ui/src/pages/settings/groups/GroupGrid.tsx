@@ -9,6 +9,7 @@ import {
   PlusIcon,
 } from '@ui/icons'
 import {
+  DOCS,
   DEFAULT_GROUP_QUERY,
   GROUP_ENTITY_TYPE_LABEL,
   GROUP_SORT_LABEL,
@@ -70,19 +71,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'What a tag is',
     description: 'Bundling prices or features so they report and invoice together.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/groups/overview',
+    href: DOCS.groups,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Creating a tag',
     description: 'Pick what it holds, name it, and add its members.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/groups/create',
+    href: DOCS.groupCreate,
     icon: <LayersIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Grouping charges',
     description: 'How a price group changes what an invoice looks like.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/groups/charges-grouping',
+    href: DOCS.groupCharges,
     icon: <TagIcon aria-hidden className="size-4" />,
   },
 ]

@@ -364,20 +364,34 @@ export const CountHidesTheAggregationTarget: Story = {
 }
 
 /**
- * Ticking "Use a custom expression" only turns the field into the expression
- * box: no examples block, just a faint placeholder expression.
+ * "Custom expression" is the second of two aggregation inputs: a compact
+ * monospace editor, the event's properties to insert, and a check that names
+ * an unfinished expression. "Event field" brings the plain field back.
  */
-export const CustomExpressionPlaceholder: Story = {
+export const CustomExpressionEditor: Story = {
+  args: { eventProperties: ['duration_seconds', 'tokens'] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const before = canvasElement.querySelectorAll('textarea, input').length
-    await userEvent.click(await canvas.findByRole('checkbox', { name: 'Use a custom expression' }))
-    const expression = await canvas.findByLabelText(/^Custom expression(?! docs)/)
+    await userEvent.click(await canvas.findByRole('tab', { name: 'Custom expression' }))
+    await expect(canvas.queryByLabelText(/^Event field/)).not.toBeInTheDocument()
+
+    const expression = await canvas.findByLabelText(/^Expression/)
     await expect(expression.tagName).toBe('TEXTAREA')
     await expect(expression).toHaveValue('')
     await expect(expression).toHaveAttribute('placeholder', 'duration_seconds / 60 / 100')
-    // The field replaced the event field in place; nothing else appeared.
-    await expect(canvasElement.querySelectorAll('textarea, input').length).toBe(before)
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Insert duration_seconds' }))
+    await expect(expression).toHaveValue('duration_seconds')
+    await userEvent.type(expression, ' /')
+    await expect(
+      await canvas.findByText('The expression ends with an operator.'),
+    ).toBeInTheDocument()
+    await userEvent.type(expression, ' 60')
+    await expect(canvas.queryByText('The expression ends with an operator.')).toBeNull()
+
+    await userEvent.click(canvas.getByRole('tab', { name: 'Event field' }))
+    await expect(await canvas.findByLabelText(/^Event field/)).toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Expression/)).not.toBeInTheDocument()
   },
 }
 

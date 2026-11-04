@@ -6,6 +6,7 @@ import {
   addPortalPaymentMethod,
   deletePortalPaymentMethod,
   getPortalConfig,
+  getPortalPropertyKeys,
   getPortalCustomer,
   getPortalIntegrations,
   getPortalInvoice,
@@ -38,6 +39,7 @@ import {
   type PortalWalletTransaction,
   toPortalActionUrl,
   toPortalConfig,
+  toPortalPropertyKeys,
   toPortalCustomer,
   toPortalGateways,
   toPortalInvoice,
@@ -317,15 +319,39 @@ export const usePortalSpend = (
   start: Date,
   end: Date,
   enabled = true,
+  /** An event property key: each feature split by its values. */
+  groupBy: string | null = null,
 ): PortalQuery<PortalSpend> => {
   const windowSize = end.getTime() - start.getTime() <= 86_400_000 ? 'HOUR' : 'DAY'
   return usePortalQuery(
     auth,
-    ['spend', start.toISOString(), end.toISOString()],
-    async () => toPortalSpend(await getPortalUsageAnalytics(auth, { start, end, windowSize })),
+    ['spend', start.toISOString(), end.toISOString(), groupBy],
+    async () =>
+      toPortalSpend(
+        await getPortalUsageAnalytics(auth, { start, end, windowSize }, groupBy ?? undefined),
+        groupBy ?? undefined,
+      ),
     enabled && end.getTime() > start.getTime(),
   )
 }
+
+/**
+ * The event property keys this customer may group usage by, in the window.
+ * Empty unless the merchant turned grouping on; their allowed and hidden keys
+ * are applied by the server.
+ */
+export const usePortalPropertyKeys = (
+  auth: PortalAuth,
+  start: Date,
+  end: Date,
+  enabled = true,
+): PortalQuery<string[]> =>
+  usePortalQuery(
+    auth,
+    ['propertyKeys', start.toISOString(), end.toISOString()],
+    async () => toPortalPropertyKeys(await getPortalPropertyKeys(auth, { start, end })),
+    enabled && end.getTime() > start.getTime(),
+  )
 
 /* ---- Actions -------------------------------------------------------------- */
 

@@ -1465,6 +1465,40 @@ function startPriceSync(workflowId: string) {
   }
 }
 
+/** Usage-event CSV imports (`GET /tasks?task_type=IMPORT`), newest first. */
+const eventImports: Record<string, unknown>[] = [
+  {
+    id: 'task_import_2',
+    task_type: 'IMPORT',
+    entity_type: 'EVENTS',
+    file_name: 'september-backfill.csv',
+    task_status: 'COMPLETED',
+    total_records: 1250,
+    processed_records: 1250,
+    successful_records: 1248,
+    failed_records: 2,
+    error_summary:
+      'Record 18: timestamp error: invalid timestamp format; Record 402: event_name is required',
+    created_at: '2026-10-02T14:40:00Z',
+    started_at: '2026-10-02T14:40:03Z',
+    completed_at: '2026-10-02T14:41:10Z',
+  },
+  {
+    id: 'task_import_1',
+    task_type: 'IMPORT',
+    entity_type: 'EVENTS',
+    file_name: 'august-usage.csv',
+    task_status: 'COMPLETED',
+    total_records: 320,
+    processed_records: 320,
+    successful_records: 320,
+    failed_records: 0,
+    created_at: '2026-09-01T08:00:00Z',
+    started_at: '2026-09-01T08:00:02Z',
+    completed_at: '2026-09-01T08:00:20Z',
+  },
+]
+
 /** Scheduled exports, authored to the wire: snake_case, `job_config` nested. */
 const scheduledTasks: Record<string, unknown>[] = [
   ['invoice', 'daily', true, 'acme-billing', 'us-east-1', 'flexprice/invoices/'],
@@ -4492,6 +4526,13 @@ export const handlers = [
     const offset = Number(url.searchParams.get('offset') ?? 0)
     const taskId = url.searchParams.get('scheduled_task_id')
     const status = url.searchParams.get('task_status')
+    if (url.searchParams.get('task_type') === 'IMPORT') {
+      const matches = eventImports.filter((row) => !status || row['task_status'] === status)
+      return HttpResponse.json({
+        items: matches.slice(offset, offset + limit),
+        pagination: { total: matches.length, limit, offset },
+      })
+    }
     const task = scheduledTasks.find((row) => row['id'] === taskId)
     const all = task ? [...(manualRuns.get(String(task['id'])) ?? []), ...exportRuns(task)] : []
     const matches = all.filter((run) => !status || run['task_status'] === status)
@@ -4499,6 +4540,32 @@ export const handlers = [
       items: matches.slice(offset, offset + limit),
       pagination: { total: matches.length, limit, offset },
     })
+  }),
+
+  /** `POST /tasks`: a CSV Box upload becomes a queued import, listed first. */
+  http.post(`${BASE}/tasks`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const id = `task_import_${eventImports.length + 1}`
+    eventImports.unshift({
+      id,
+      task_type: 'IMPORT',
+      entity_type: 'EVENTS',
+      file_name: body['file_name'] ?? '',
+      task_status: 'PENDING',
+      created_at: new Date().toISOString(),
+    })
+    return HttpResponse.json({
+      message: 'task processing workflow started successfully',
+      workflow_id: `wf_${id}`,
+      run_id: `run_${id}`,
+    })
+  }),
+
+  http.get(`${BASE}/tasks/:id`, ({ params }) => {
+    const row = eventImports.find((item) => item['id'] === params['id'])
+    return row
+      ? HttpResponse.json(row)
+      : HttpResponse.json({ error: { message: 'task not found' } }, { status: 404 })
   }),
 
   http.get(`${BASE}/tasks/:id/download`, ({ params }) =>

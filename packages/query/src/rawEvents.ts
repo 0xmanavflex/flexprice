@@ -73,13 +73,14 @@ export async function fetchRawEvents(
   return { events, total: response.totalCount ?? events.length }
 }
 
-export function useRawEvents(query: RawEventQuery) {
+export function useRawEvents(query: RawEventQuery, options: { enabled?: boolean } = {}) {
   const client = useFlexprice()
 
   return useQuery({
     queryKey: queryKeys.rawEvents.list({ ...query }),
     queryFn: () => fetchRawEvents(client, query),
     placeholderData: (previous) => previous,
+    enabled: options.enabled ?? true,
   })
 }
 

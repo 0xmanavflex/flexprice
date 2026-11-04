@@ -11,6 +11,7 @@ import {
   SquareStackIcon,
 } from '@ui/icons'
 import {
+  DOCS,
   BILLING_PERIOD_SHORT,
   DEFAULT_PLAN_QUERY,
   planKindLabel,
@@ -93,32 +94,28 @@ function headlinePrice(plan: Plan): string | null {
 }
 
 /**
- * The three cards under the first-run empty state.
- *
- * Every URL was requested and returned 200, and every one appears in
- * `docs.flexprice.io/sitemap.xml`. Worth re-checking when these change: the
- * real site namespaces everything under `/docs/` or `/api-reference/`, and a
- * guessed path like `docs.flexprice.io/plans` 404s. A dead link in an empty
- * state is worse than no link, because the empty state is where someone has
- * already admitted they do not know what to do next.
+ * The three cards under the first-run empty state. Their addresses live in
+ * `DOCS` (`@fp/domain`), checked against the docs sitemap: a dead link in an
+ * empty state is worse than none, because that is where someone has already
+ * admitted they do not know what to do next.
  */
 const GUIDES: EntityGuide[] = [
   {
     title: 'What a plan is',
     description: 'How a plan groups charges into something a customer can subscribe to.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/overview',
+    href: DOCS.plans,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Creating your first plan',
     description: 'Name it, price it, and publish it so someone can subscribe.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/create',
+    href: DOCS.planCreate,
     icon: <SquareStackIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Pricing models',
     description: 'Flat fee, package and volume tiers, and when each one fits.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/pricing',
+    href: DOCS.planPricing,
     icon: <ReceiptTextIcon aria-hidden className="size-4" />,
   },
 ]
@@ -397,14 +394,7 @@ export function PlanGrid({
       primaryAction={
         onCreate || onCreateWithAi ? (
           <>
-            {onCreateWithAi ? (
-              <Button variant="outline" onClick={onCreateWithAi}>
-                {/* The AI entry point's mark: a violet wand, and a violet sheen
-                    across the label (still under reduced motion). */}
-                <WandSparklesIcon aria-hidden className="ai-accent" />
-                <span className="ai-shimmer">Create with AI</span>
-              </Button>
-            ) : null}
+            {onCreateWithAi ? <CreateWithAiButton onClick={onCreateWithAi} /> : null}
             {onCreate ? <Button onClick={onCreate}>New plan</Button> : null}
           </>
         ) : undefined
@@ -426,5 +416,19 @@ export function PlanGrid({
         guides: GUIDES,
       }}
     />
+  )
+}
+
+/**
+ * The entry to Create with AI: an outline button with a violet wand and a
+ * violet sheen across its label (still under reduced motion). On the Plans
+ * toolbar, and in the empty Plans page where the toolbar is not shown.
+ */
+export function CreateWithAiButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="outline" onClick={onClick}>
+      <WandSparklesIcon aria-hidden className="ai-accent" />
+      <span className="ai-shimmer">Create with AI</span>
+    </Button>
   )
 }

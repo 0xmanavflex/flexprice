@@ -12,7 +12,7 @@
  * on the top-up itself overrides it. Free credit grants never earn a bonus:
  * only purchased top-ups (paid directly or invoiced) do.
  *
- * Docs: https://docs.flexprice.io/docs/settings/settings#bonus-credits-topup-configuration
+ * Docs: `DOCS.bonusCredits`.
  */
 import { z } from 'zod'
 

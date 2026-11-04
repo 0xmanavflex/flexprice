@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import { BookOpenIcon, CopyIcon, RefreshCwIcon, ScrollTextIcon, SendIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { cn } from '@ui/lib/cn'
 import {
+  DOCS,
   DEFAULT_RAW_EVENT_QUERY,
   RAW_EVENT_PERIODS,
   type RawEvent,
@@ -70,19 +71,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Sending an event',
     description: 'The shape of a usage event and the one field that makes it idempotent.',
-    href: 'https://docs.flexprice.io/api-reference/events/ingest-event',
+    href: DOCS.apiIngestEvent,
     icon: <SendIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Sending events in bulk',
     description: 'Backfilling or batching usage without a request per event.',
-    href: 'https://docs.flexprice.io/api-reference/events/bulk-ingest-events',
+    href: DOCS.apiBulkIngestEvents,
     icon: <ScrollTextIcon aria-hidden className="size-4" />,
   },
   {
     title: 'How events become usage',
     description: 'How a feature meters the events it receives.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/features/use-cases',
+    href: DOCS.featureUseCases,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
 ]
@@ -115,6 +116,8 @@ export interface EventGridProps {
   /** Fetches the newest events again. Events land a moment after they are sent. */
   onReload?: () => void
   isReloading?: boolean
+  /** Beside Reload: the page's Import CSV, so a backfill starts where events are read. */
+  importAction?: ReactNode
   locale?: string
 }
 
@@ -130,6 +133,7 @@ export function EventGrid({
   onClearFilters,
   onReload,
   isReloading = false,
+  importAction,
   locale,
 }: EventGridProps) {
   const columns = useMemo<EntityColumn<RawEvent>[]>(
@@ -283,20 +287,25 @@ export function EventGrid({
         onChange: (_field, sortDirection) => onQueryChange({ ...query, sortDirection, page: 1 }),
       }}
       rowActions={rowActions}
-      {...(onReload
+      {...(onReload || importAction
         ? {
             primaryAction: (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 px-3"
-                onClick={onReload}
-                disabled={isReloading}
-              >
-                <RefreshCwIcon aria-hidden className={cn(isReloading && 'animate-spin')} />
-                Reload
-              </Button>
+              <>
+                {onReload ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3"
+                    onClick={onReload}
+                    disabled={isReloading}
+                  >
+                    <RefreshCwIcon aria-hidden className={cn(isReloading && 'animate-spin')} />
+                    Reload
+                  </Button>
+                ) : null}
+                {importAction}
+              </>
             ),
           }
         : {})}

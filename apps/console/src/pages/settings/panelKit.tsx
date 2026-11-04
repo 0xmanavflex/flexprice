@@ -149,6 +149,7 @@ export function SettingsTable<T extends object>({
   isLoading,
   empty,
   facet,
+  onRowClick,
 }: {
   /** Names the table for assistive tech, e.g. "Team". */
   label: string
@@ -163,6 +164,8 @@ export function SettingsTable<T extends object>({
   /** The first-run state: what this table is for and how to start it. */
   empty: ReactNode
   facet?: { label: string; value: (row: T) => string }
+  /** Opens the row's own page, for tables whose rows have one. */
+  onRowClick?: (row: T) => void
 }) {
   // The create action stays at the top right with or without rows; the empty
   // state under it says what the table is for and does not repeat the button.
@@ -179,6 +182,7 @@ export function SettingsTable<T extends object>({
       {...(getRowId ? { getRowId } : {})}
       {...(toolbarAction ? { action: toolbarAction } : {})}
       {...(facet ? { facet } : {})}
+      {...(onRowClick ? { onRowClick } : {})}
       empty={empty}
     />
   )

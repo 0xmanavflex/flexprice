@@ -135,6 +135,11 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   onEditSection?: (charge: Charge, section: ChargeSection) => void
   editableSections?: (charge: Charge) => readonly ChargeSection[]
   /**
+   * Deletes a version that has not started. The API clears the end date on the
+   * version billing now.
+   */
+  onDeleteUpcoming?: ((versionId: string) => Promise<unknown>) | undefined
+  /**
    * Told which charge's sheet is open (`null` once closed), so the page can
    * read that charge's history from the API and pass it back as `history`.
    */
@@ -310,6 +315,7 @@ export function ChargeTable({
   onRowClick,
   onEditSection,
   editableSections,
+  onDeleteUpcoming,
   onOpenCharge,
   history,
   onShowAll,
@@ -668,6 +674,9 @@ export function ChargeTable({
                 },
                 deleteLabel: removeLabel,
               }
+            : {})}
+          {...(onDeleteUpcoming && open
+            ? { onDeleteUpcoming: (versionId: string) => onDeleteUpcoming(versionId) }
             : {})}
           {...(open && history ? { history } : {})}
           onClose={() => setOpen(null)}

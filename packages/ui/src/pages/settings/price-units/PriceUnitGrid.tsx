@@ -9,6 +9,7 @@ import {
   ArchiveIcon,
 } from '@ui/icons'
 import {
+  DOCS,
   DEFAULT_PRICE_UNIT_QUERY,
   PRICE_UNIT_SORT_LABEL,
   PRICE_UNIT_STATUS_LABEL,
@@ -64,19 +65,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'What a pricing unit is',
     description: 'Charging in credits or tokens instead of a currency.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/custom-pricing/pricing-unit',
+    href: DOCS.pricingUnit,
     icon: <CoinsIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Custom currencies',
     description: 'Pinning a code and a symbol to a base currency through a rate.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/custom-pricing/custom-currency',
+    href: DOCS.customCurrency,
     icon: <ScaleIcon aria-hidden className="size-4" />,
   },
   {
     title: 'When to use one',
     description: 'The pricing shapes custom units make possible, with worked examples.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/custom-pricing/use-cases',
+    href: DOCS.customPricingUseCases,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
 ]

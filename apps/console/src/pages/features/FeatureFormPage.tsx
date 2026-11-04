@@ -1,11 +1,13 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   DEFAULT_GROUP_QUERY,
+  DEFAULT_RAW_EVENT_QUERY,
   GroupEntityType,
+  eventPropertyNames,
   type CreateFeature,
   type EditFeature,
 } from '@fp/domain'
-import { useCreateFeature, useFeature, useGroups, useUpdateFeature } from '@fp/query'
+import { useCreateFeature, useFeature, useGroups, useRawEvents, useUpdateFeature } from '@fp/query'
 import { FeatureForm } from '@fp/ui/pages'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { expressionFieldError, toSubmitError } from './featureMessages'
@@ -47,7 +49,8 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
     () => (groups.data?.groups ?? []).map((group) => ({ value: group.id, label: group.name })),
     [groups.data],
   )
-  const formProps = { onCancel, groups: groupOptions }
+  const eventProperties = useEventProperties()
+  const formProps = { onCancel, groups: groupOptions, ...eventProperties }
 
   if (props.mode === 'create') {
     return (
@@ -107,4 +110,27 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
       }
     />
   )
+}
+
+/**
+ * The property names on recent events with the name typed into the form: the
+ * variables a custom expression can use. The name is read after a pause in
+ * typing, and nothing is fetched until there is one.
+ */
+function useEventProperties() {
+  const [typed, setTyped] = useState('')
+  const [eventName, setEventName] = useState('')
+  useEffect(() => {
+    const timer = window.setTimeout(() => setEventName(typed), 400)
+    return () => window.clearTimeout(timer)
+  }, [typed])
+  const events = useRawEvents(
+    { ...DEFAULT_RAW_EVENT_QUERY, search: eventName, pageSize: 50 },
+    { enabled: eventName.length > 0 },
+  )
+  const eventProperties = useMemo(
+    () => (eventName ? eventPropertyNames(events.data?.events ?? [], eventName) : []),
+    [events.data, eventName],
+  )
+  return { eventProperties, onEventNameChange: setTyped }
 }

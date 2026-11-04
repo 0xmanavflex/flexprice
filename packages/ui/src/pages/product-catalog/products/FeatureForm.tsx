@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
-import { get, useFieldArray, type Resolver } from 'react-hook-form'
+import { Controller, get, useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
+  DOCS,
   AGGREGATION_DESCRIPTION,
   AGGREGATION_LABEL,
   AggregationType,
@@ -10,6 +11,7 @@ import {
   FeatureType,
   ResetUsage,
   allowsExpression,
+  expressionProblem,
   createFeatureSchema,
   defaultFeatureLookupKey,
   defaultUnitPlural,
@@ -19,18 +21,24 @@ import {
   type EditFeature,
   type Feature,
 } from '@fp/domain'
-import { ArrowUpRightIcon, PlusIcon, Trash2Icon } from '@ui/icons'
+import { PlusIcon, Trash2Icon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupTextarea,
+} from '@ui/components/primitives/input-group'
+import { Tabs, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { Field } from '@ui/compositions/forms/Field'
-import { CheckboxRow } from '@ui/compositions/forms/CheckboxRow'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
 import { FormDisclosure } from '@ui/compositions/forms/FormDisclosure'
 import { FormPage } from '@ui/compositions/forms/FormPage'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { OptionSelect, type Option } from '@ui/compositions/forms/OptionSelect'
+import { ValuesInput } from '@ui/compositions/forms/ValuesInput'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -63,6 +71,14 @@ type FeatureFormProps = {
   submitError?: string | null
   /** The API refused the custom expression. Shown on that field. */
   expressionError?: string | null
+  /**
+   * Property names seen on recent events with the form's event name: offered
+   * as variables in a custom expression. The page loads them; see
+   * `onEventNameChange`.
+   */
+  eventProperties?: readonly string[]
+  /** The event name as typed, so the page can load its events' properties. */
+  onEventNameChange?: (eventName: string) => void
   /** The tags a feature can be filed under. Empty disables the picker, never hides it. */
   groups?: readonly Option[]
   trail: DetailCrumb[]
@@ -327,6 +343,8 @@ export function FeatureForm(props: FeatureFormProps) {
     expressionError = null,
     groups = [],
     trail,
+    eventProperties = [],
+    onEventNameChange,
   } = props
   const feature = props.mode === 'edit' ? props.feature : undefined
   const isEdit = mode === 'edit'
@@ -337,9 +355,24 @@ export function FeatureForm(props: FeatureFormProps) {
   const schemaResolver = (isEdit
     ? standardSchemaResolver(editFeatureSchema)
     : standardSchemaResolver(createFeatureSchema)) as unknown as Resolver<FormValues>
-  const resolver: Resolver<FormValues> = (values, context, options) => {
+  const resolver: Resolver<FormValues> = async (values, context, options) => {
     const candidate = normalize(values, mode, useExpression) as unknown as FormValues
-    return schemaResolver(candidate, context, options)
+    const result = await schemaResolver(candidate, context, options)
+    // The schema only asks for an expression; a plainly unfinished one is
+    // caught here, before the API's CEL parse.
+    const problem =
+      useExpression && allowsExpression(values.meter.aggregationType)
+        ? expressionProblem(values.meter.expression)
+        : null
+    if (!problem || get(result.errors, 'meter.expression')) return result
+    const errors = result.errors as Record<string, Record<string, unknown> | undefined>
+    return {
+      values: {},
+      errors: {
+        ...errors,
+        meter: { ...errors['meter'], expression: { type: 'syntax', message: problem } },
+      },
+    } as unknown as Awaited<ReturnType<Resolver<FormValues>>>
   }
 
   const form = useCalmForm<FormValues>({
@@ -392,6 +425,41 @@ export function FeatureForm(props: FeatureFormProps) {
       }
     },
   })
+
+  const chooseInput = (expression: boolean) => {
+    if (expression === useExpression) return
+    setUseExpression(expression)
+    if (expression) form.setValue('meter.field', '', { shouldDirty: true })
+    else form.setValue('meter.expression', '', { shouldDirty: true })
+  }
+
+  const eventName = form.watch('meter.eventName') ?? ''
+  const filterKeys = form.watch('filters').map((row) => row.key.trim())
+  // Properties seen on recent events of this name first, then the filter keys
+  // typed above: both are properties an expression over these events can use.
+  const variables = [...new Set([...eventProperties, ...filterKeys].filter(Boolean))]
+  useEffect(() => {
+    onEventNameChange?.(eventName.trim())
+  }, [eventName, onEventNameChange])
+
+  const expressionField = form.register('meter.expression')
+  const expressionRef = useRef<HTMLTextAreaElement | null>(null)
+  const expressionText = form.watch('meter.expression') ?? ''
+  const liveExpressionProblem = expressionOn
+    ? (expressionProblem(expressionText) ?? undefined)
+    : undefined
+  const insertVariable = (name: string) => {
+    const element = expressionRef.current
+    const current = form.getValues('meter.expression') ?? ''
+    const start = element?.selectionStart ?? current.length
+    const end = element?.selectionEnd ?? current.length
+    const next = current.slice(0, start) + name + current.slice(end)
+    form.setValue('meter.expression', next, { shouldDirty: true })
+    requestAnimationFrame(() => {
+      element?.focus()
+      element?.setSelectionRange(start + name.length, start + name.length)
+    })
+  }
 
   const chooseAggregation = (next: AggregationType) => {
     form.setValue('meter.aggregationType', next, { shouldDirty: true })
@@ -549,11 +617,24 @@ export function FeatureForm(props: FeatureFormProps) {
               </Field>
               <Field
                 label={`Filter ${index + 1} values`}
-                hint="Comma separated."
+                hint="Press Enter after each value."
                 error={message(`${filterPath}.${index}.values`)}
               >
                 {({ id, ...field }) => (
-                  <Input id={id} {...field} {...form.register(`filters.${index}.valuesText`)} />
+                  // Held as comma-joined text, as before: only the field changed.
+                  <Controller
+                    control={form.control}
+                    name={`filters.${index}.valuesText`}
+                    render={({ field: values }) => (
+                      <ValuesInput
+                        id={id}
+                        {...field}
+                        value={splitValues(values.value)}
+                        onChange={(next) => values.onChange(next.join(', '))}
+                        onBlur={values.onBlur}
+                      />
+                    )}
+                  />
                 )}
               </Field>
               <Button
@@ -598,68 +679,117 @@ export function FeatureForm(props: FeatureFormProps) {
         )}
       </FormRow>
 
-      {needsAggregationTarget(aggregationType) ? (
+      {needsAggregationTarget(aggregationType) && allowsExpression(aggregationType) ? (
+        <FormRow label="Aggregation input" hint="Choose how the value to aggregate is calculated.">
+          {() => (
+            <Tabs
+              value={expressionOn ? 'expression' : 'field'}
+              onValueChange={(next) => chooseInput(next === 'expression')}
+            >
+              <TabsList aria-label="Aggregation input">
+                <TabsTrigger value="field" disabled={isEdit}>
+                  Event field
+                </TabsTrigger>
+                <TabsTrigger value="expression" disabled={isEdit}>
+                  Custom expression
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+        </FormRow>
+      ) : null}
+
+      {needsAggregationTarget(aggregationType) && !expressionOn ? (
         <FormRow
-          label={expressionOn ? 'Custom expression' : 'Event field'}
+          label="Event field"
+          required
+          hint="The property on the event to aggregate."
+          error={message('meter.field')}
+        >
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              readOnly={isEdit}
+              disabled={isEdit}
+              placeholder={FIELD_PLACEHOLDER[aggregationType]}
+              {...field}
+              {...form.register('meter.field')}
+            />
+          )}
+        </FormRow>
+      ) : null}
+
+      {expressionOn ? (
+        <FormRow
+          label="Expression"
           required
           align="start"
-          hint={
-            expressionOn
-              ? 'A CEL expression over the event. It replaces the event field, and only this is saved.'
-              : 'The property on the event to aggregate.'
-          }
-          error={
-            expressionOn
-              ? (expressionError ?? message('meter.expression'))
-              : message('meter.field')
-          }
+          hint="Use event properties and maths operators; the result is the value aggregated. Only the expression is saved."
+          error={expressionError ?? message('meter.expression') ?? liveExpressionProblem}
         >
           {({ id, ...field }) => (
             <div className="flex flex-col gap-3">
-              {expressionOn ? (
-                <Textarea
+              <InputGroup>
+                <InputGroupAddon align="block-start">
+                  <span className="text-muted-foreground font-mono text-xs italic" aria-hidden>
+                    ƒx
+                  </span>
+                  <span className="text-muted-foreground text-xs">Expression</span>
+                </InputGroupAddon>
+                <InputGroupTextarea
                   id={id}
-                  rows={2}
+                  rows={3}
+                  spellCheck={false}
                   readOnly={isEdit}
                   disabled={isEdit}
                   placeholder={EXPRESSION_PLACEHOLDER}
+                  className="font-mono text-[13px]"
                   {...field}
-                  {...form.register('meter.expression')}
+                  {...expressionField}
+                  ref={(element) => {
+                    expressionField.ref(element)
+                    expressionRef.current = element
+                  }}
                 />
-              ) : (
-                <Input
-                  id={id}
-                  readOnly={isEdit}
-                  disabled={isEdit}
-                  placeholder={FIELD_PLACEHOLDER[aggregationType]}
-                  {...field}
-                  {...form.register('meter.field')}
-                />
-              )}
-              {allowsExpression(aggregationType) ? (
-                <div className="flex items-center gap-1.5">
-                  <CheckboxRow
-                    checked={useExpression}
-                    disabled={isEdit}
-                    onCheckedChange={(checked) => {
-                      setUseExpression(checked)
-                      if (checked) form.setValue('meter.field', '', { shouldDirty: true })
-                      else form.setValue('meter.expression', '', { shouldDirty: true })
-                    }}
-                  >
-                    Use a custom expression
-                  </CheckboxRow>
-                  <a
-                    href="https://docs.flexprice.io/docs/product-catalogue/features/custom-expression"
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Custom expression docs"
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <ArrowUpRightIcon aria-hidden className="size-3.5" />
-                  </a>
+              </InputGroup>
+              {isEdit ? null : (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-muted-foreground text-xs">Variables</p>
+                    <a
+                      href={DOCS.featureCustomExpression}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
+                    >
+                      Expression syntax
+                    </a>
+                  </div>
+                  {variables.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {variables.map((name) => (
+                        <Button
+                          key={name}
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          className="font-mono"
+                          aria-label={`Insert ${name}`}
+                          onClick={() => insertVariable(name)}
+                        >
+                          {name}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">
+                      {eventName.trim()
+                        ? `No events named ${eventName.trim()} yet. Their properties will show here.`
+                        : 'Enter the event name to see its properties here.'}
+                    </p>
+                  )}
                 </div>
-              ) : null}
+              )}
             </div>
           )}
         </FormRow>

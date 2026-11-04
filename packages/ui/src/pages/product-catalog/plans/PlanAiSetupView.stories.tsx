@@ -56,7 +56,7 @@ function Harness({
   applyError?: string | null
   createStep?: PlanAiCreateStep | null
   created?: boolean
-  onParse?: (description: string) => void
+  onParse?: (description: string, templateId?: string) => void
   onApply?: () => void
   onDiscard?: () => void
   onCancel?: () => void
@@ -114,7 +114,24 @@ export const PickATemplate: Story = {
     await expect(box.value).toContain("Railway's pricing")
     await expect(canvas.getByText('Railway template')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Generate pricing' }))
-    await expect(args.onParse).toHaveBeenCalledWith(expect.stringContaining("Railway's pricing"))
+    // Sent as written, the template is named: its own schema is used, not the model.
+    await expect(args.onParse).toHaveBeenCalledWith(
+      expect.stringContaining("Railway's pricing"),
+      'railway',
+    )
+  },
+}
+
+/** An edited template is a description of its own: it goes to the model, unnamed. */
+export const EditedTemplateGoesToTheModel: Story = {
+  args: { onParse: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('radio', { name: /Cursor/ }))
+    await userEvent.type(canvas.getByLabelText('Describe your pricing'), ' Add a team plan.')
+    await userEvent.click(canvas.getByRole('button', { name: 'Generate pricing' }))
+    await expect(args.onParse).toHaveBeenLastCalledWith(expect.stringContaining('team plan'))
+    await expect((args.onParse as ReturnType<typeof fn>).mock.lastCall).toHaveLength(1)
   },
 }
 

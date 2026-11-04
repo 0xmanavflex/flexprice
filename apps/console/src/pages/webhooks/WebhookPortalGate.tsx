@@ -9,6 +9,7 @@ import {
 } from '@fp/ui/compositions'
 import { useSession } from '@/app/session'
 import { toWebhookFailure } from './webhookFailure'
+import { DOCS } from '@fp/domain'
 
 /**
  * Every webhook screen opens through here.
@@ -87,7 +88,7 @@ export function WebhookPortalGate({
           secondaryAction={
             <a
               className="text-sm underline underline-offset-4"
-              href="https://docs.flexprice.io/docs/webhooks/overview"
+              href={DOCS.webhooks}
               target="_blank"
               rel="noreferrer"
             >

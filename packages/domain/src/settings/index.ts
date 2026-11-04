@@ -55,9 +55,15 @@ export {
   withTabEnabled,
   withTabOrder,
   withUsageGraph,
+  withTabTypeEnabled,
+  withUsageProperties,
+  PORTAL_PROPERTY_KEY,
+  PORTAL_SECTION_PARTS,
+  portalUsagePropertiesSchema,
 } from './customerPortalConfig'
 export type {
   CustomerPortalConfig,
+  PortalUsageProperties,
   PortalMetricCards,
   PortalSection,
   PortalTab,

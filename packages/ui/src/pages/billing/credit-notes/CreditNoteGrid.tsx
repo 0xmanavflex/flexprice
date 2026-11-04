@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { BanIcon, CopyIcon, FileMinusIcon, ReceiptIcon } from '@ui/icons'
 import {
+  DOCS,
   CREDIT_NOTE_STATUS_LABEL,
   type CreditNote,
   type CreditNoteQuery,
@@ -52,19 +53,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Issuing a credit memo',
     description: 'Refunding or adjusting an invoice after it has been finalized.',
-    href: 'https://docs.flexprice.io/api-reference/credit-notes/create-a-new-credit-note',
+    href: DOCS.apiCreateCreditNote,
     icon: <FileMinusIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Finalizing a draft',
     description: 'Processing a draft so the refund or adjustment takes effect.',
-    href: 'https://docs.flexprice.io/api-reference/credit-notes/process-a-draft-credit-note',
+    href: DOCS.apiFinalizeCreditNote,
     icon: <ReceiptIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Voiding a credit memo',
     description: 'Cancelling one that was raised in error, before it takes effect.',
-    href: 'https://docs.flexprice.io/api-reference/credit-notes/void-a-credit-note',
+    href: DOCS.apiVoidCreditNote,
     icon: <BanIcon aria-hidden className="size-4" />,
   },
 ]

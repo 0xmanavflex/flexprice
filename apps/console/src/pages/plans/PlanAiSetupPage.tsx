@@ -1,5 +1,10 @@
-import { useEffect, useState } from 'react'
-import type { PricingSchema } from '@fp/domain'
+import { useEffect, useRef, useState } from 'react'
+import {
+  PRICING_TEMPLATE_SCHEMAS,
+  type PricingSchema,
+  type PricingTemplateId,
+  pricingTemplateSchema,
+} from '@fp/domain'
 import { useApplyPricingSchema, useParsePricing } from '@fp/query'
 import type { ApplyStep } from '@fp/query'
 import { PlanAiSetupView, toast } from '@fp/ui/pages'
@@ -7,6 +12,16 @@ import { toSubmitError } from './planMessages'
 
 /** How long "Your pricing has been created" stays up before Plans, as the reference. */
 const CREATED_HOLD_MS = 1600
+/**
+ * A template is not sent to the model (as in V1): its schema is ready at once.
+ * The draft card still walks its steps for this long, so a template reads as
+ * drafted rather than appearing from nowhere.
+ */
+const TEMPLATE_DRAFT_MS = 2400
+
+function isTemplateId(id: string | undefined): id is PricingTemplateId {
+  return id !== undefined && id in PRICING_TEMPLATE_SCHEMAS
+}
 
 export interface PlanAiSetupPageProps {
   /** Back to the plans list, on cancel or once everything is created. */
@@ -32,6 +47,10 @@ export function PlanAiSetupPage({ onDone }: PlanAiSetupPageProps) {
 
   const parse = useParsePricing()
   const apply = useApplyPricingSchema()
+  // A template being "drafted": its schema is known, the card is still walking.
+  const [templateDrafting, setTemplateDrafting] = useState(false)
+  const templateTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(templateTimer.current), [])
 
   // Hold the success card for a moment, then go to Plans with a toast.
   useEffect(() => {
@@ -53,14 +72,27 @@ export function PlanAiSetupPage({ onDone }: PlanAiSetupPageProps) {
           // changed description would invite creating the wrong thing.
           if (schema) setSchema(null)
         }}
-        onParse={(text) => {
+        onParse={(text, templateId) => {
           setSchema(null)
+          clearTimeout(templateTimer.current)
+          if (isTemplateId(templateId)) {
+            // A template sent as written: its own schema, no model, as in V1.
+            parse.reset()
+            setTemplateDrafting(true)
+            templateTimer.current = setTimeout(() => {
+              setTemplateDrafting(false)
+              setSchema(pricingTemplateSchema(templateId))
+            }, TEMPLATE_DRAFT_MS)
+            return
+          }
           parse.mutate(text, { onSuccess: setSchema })
         }}
-        isParsing={parse.isPending}
+        isParsing={parse.isPending || templateDrafting}
         parseError={parse.isError ? toSubmitError(parse.error, 'read') : null}
         schema={schema}
         onDiscard={() => {
+          clearTimeout(templateTimer.current)
+          setTemplateDrafting(false)
           setSchema(null)
           parse.reset()
           apply.reset()

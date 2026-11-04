@@ -115,6 +115,7 @@ export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   '/webhooks/$endpointId': read(E.Webhook),
   '/webhooks/new': write(E.Webhook),
   '/exports': read(E.Task),
+  '/imports': read(E.Task),
   '/exports/s3': read(E.Connection),
   '/exports/s3/$connectionId': read(E.Task),
   '/exports/s3/$connectionId/$exportId': read(E.Task),

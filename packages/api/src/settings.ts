@@ -338,3 +338,22 @@ export async function fetchTenantBilling(
 ): Promise<unknown> {
   return request(serverURL, '/tenants/billing', { method: 'GET', token, environmentId })
 }
+
+/**
+ * Event property keys seen in the window, most seen first:
+ * `POST /meter-usage/properties`. The customer portal settings suggest these
+ * for the keys customers may group usage by.
+ */
+export async function fetchUsagePropertyKeys(
+  serverURL: string,
+  token: string,
+  environmentId: string,
+  window: { start: Date; end: Date },
+): Promise<unknown> {
+  return request(serverURL, '/meter-usage/properties', {
+    method: 'POST',
+    token,
+    environmentId,
+    body: { start_time: window.start.toISOString(), end_time: window.end.toISOString() },
+  })
+}

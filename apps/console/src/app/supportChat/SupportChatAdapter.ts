@@ -23,6 +23,12 @@ export interface SupportChatAdapter {
   init(user: SupportChatUser): Promise<void>
   /** Open the messenger. Never throws: a no-op if init failed or has not completed. */
   show(): void
+  /**
+   * Hide or bring back the provider's launcher, e.g. while a sheet or dialog is
+   * open and the launcher would cover its actions. Optional: a provider without
+   * it keeps its launcher.
+   */
+  setLauncherHidden?(hidden: boolean): void
   /** Register visibility handlers. The returned function removes them. */
   subscribe(handlers: SupportChatVisibilityHandlers): () => void
   /** Tear down this adapter instance. Called exactly once, on unmount. Idempotent. */

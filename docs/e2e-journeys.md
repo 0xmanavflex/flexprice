@@ -2134,7 +2134,7 @@ Steps:
 
 Expected:
 
-- `expect(guide).toHaveAttribute('href', 'https://docs.flexprice.io/integrations/stripe/')`
+- `expect(guide).toHaveAttribute('href', 'https://docs.flexprice.io/integrations/stripe/connection-setup')`
 - `expect(guide).toHaveAttribute('target', '_blank')`
 
 </details>

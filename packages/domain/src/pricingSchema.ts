@@ -72,6 +72,11 @@ export interface PricingCreditGrant {
   credits: number
   cadence: PricingCadence
   period: 'monthly' | 'annual' | null
+  /**
+   * What one credit is worth in the plan's currency (1 credit = $0.01 is
+   * 0.01), or null when the grant does not say. Sent with the grant, as V1 did.
+   */
+  conversionRate: number | null
 }
 
 export interface PricingSchema {
@@ -202,15 +207,56 @@ export function normalisePricingSchema(wire: unknown): PricingSchema {
         const cadence: PricingCadence =
           str(g['cadence']).toLowerCase() === 'recurring' ? 'recurring' : 'onetime'
         const period = str(g['period']).toLowerCase()
+        const rate = num(g['conversion_rate'])
         return {
           planName: str(g['plan_name']),
           name: str(g['name'], 'Credits'),
           credits: num(g['credits']) ?? 0,
           cadence,
           period: grantPeriod(cadence, period),
+          conversionRate: rate !== null && rate > 0 ? rate : null,
         }
       })
       .filter((grant) => planNames.has(grant.planName)),
+  }
+}
+
+/** Rounds away float noise (0.078 * 0.01 is 0.0007800000000000001). */
+function tidy(amount: number): number {
+  return Number(amount.toPrecision(12))
+}
+
+/**
+ * The schema with each credit-priced usage rate turned into its currency amount.
+ *
+ * For a schema whose usage rates are written in credits (the Railway, Apollo
+ * and Vapi templates: "hosting is 5 credits a minute"), while prices are
+ * created in currency. A plan's rates are converted with its own grant's rate,
+ * so Vapi's 5 credits at 1 credit = $0.01 becomes $0.05 a minute, which the
+ * wallet then debits as 5 credits. A plan with no grant that names a rate is
+ * left as it is. Only the templates go through this; a parse is created as
+ * the model wrote it.
+ */
+export function creditRatesToCurrency(schema: PricingSchema): PricingSchema {
+  const rates = new Map<string, number>()
+  for (const grant of schema.creditGrants) {
+    if (grant.conversionRate !== null && !rates.has(grant.planName)) {
+      rates.set(grant.planName, grant.conversionRate)
+    }
+  }
+  return {
+    ...schema,
+    plans: schema.plans.map((plan) => {
+      const rate = rates.get(plan.name)
+      if (rate === undefined) return plan
+      return {
+        ...plan,
+        usageCharges: plan.usageCharges.map((charge) => ({
+          ...charge,
+          amountPerUnit: tidy(charge.amountPerUnit * rate),
+        })),
+      }
+    }),
   }
 }
 

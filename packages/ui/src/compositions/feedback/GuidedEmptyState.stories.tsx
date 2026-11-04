@@ -8,30 +8,31 @@ import {
   type GuideCard,
   type GuidedEmptyStateProps,
 } from './GuidedEmptyState'
+import { DOCS } from '@fp/domain'
 
 const allGuides: GuideCard[] = [
   {
     title: 'Model your first plan',
     description: 'Plans bundle prices and entitlements into something a customer can subscribe to.',
-    href: 'https://docs.flexprice.io/docs/plans',
+    href: DOCS.plans,
     icon: <BookOpenIcon aria-hidden />,
   },
   {
     title: 'Send usage events',
     description: 'Meter what customers consume with the events API and bill on it.',
-    href: 'https://docs.flexprice.io/docs/events',
+    href: DOCS.eventDebugger,
     icon: <ZapIcon aria-hidden />,
   },
   {
     title: 'Use the API',
     description: 'Everything in the console is available over REST and the SDKs.',
-    href: 'https://docs.flexprice.io/api-reference',
+    href: DOCS.apiReference,
     icon: <CodeIcon aria-hidden />,
   },
   {
     title: 'A fourth guide',
     description: 'Only the first three are ever shown.',
-    href: 'https://docs.flexprice.io/docs/extra',
+    href: DOCS.featureUseCases,
     icon: <BookOpenIcon aria-hidden />,
   },
 ]
@@ -140,7 +141,7 @@ export const GuidesOpenDocs: Story = {
     const link = within(canvasElement).getByRole('link', {
       name: 'Send usage events: read docs',
     })
-    await expect(link).toHaveAttribute('href', 'https://docs.flexprice.io/docs/events')
+    await expect(link).toHaveAttribute('href', DOCS.eventDebugger)
     await expect(link).toHaveAttribute('target', '_blank')
     await expect(link).toHaveAttribute('rel', 'noreferrer')
   },
@@ -167,9 +168,9 @@ export const GuideGridBare: Story = {
   render: () => (
     <GuideGrid
       guides={[
-        { title: 'Plans', href: 'https://docs.flexprice.io/docs/plans' },
-        { title: 'Events', href: 'https://docs.flexprice.io/docs/events' },
-        { title: 'API', href: 'https://docs.flexprice.io/api-reference' },
+        { title: 'Plans', href: DOCS.plans },
+        { title: 'Events', href: DOCS.eventDebugger },
+        { title: 'API', href: DOCS.apiReference },
       ]}
     />
   ),

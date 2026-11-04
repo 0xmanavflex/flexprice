@@ -668,6 +668,11 @@ export {
   withTabEnabled,
   withTabOrder,
   withUsageGraph,
+  withTabTypeEnabled,
+  withUsageProperties,
+  PORTAL_PROPERTY_KEY,
+  PORTAL_SECTION_PARTS,
+  portalUsagePropertiesSchema,
   EXTERNAL_TAX_PROVIDERS,
   TAX_PROVIDER_LABEL,
   TaxProvider,
@@ -692,6 +697,7 @@ export type {
   PortalTab,
   PortalTheme,
   PortalUsageGraph,
+  PortalUsageProperties,
   RolloutToSubscriptionsAction,
   SamlConfig,
   SamlConfigDraft,
@@ -762,6 +768,21 @@ export type {
   S3Connection,
   S3ConnectionErrors,
 } from './dataExport'
+export {
+  DEFAULT_EVENT_IMPORT_QUERY,
+  EVENT_IMPORT_COLUMNS,
+  EVENT_IMPORT_STATUS,
+  EVENT_IMPORT_STATUS_LABEL,
+  eventImportErrors,
+  eventImportTemplateCsv,
+  isEventImportActive,
+} from './eventImport'
+export type {
+  EventImport,
+  EventImportColumn,
+  EventImportQuery,
+  EventImportStatus,
+} from './eventImport'
 export { CARD_SETUP_PROVIDERS, INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
 export * from './connectionId'
@@ -840,6 +861,7 @@ export {
 
 export {
   AI_SETUP_METADATA,
+  creditRatesToCurrency,
   normalisePricingSchema,
   pricingSchemaProblems,
   pricingSchemaTotals,
@@ -853,6 +875,8 @@ export type {
   PricingSchema,
   PricingUsageCharge,
 } from './pricingSchema'
+export { PRICING_TEMPLATE_SCHEMAS, pricingTemplateSchema } from './pricingTemplates'
+export type { PricingTemplateId } from './pricingTemplates'
 export { GEMINI_PRICING_SCHEMA, SYSTEM_PROMPT, buildPricingPrompt } from './pricingPrompt'
 
 export {
@@ -967,7 +991,10 @@ export type {
 } from './selfBilling'
 export {
   DEFAULT_PORTAL_CONFIG,
+  DEFAULT_PORTAL_RANGE,
+  NO_PROPERTY_VALUE,
   PORTAL_RANGES,
+  PORTAL_VIEW_LABEL,
   PORTAL_VIEWS,
   billingCadence,
   creditsAfter,
@@ -991,6 +1018,7 @@ export {
   toPortalInvoice,
   toPortalInvoices,
   toPortalPaymentMethods,
+  toPortalPropertyKeys,
   toPortalQuotas,
   toPortalSpend,
   toPortalSubscriptions,
@@ -1001,6 +1029,8 @@ export {
 } from './customerPortal'
 export type {
   PortalConfig,
+  PortalParts,
+  PortalUsageControls,
   PortalCooldown,
   PortalCooldownUnit,
   PortalCustomer,
@@ -1118,3 +1148,5 @@ export {
   type SellerDetails,
   type TaxIdentifier,
 } from './billingEntity'
+export { DOCS } from './docsLinks'
+export { eventPropertyNames, expressionProblem } from './featureExpression'

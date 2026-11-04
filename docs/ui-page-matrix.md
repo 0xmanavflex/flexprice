@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-76 route pages.
+78 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -44,9 +44,11 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FilterBar, FormActions, FormCard, FormDialog, MetricRail, RowActionsMenu, Section, SortMenu | EntityAlertDialog, FeatureCloneDialog, FeatureDetailView, FeatureTab |
 | features | `FeatureFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, FeatureForm, LoadingRows, PageBody |
 | features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, FeatureLinkage, ListState, PageBody |
+| groups | `GroupDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormCard, MetricRail, RowActionsMenu, Section, SortMenu | CatalogDetailFrame, CatalogStatusBadge, CopyIcon, EditableCard, GroupMembersView, LayersIcon, Pill, Trash2Icon |
 | groups | `GroupFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | GroupForm |
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, ListState, PageBody |
 | home | `HomePage` | Dashboard | Panel | CUSTOM_RANGE_ID, DashboardHome |
+| imports | `EventImportsPage` | Other | DetailList, EmptyState, EntityList, FilterBar, Properties, Section, SimpleTable, SortMenu | EventImportGrid, EventImportSheet, EventImportsOverview, ListState |
 | integrations | `IntegrationListPage` | List | ConnectorCard, EmptyState | IntegrationsBlock |
 | integrations | `OAuthCallbackPage` | Other | — | Button, ErrorState, PageBody, PageLoadingState |
 | integrations | `ProviderConnectionsPage` | Other | ConnectorCard, DetailHeader, EmptyState, RowActionsMenu, Section, SimpleTable | ErrorState, IntegrationLogo, PageLoadingState, ProviderConnections |
@@ -60,7 +62,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | plans | `PlanAiSetupPage` | Other | Section, SimpleTable | PlanAiSetupView |
 | plans | `PlanDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, Field, FormCard, FormDialog, MetricRail, Section | ArchiveIcon, Button, ContractIntegrations, ContractIntegrationsProps, CopyIcon, DetailBreadcrumb, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EditableCard, LayersIcon, MetadataCard, MoreHorizontalIcon, PencilIcon, Pill, PlanCustomerPreview, PlugIcon, RefreshCwIcon, RelatedCard, Status |
 | plans | `PlanFormPage` | Form | ChoiceCards, Field, FormActions, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, PlanForm, PlanFormValue |
-| plans | `PlanListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PlanGrid |
+| plans | `PlanListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CreateWithAiButton, ListState, PageBody, PlanGrid |
 | price-units | `PriceUnitDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, Field, FormCard, MetricRail, Section | ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CoinsIcon, EditableCard, MetadataCard, PencilIcon, Pill |
 | price-units | `PriceUnitFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | PriceUnitForm |
 | price-units | `PriceUnitListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PriceUnitGrid |

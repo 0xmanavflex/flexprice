@@ -431,6 +431,7 @@
       "usedBy": [
         "AddonGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CustomerDetail",
         "FeatureDetailView",
         "PlanGrid",
@@ -638,7 +639,6 @@
         "CustomerWalletView",
         "DashboardHome",
         "EventDetailSheet",
-        "FeatureForm",
         "FilterSelect",
         "InvoiceStatusPill",
         "LedgerRow",
@@ -940,9 +940,11 @@
         "AddonGrid",
         "CostSheetGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CustomerGrid",
         "DataExportGrid",
         "EventGrid",
+        "EventImportGrid",
         "FeatureGrid",
         "GroupGrid",
         "PlanGrid",
@@ -1184,6 +1186,7 @@
       "layer": "surface",
       "composes": [
         "ActivityLog",
+        "ConfirmDialog",
         "Pill",
         "PlusIcon",
         "Sheet"
@@ -1299,7 +1302,6 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "FeatureForm",
         "UsageTermsFields",
         "WebhookEventTypePicker"
       ],
@@ -1659,6 +1661,7 @@
         "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "ChargeSheet",
         "ConnectionExports",
         "ContractIntegrations",
         "CustomerTaxSection",
@@ -1928,6 +1931,7 @@
         "CopyValue",
         "CostSheetGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CreditNoteGrid",
         "CustomerGrid",
         "CustomerWalletView",
@@ -1938,6 +1942,7 @@
         "Dot",
         "EnvironmentSwitcher",
         "EventGrid",
+        "EventImportGrid",
         "FeatureDetailView",
         "FeatureGrid",
         "GroupGrid",
@@ -2127,6 +2132,24 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "CreateWithAiButton": {
+      "file": "src/pages/product-catalog/plans/PlanGrid.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArchiveIcon",
+        "BookOpenIcon",
+        "CopyIcon",
+        "EmDash",
+        "EntityCell",
+        "EntityList",
+        "PencilIcon",
+        "Status",
+        "Tag",
+        "WandSparklesIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/product-catalog/plans/PlanGrid.stories.tsx"
     },
     "CreatingPausedScreen": {
       "file": "src/pages/selfBilling/AccountStatus.tsx",
@@ -2783,6 +2806,7 @@
         "ConnectionExports",
         "DataExportDetail",
         "EventDetailSheet",
+        "EventImportSheet",
         "ExportRunList",
         "ExportsOverview",
         "S3ConnectionList",
@@ -3075,6 +3099,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonGrid",
+        "CreateWithAiButton",
         "CustomerActivityView",
         "CustomerDetail",
         "CustomerGrid",
@@ -3236,6 +3261,7 @@
       ],
       "usedBy": [
         "BillingEntityGrid",
+        "CreateWithAiButton",
         "FeatureGrid",
         "PlanGrid",
         "WebhookEndpointGrid"
@@ -3305,6 +3331,7 @@
         "ConnectionExports",
         "CostSheetGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CreditNoteGrid",
         "CustomerActivityView",
         "CustomerGrid",
@@ -3312,6 +3339,7 @@
         "DataExportGrid",
         "DetailTable",
         "EventGrid",
+        "EventImportGrid",
         "ExportRunList",
         "ExportsOverview",
         "FeatureGrid",
@@ -3449,6 +3477,42 @@
       "usedBy": [],
       "story": "./src/pages/developers/events/EventGrid.stories.tsx"
     },
+    "EventImportGrid": {
+      "file": "src/pages/developers/imports/EventImportGrid.tsx",
+      "layer": "surface",
+      "composes": [
+        "BookOpenIcon",
+        "CopyIcon",
+        "EntityList",
+        "EyeIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/imports/EventImportGrid.stories.tsx"
+    },
+    "EventImportSheet": {
+      "file": "src/pages/developers/imports/EventImportSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailList",
+        "Pill",
+        "Properties",
+        "Sheet"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/imports/EventImportSheet.stories.tsx"
+    },
+    "EventImportsOverview": {
+      "file": "src/pages/developers/imports/EventImportsOverview.tsx",
+      "layer": "surface",
+      "composes": [
+        "PageBody",
+        "Pill",
+        "Section",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/imports/EventImportsOverview.stories.tsx"
+    },
     "EventTrace": {
       "file": "src/pages/developers/events/EventTrace.tsx",
       "layer": "surface",
@@ -3577,6 +3641,7 @@
         "CustomerDetail",
         "DataExportDetail",
         "DataExportGrid",
+        "EventImportGrid",
         "ExportRunList",
         "ExportsOverview",
         "PortalInvoices",
@@ -3644,15 +3709,14 @@
       "file": "src/pages/product-catalog/products/FeatureForm.tsx",
       "layer": "surface",
       "composes": [
-        "ArrowUpRightIcon",
-        "CheckboxRow",
         "Field",
         "FormCard",
         "FormDisclosure",
         "FormPage",
         "FormRow",
         "OptionSelect",
-        "PlusIcon"
+        "PlusIcon",
+        "ValuesInput"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureForm.stories.tsx"
@@ -5774,6 +5838,7 @@
       "usedBy": [
         "ConnectionExports",
         "DataExportDetail",
+        "EventImportsOverview",
         "ExportRunList",
         "ExportsOverview",
         "FormPage",
@@ -5998,6 +6063,7 @@
         "AddonGrid",
         "CostSheetGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CustomerDetail",
         "CustomerGrid",
         "EditableCard",
@@ -6084,6 +6150,8 @@
         "CustomerDetail",
         "CustomerWalletView",
         "DataExportDetail",
+        "EventImportSheet",
+        "EventImportsOverview",
         "EventTypeName",
         "ExportRunList",
         "ExportsOverview",
@@ -6687,6 +6755,7 @@
         "ActivityEventSheet",
         "CustomerActivityView",
         "CustomerWalletView",
+        "EventImportSheet",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -7190,6 +7259,7 @@
         "CustomerUsageSummary",
         "DataExportDetail",
         "EntitlementTable",
+        "EventImportsOverview",
         "ExportRunList",
         "ExportsOverview",
         "FeatureDetailView",
@@ -7387,6 +7457,7 @@
         "CustomerActivityView",
         "CustomerEventsGrid",
         "EventDetailSheet",
+        "EventImportSheet",
         "HostedInvoiceDetailsSheet",
         "ManageConnectionSheet",
         "PortalInvoiceSheet",
@@ -7607,6 +7678,7 @@
         "ContractQuantityDialog",
         "CustomerDetail",
         "DataExportDetail",
+        "EventImportsOverview",
         "ExportRunList",
         "ExportsOverview",
         "PlanAiSetupView",
@@ -7821,6 +7893,7 @@
       ],
       "usedBy": [
         "AddonSubscriptionsView",
+        "CreateWithAiButton",
         "CustomerDetail",
         "FeatureDetailView",
         "FeatureGrid",
@@ -8123,6 +8196,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonGrid",
+        "CreateWithAiButton",
         "CustomerActivityView",
         "EventGrid",
         "FeatureGrid",
@@ -8642,6 +8716,15 @@
       ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
+    "ValuesInput": {
+      "file": "src/compositions/forms/ValuesInput.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "FeatureForm"
+      ],
+      "story": "./src/compositions/forms/ValuesInput.stories.tsx"
+    },
     "Wallet": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -8691,6 +8774,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "CreateWithAiButton",
         "PlanGrid"
       ],
       "story": null
@@ -9333,6 +9417,13 @@
       "component": "TimezoneCombobox",
       "uses": [
         "TimezoneCombobox"
+      ]
+    },
+    "./src/compositions/forms/ValuesInput.stories.tsx": {
+      "title": "Building blocks/Forms/ValuesInput",
+      "component": "ValuesInput",
+      "uses": [
+        "ValuesInput"
       ]
     },
     "./src/compositions/forms/WorkflowStepper.stories.tsx": {
@@ -9997,6 +10088,28 @@
       "component": "DataExportDialog",
       "uses": [
         "DataExportDialog"
+      ]
+    },
+    "./src/pages/developers/imports/EventImportGrid.stories.tsx": {
+      "title": "App/Developers/Imports/Import table",
+      "component": "EventImportGrid",
+      "uses": [
+        "EventImportGrid"
+      ]
+    },
+    "./src/pages/developers/imports/EventImportSheet.stories.tsx": {
+      "title": "App/Developers/Imports/Import detail sheet",
+      "component": "EventImportSheet",
+      "uses": [
+        "EventImportSheet"
+      ]
+    },
+    "./src/pages/developers/imports/EventImportsOverview.stories.tsx": {
+      "title": "App/Developers/Imports/Imports",
+      "component": "EventImportsOverview",
+      "uses": [
+        "EventImportGrid",
+        "EventImportsOverview"
       ]
     },
     "./src/pages/developers/usage-syncs/UsageSyncDetailSheet.stories.tsx": {
@@ -11228,6 +11341,20 @@
         "PageBody"
       ]
     },
+    "GroupDetailPage": {
+      "file": "apps/console/src/pages/groups/GroupDetailPage.tsx",
+      "pattern": "Detail",
+      "route": "/groups/$groupId",
+      "uses": [
+        "CatalogDetailFrame",
+        "CatalogStatusBadge",
+        "ConfirmDialog",
+        "CopyIcon",
+        "EditableCard",
+        "GroupMembersView",
+        "Pill"
+      ]
+    },
     "GroupFormPage": {
       "file": "apps/console/src/pages/groups/GroupFormPage.tsx",
       "pattern": "Form",
@@ -11253,6 +11380,17 @@
       "route": "/",
       "uses": [
         "DashboardHome"
+      ]
+    },
+    "EventImportsPage": {
+      "file": "apps/console/src/pages/imports/EventImportsPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "EventImportGrid",
+        "EventImportSheet",
+        "EventImportsOverview",
+        "ListState"
       ]
     },
     "IntegrationListPage": {
@@ -11411,6 +11549,7 @@
       "route": "/plans",
       "uses": [
         "ConfirmDialog",
+        "CreateWithAiButton",
         "ListState",
         "PageBody",
         "PlanGrid"

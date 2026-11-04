@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { BookOpenIcon, CopyIcon, RefreshCwIcon, WaypointsIcon } from '@ui/icons'
 import {
+  DOCS,
   USAGE_SYNC_STATE,
   USAGE_SYNC_STATE_LABEL,
   type UsageSync,
@@ -43,13 +44,13 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Marketplace metering',
     description: 'How usage is reported to a cloud marketplace each billing period.',
-    href: 'https://docs.flexprice.io/docs/overview',
+    href: DOCS.marketplaceUsageReporting,
     icon: <WaypointsIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Connecting a marketplace',
     description: 'Adding the connection that usage syncs report through.',
-    href: 'https://docs.flexprice.io/docs/overview',
+    href: DOCS.marketplaces,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
 ]

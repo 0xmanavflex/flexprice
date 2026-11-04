@@ -8,6 +8,7 @@ import { ShellBreadcrumb } from './ShellBreadcrumb'
 import { ShellChangelog } from './ShellChangelog'
 import { ShellCreateMenu } from './ShellCreateMenu'
 import type { ShellEnvironment, ShellNavGroup } from './types'
+import { DOCS } from '@fp/domain'
 
 /**
  * The shell, in the arrangements that actually occur.
@@ -457,7 +458,7 @@ export const WithChangelog: Story = {
             id: 'console-v2',
             title: 'A new console',
             summary: 'Search every record with ⌘K, and switch environments from the breadcrumb.',
-            href: 'https://docs.flexprice.io/docs/overview',
+            href: DOCS.home,
             scene: 'home',
           },
           {
@@ -465,7 +466,7 @@ export const WithChangelog: Story = {
             title: 'Subscriptions are now contracts',
             summary:
               'Charges split into Current, Upcoming and History, and a contract can have a parent.',
-            href: 'https://docs.flexprice.io/docs/subscriptions/customers-create-subscription',
+            href: DOCS.subscriptionCreate,
             scene: 'contracts',
           },
         ]}

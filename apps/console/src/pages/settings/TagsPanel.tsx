@@ -11,6 +11,8 @@ import {
 } from '@fp/domain'
 import { useCreateGroup, useDeleteGroup, useGroups } from '@fp/query'
 import { ConfirmDialog, EmptyState, Field, OptionSelect } from '@fp/ui/compositions'
+import { CopyIcon, LayersIcon } from '@fp/ui/icons'
+import { RowActionsMenu } from '@fp/ui/pages'
 import {
   Button,
   Dialog,
@@ -44,9 +46,9 @@ const ENTITY_OPTIONS = Object.values(GroupEntityType).map((value) => ({
  * Tags are the console's name for the API's groups, so this reads and writes
  * the same records as the Groups pages. Creating one happens in a dialog on
  * this page: a tag is three fields, and leaving Settings for a full page to
- * fill them in is a lot of navigation for very little form. The groups API has
- * no update route, so there is no edit here either: Open goes to the detail
- * page, which is where a group's members are managed.
+ * fill them in is a lot of navigation for very little form. The SDK has no
+ * group update, so there is no edit here either. A row, or View tag in its
+ * menu, opens the tag's page inside Settings, where its members are listed.
  */
 export function TagsPanel({ onOpenPage }: { onOpenPage: (href: string) => void }) {
   const [isCreating, setIsCreating] = useState(false)
@@ -77,6 +79,7 @@ export function TagsPanel({ onOpenPage }: { onOpenPage: (href: string) => void }
         rows={rows}
         isLoading={groups.isPending}
         getRowId={(group) => group.id}
+        onRowClick={(group) => onOpenPage(`/groups/${group.id}`)}
         action={create}
         empty={
           <EmptyState
@@ -130,15 +133,29 @@ export function TagsPanel({ onOpenPage }: { onOpenPage: (href: string) => void }
           {
             key: 'actions',
             header: '',
-            width: 150,
+            width: 56,
+            // The menu (and its portalled items) must not also open the row.
             cell: (group) => (
-              <span className="flex justify-end gap-1">
-                <Button size="sm" variant="ghost" onClick={() => onOpenPage(`/groups/${group.id}`)}>
-                  Open
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setDeleting(group)}>
-                  Delete
-                </Button>
+              <span onClick={(event) => event.stopPropagation()}>
+                <RowActionsMenu
+                  label={group.name}
+                  extra={[
+                    {
+                      label: 'View tag',
+                      readOnly: true,
+                      icon: <LayersIcon aria-hidden />,
+                      onSelect: () => onOpenPage(`/groups/${group.id}`),
+                    },
+                    {
+                      label: 'Copy tag ID',
+                      readOnly: true,
+                      icon: <CopyIcon aria-hidden />,
+                      onSelect: () => void navigator.clipboard?.writeText(group.id),
+                    },
+                  ]}
+                  onRemove={() => setDeleting(group)}
+                  removeLabel="Delete tag"
+                />
               </span>
             ),
           },

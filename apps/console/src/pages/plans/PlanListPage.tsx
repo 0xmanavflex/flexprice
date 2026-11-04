@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { type Plan, type PlanQuery, isPlanQueryFiltered } from '@fp/domain'
+import { type Plan, type PlanQuery, RBAC_ENTITY, isPlanQueryFiltered } from '@fp/domain'
 import { useArchivePlan, usePlanLinkage, usePlans } from '@fp/query'
 import { DuplicatePlanDialog } from './DuplicatePlanDialog'
-import { PlanGrid } from '@fp/ui/pages'
-import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
+import { CreateWithAiButton, PlanGrid } from '@fp/ui/pages'
+import { ConfirmDialog, ListState, PageBody, useWriteAccess } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
 
@@ -41,6 +41,10 @@ export function PlanListPage({
   // for the rows on screen. None of it is on the plan itself.
   const linked = usePlanLinkage(useMemo(() => rows.map((plan) => plan.id), [rows]))
   const isFiltered = isPlanQueryFiltered(query)
+  // Create with AI makes features as well as plans: V1 offers it only with
+  // write on both. The route itself is gated on plan write.
+  const featureWrite = useWriteAccess(RBAC_ENTITY.Feature)
+  const createWithAi = featureWrite.allowed ? onCreateWithAi : undefined
 
   const clearFilters = () =>
     onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
@@ -60,7 +64,14 @@ export function PlanListPage({
           isFiltered={isFiltered}
           onRetry={() => void plans.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={() => onCreatePlan()}>New plan</Button>}
+          createAction={
+            // The toolbar is not shown on an empty Plans page, so its AI entry
+            // is offered here too, as V1 does on its empty state.
+            <>
+              {createWithAi ? <CreateWithAiButton onClick={createWithAi} /> : null}
+              <Button onClick={() => onCreatePlan()}>New plan</Button>
+            </>
+          }
           emptyTitle="No plans yet"
           emptyDescription="Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants: create the first to start selling."
         >
@@ -71,7 +82,7 @@ export function PlanListPage({
             total={plans.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
-            onCreateWithAi={onCreateWithAi}
+            {...(createWithAi ? { onCreateWithAi: createWithAi } : {})}
             onPlanClick={(plan) => onOpenPlan(plan.id)}
             onEdit={(plan) => onEditPlan(plan.id)}
             onAddCharges={(plan) => onOpenPlan(plan.id)}

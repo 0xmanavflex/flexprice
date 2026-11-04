@@ -8,6 +8,7 @@ import {
   PlusIcon,
 } from '@ui/icons'
 import {
+  DOCS,
   COUPON_CADENCE_LABEL,
   COUPON_SORT_LABEL,
   COUPON_STATUS_LABEL,
@@ -98,19 +99,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'What a coupon is',
     description: 'Fixed amounts and percentages, and how a discount is redeemed.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/coupons/overview',
+    href: DOCS.coupons,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Creating a coupon',
     description: 'Set the discount, the cadence and the redemption window.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/coupons/create',
+    href: DOCS.couponCreate,
     icon: <TicketPercentIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Applying a discount',
     description: 'Put a coupon on a contract and see it on the next invoice.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/coupons/apply-discount-on-subscription',
+    href: DOCS.couponOnSubscription,
     icon: <PencilIcon aria-hidden className="size-4" />,
   },
 ]

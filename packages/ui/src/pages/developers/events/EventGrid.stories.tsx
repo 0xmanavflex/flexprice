@@ -2,6 +2,8 @@ import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { DEFAULT_RAW_EVENT_QUERY, type RawEvent } from '@fp/domain'
+import { Button } from '@ui/components/primitives/button'
+import { UploadIcon } from '@ui/icons'
 import { EventGrid } from './EventGrid'
 
 const events: RawEvent[] = [
@@ -163,5 +165,23 @@ export const Reload: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('button', { name: 'Reload' }))
     await expect(args.onReload).toHaveBeenCalledOnce()
+  },
+}
+
+/** The page's Import CSV sits beside Reload, so a backfill starts where events are read. */
+export const WithImport: Story = {
+  args: {
+    onReload: fn(),
+    importAction: (
+      <Button variant="outline" size="sm" className="h-8 px-3">
+        <UploadIcon aria-hidden />
+        Import CSV
+      </Button>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('button', { name: 'Import CSV' })).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Reload' })).toBeInTheDocument()
   },
 }

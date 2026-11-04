@@ -297,6 +297,11 @@ export function useApplyPricingSchema() {
                       }
                     : {}),
                   expirationType: CreditGrantExpiryType.Never,
+                  // What a credit is worth, so the wallet debits usage priced
+                  // in currency at the right number of credits (V1 sent it).
+                  ...(grant.conversionRate !== null
+                    ? { conversionRate: String(grant.conversionRate) }
+                    : {}),
                   priority: 1,
                 } as never,
                 CreditGrantScope.Plan,

@@ -1,6 +1,12 @@
 import { type ReactNode, useMemo } from 'react'
 import { BookOpenIcon, CopyIcon, EyeIcon, RefreshCwIcon, Trash2Icon } from '@ui/icons'
-import { type DataExport, type DataExportQuery, EXPORT_STATE, type ExportState } from '@fp/domain'
+import {
+  DOCS,
+  type DataExport,
+  type DataExportQuery,
+  EXPORT_STATE,
+  type ExportState,
+} from '@fp/domain'
 import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
@@ -31,7 +37,7 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Exporting to S3',
     description: 'How exports write billing data to a bucket you own.',
-    href: 'https://docs.flexprice.io/docs/overview',
+    href: DOCS.s3Export,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
 ]

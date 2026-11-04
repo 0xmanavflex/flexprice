@@ -3,6 +3,7 @@ import type { DateRange } from 'react-day-picker'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import {
   PORTAL_RANGES,
+  type PortalParts,
   type PortalQuota,
   type PortalRange,
   type PortalSpend,
@@ -83,6 +84,16 @@ const DAY = 86_400_000
 
 export interface PortalUsageProps {
   data: CustomerPortalData
+  /** Which of the summary, trend, quota and breakdown the merchant shows. */
+  parts: Pick<PortalParts, 'spendSummary' | 'usageTrend' | 'usageQuota' | 'usageBreakdown'>
+  /** The ranges offered, in the portal's order. */
+  ranges: readonly PortalRange[]
+  /** Whether the calendar lets the customer pick their own dates. */
+  allowCustomRange: boolean
+  /** Event property keys the breakdown may be grouped by; none hides the control. */
+  groupKeys: readonly string[]
+  groupBy: string | null
+  onGroupByChange: (key: string | null) => void
   range: PortalRange
   customRange: { start: Date; end: Date } | null
   onRangeChange: (range: PortalRange) => void
@@ -92,7 +103,7 @@ export interface PortalUsageProps {
 }
 
 export function PortalUsage(props: PortalUsageProps) {
-  const { data, range, customRange, now, locale } = props
+  const { data, parts, range, customRange, now, locale } = props
   const period = customRange
     ? {
         start: customRange.start,
@@ -107,16 +118,28 @@ export function PortalUsage(props: PortalUsageProps) {
   return (
     <div className="flex flex-col gap-5">
       <DateControls {...props} period={period} />
-      <SpendSummary
-        data={data}
-        days={period.days}
-        caption={customRange ? 'this period' : RANGE_CAPTION[range]}
-        now={now}
-        locale={locale}
-      />
-      <UsageTrend spend={data.spend} hourly={period.days === 1} locale={locale} />
-      <Allowances quotas={data.quotas} locale={locale} />
-      <Breakdown spend={data.spend} locale={locale} />
+      {parts.spendSummary ? (
+        <SpendSummary
+          data={data}
+          days={period.days}
+          caption={customRange ? 'this period' : RANGE_CAPTION[range]}
+          now={now}
+          locale={locale}
+        />
+      ) : null}
+      {parts.usageTrend ? (
+        <UsageTrend spend={data.spend} hourly={period.days === 1} locale={locale} />
+      ) : null}
+      {parts.usageQuota ? <Allowances quotas={data.quotas} locale={locale} /> : null}
+      {parts.usageBreakdown ? (
+        <Breakdown
+          spend={props.groupBy && data.groupedSpend ? data.groupedSpend : data.spend}
+          groupKeys={props.groupKeys}
+          groupBy={props.groupBy}
+          onGroupByChange={props.onGroupByChange}
+          locale={locale}
+        />
+      ) : null}
     </div>
   )
 }
@@ -126,6 +149,8 @@ export function PortalUsage(props: PortalUsageProps) {
 /** Preset control plus a calendar range, shared by every widget on the page. */
 function DateControls({
   range,
+  ranges,
+  allowCustomRange,
   customRange,
   onRangeChange,
   onCustomRange,
@@ -137,6 +162,9 @@ function DateControls({
   const [draft, setDraft] = useState<DateRange | undefined>(undefined)
   const last = new Date(period.end.getTime() - 1)
   const oneDay = period.end.getTime() - period.start.getTime() <= DAY
+  const span = oneDay
+    ? formatDate(period.start, locale)
+    : `${formatDate(period.start, locale)} – ${formatDate(last, locale)}`
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <Tabs
@@ -146,66 +174,69 @@ function DateControls({
         }}
       >
         <TabsList aria-label="Period" className="bg-muted/60 h-9 rounded-lg p-1">
-          {PORTAL_RANGES.map((r) => (
+          {PORTAL_RANGES.filter((r) => ranges.includes(r.id)).map((r) => (
             <TabsTrigger key={r.id} value={r.id} className="h-7 px-3 text-[13px] font-normal">
               {r.label}
             </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
-      <Popover
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next)
-          if (next) setDraft({ from: period.start, to: last })
-        }}
-      >
-        <PopoverTrigger
-          render={
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                'h-8 px-3 font-normal tabular-nums',
-                customRange && 'border-primary/50',
-              )}
-              aria-label="Pick a date range"
-            />
-          }
+      {allowCustomRange ? (
+        <Popover
+          open={open}
+          onOpenChange={(next) => {
+            setOpen(next)
+            if (next) setDraft({ from: period.start, to: last })
+          }}
         >
-          <CalendarIcon aria-hidden="true" />
-          {oneDay
-            ? formatDate(period.start, locale)
-            : `${formatDate(period.start, locale)} – ${formatDate(last, locale)}`}
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end">
-          <Calendar
-            mode="range"
-            captionLayout="dropdown"
-            numberOfMonths={2}
-            selected={draft}
-            defaultMonth={new Date(now.getFullYear(), now.getMonth() - 1, 1)}
-            disabled={{ after: now }}
-            onSelect={(next: DateRange | undefined) => {
-              setDraft(next)
-              if (next?.from && next.to && next.from.getTime() !== next.to.getTime()) {
-                const start = new Date(
-                  next.from.getFullYear(),
-                  next.from.getMonth(),
-                  next.from.getDate(),
-                )
-                const end = new Date(
-                  next.to.getFullYear(),
-                  next.to.getMonth(),
-                  next.to.getDate() + 1,
-                )
-                onCustomRange(start, end)
-                setOpen(false)
-              }
-            }}
-          />
-        </PopoverContent>
-      </Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'h-8 px-3 font-normal tabular-nums',
+                  customRange && 'border-primary/50',
+                )}
+                aria-label="Pick a date range"
+              />
+            }
+          >
+            <CalendarIcon aria-hidden="true" />
+            {span}
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="range"
+              captionLayout="dropdown"
+              numberOfMonths={2}
+              selected={draft}
+              defaultMonth={new Date(now.getFullYear(), now.getMonth() - 1, 1)}
+              disabled={{ after: now }}
+              onSelect={(next: DateRange | undefined) => {
+                setDraft(next)
+                if (next?.from && next.to && next.from.getTime() !== next.to.getTime()) {
+                  const start = new Date(
+                    next.from.getFullYear(),
+                    next.from.getMonth(),
+                    next.from.getDate(),
+                  )
+                  const end = new Date(
+                    next.to.getFullYear(),
+                    next.to.getMonth(),
+                    next.to.getDate() + 1,
+                  )
+                  onCustomRange(start, end)
+                  setOpen(false)
+                }
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+      ) : (
+        // The merchant keeps the dates to the presets: the window still says which days it is.
+        <span className="text-muted-foreground text-[13px] tabular-nums">{span}</span>
+      )}
     </div>
   )
 }
@@ -674,12 +705,25 @@ function groupItems(items: PortalSpendItem[]): Group[] {
     .sort((a, b) => b.cost - a.cost)
 }
 
-/** Features grouped, with usage, unit cost, cost and share of spend. */
+/** Value shown for "by feature" in the group-by control. */
+const BY_FEATURE = '__feature__'
+
+/**
+ * Features grouped, with usage, unit cost, cost and share of spend. With a
+ * property key chosen, each group is one of that property's values, holding
+ * the features used under it.
+ */
 function Breakdown({
   spend,
+  groupKeys,
+  groupBy,
+  onGroupByChange,
   locale,
 }: {
   spend: CustomerPortalData['spend']
+  groupKeys: readonly string[]
+  groupBy: string | null
+  onGroupByChange: (key: string | null) => void
   locale: string | undefined
 }) {
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set())
@@ -691,7 +735,39 @@ function Breakdown({
       return next
     })
   return (
-    <Section title="Usage breakdown" description="What you used and what it cost, by feature" flush>
+    <Section
+      title="Usage breakdown"
+      description={
+        groupBy
+          ? `What you used and what it cost, by ${groupBy}`
+          : 'What you used and what it cost, by feature'
+      }
+      flush
+      action={
+        groupKeys.length > 0 ? (
+          <Select
+            value={groupBy ?? BY_FEATURE}
+            onValueChange={(value) =>
+              onGroupByChange(value === null || value === BY_FEATURE ? null : value)
+            }
+          >
+            <SelectTrigger size="sm" className="h-8 min-w-40" aria-label="Group by">
+              <SelectValue>
+                {(value) => (value === BY_FEATURE || !value ? 'By feature' : `By ${String(value)}`)}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value={BY_FEATURE}>By feature</SelectItem>
+              {groupKeys.map((key) => (
+                <SelectItem key={key} value={key}>
+                  By {key}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : undefined
+      }
+    >
       <Loaded load={spend} label="usage">
         {(data) => {
           if (data.items.length === 0) {
@@ -775,7 +851,10 @@ function Breakdown({
                           ? unitPriceLabel(item.unitCost, item.unit)
                           : null
                         return (
-                          <tr key={item.featureId} className="border-border/40 h-12 border-b">
+                          <tr
+                            key={`${group.name}:${item.featureId}`}
+                            className="border-border/40 h-12 border-b"
+                          >
                             <td className="pl-12">{item.name}</td>
                             <td className="text-muted-foreground px-4 whitespace-nowrap tabular-nums">
                               {formatNumber(item.usage, locale)} {item.unit}

@@ -11,6 +11,7 @@ import {
   PlusIcon,
 } from '@ui/icons'
 import {
+  DOCS,
   BILLING_ENTITY_FILTER,
   CUSTOMER_FILTERS,
   CUSTOMER_SORT_LABEL,
@@ -90,32 +91,28 @@ const SORT_OPTIONS = Object.values(CustomerSortField).map((value) => ({
 }))
 
 /**
- * The three cards under the first-run empty state.
- *
- * Every URL was requested and returned 200. Worth re-checking whenever these
- * change: the docs site namespaces everything under `/docs/` or
- * `/api-reference/`, and a plausible-looking guess such as
- * `docs.flexprice.io/customers` simply 404s. A dead link in an empty state is
- * worse than no link, because the empty state is where someone has already
+ * The three cards under the first-run empty state. Their addresses live in
+ * `DOCS` (`@fp/domain`), checked against the docs sitemap: a dead link in an
+ * empty state is worse than none, because that is where someone has already
  * admitted they do not know what to do next.
  */
 const GUIDES: EntityGuide[] = [
   {
     title: 'What a customer is',
     description: 'The record you bill against, and how it ties back to your own system.',
-    href: 'https://docs.flexprice.io/docs/customers/overview',
+    href: DOCS.customers,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Creating one over the API',
     description: 'The fields that matter, including the external id that keeps them in sync.',
-    href: 'https://docs.flexprice.io/api-reference/customers/create-a-customer',
+    href: DOCS.apiCreateCustomer,
     icon: <UserIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Archiving a customer',
     description: 'What happens to their contracts and invoices when you do.',
-    href: 'https://docs.flexprice.io/docs/customers/archive',
+    href: DOCS.customerArchive,
     icon: <ReceiptIcon aria-hidden className="size-4" />,
   },
 ]
