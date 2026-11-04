@@ -1,3 +1,4 @@
+import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 
 test.beforeEach(async ({ context }) => {
@@ -58,7 +59,7 @@ test.describe('Settings → Tags', () => {
 })
 
 test.describe('a tag and a coupon open inside Settings', () => {
-  const settingsRail = (page: import('@playwright/test').Page, name: string) =>
+  const settingsRail = (page: Page, name: string) =>
     page.getByRole('navigation', { name: 'Settings' }).getByRole('button', { name })
 
   test('a tag row has one menu, and View tag opens its page under Tags', async ({ page }) => {
