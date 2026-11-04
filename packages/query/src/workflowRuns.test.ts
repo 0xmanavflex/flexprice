@@ -53,12 +53,26 @@ describe('toWorkflowFilter', () => {
     })
   })
 
-  it('sends no status when several are chosen', () => {
+  it('sends several statuses as one in-condition', () => {
     const filter = toWorkflowFilter({
       ...DEFAULT_WORKFLOW_QUERY,
       statuses: [WorkflowStatus.Failed, WorkflowStatus.Running],
     })
     expect(filter).not.toHaveProperty('workflowStatus')
+    expect(filter.filters).toEqual([
+      {
+        field: 'workflow_status',
+        operator: 'in',
+        dataType: 'array',
+        value: { array: ['Failed', 'Running'] },
+      },
+    ])
+  })
+
+  it('sends no status condition when none is chosen', () => {
+    const filter = toWorkflowFilter(DEFAULT_WORKFLOW_QUERY)
+    expect(filter).not.toHaveProperty('workflowStatus')
+    expect(filter).not.toHaveProperty('filters')
   })
 })
 
