@@ -197,6 +197,8 @@ export { RelatedCard, RelatedCardProvenance } from './detail/RelatedCard'
 export type { RelatedCardProps, RelatedItem } from './detail/RelatedCard'
 export { InlineField, InlineFieldProvenance } from './forms/InlineField'
 export type { InlineFieldProps } from './forms/InlineField'
+export { ValuesInput, ValuesInputProvenance } from './forms/ValuesInput'
+export type { ValuesInputProps } from './forms/ValuesInput'
 
 export {
   ChoiceCards,

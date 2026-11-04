@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
-import { get, useFieldArray, type Resolver } from 'react-hook-form'
+import { Controller, get, useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   DOCS,
@@ -32,6 +32,7 @@ import { FormPage } from '@ui/compositions/forms/FormPage'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { OptionSelect, type Option } from '@ui/compositions/forms/OptionSelect'
+import { ValuesInput } from '@ui/compositions/forms/ValuesInput'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -550,11 +551,24 @@ export function FeatureForm(props: FeatureFormProps) {
               </Field>
               <Field
                 label={`Filter ${index + 1} values`}
-                hint="Comma separated."
+                hint="Press Enter after each value."
                 error={message(`${filterPath}.${index}.values`)}
               >
                 {({ id, ...field }) => (
-                  <Input id={id} {...field} {...form.register(`filters.${index}.valuesText`)} />
+                  // Held as comma-joined text, as before: only the field changed.
+                  <Controller
+                    control={form.control}
+                    name={`filters.${index}.valuesText`}
+                    render={({ field: values }) => (
+                      <ValuesInput
+                        id={id}
+                        {...field}
+                        value={splitValues(values.value)}
+                        onChange={(next) => values.onChange(next.join(', '))}
+                        onBlur={values.onBlur}
+                      />
+                    )}
+                  />
                 )}
               </Field>
               <Button

@@ -47,6 +47,17 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
+    // The mock answers in the page, so Playwright never sees this body: keep a copy.
+    await page.evaluate(() => {
+      const send = window.fetch.bind(window)
+      window.fetch = async (input, init) => {
+        const request = new Request(input, init)
+        if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/v1/features')) {
+          ;(window as { __featureBody?: string }).__featureBody = await request.clone().text()
+        }
+        return send(request)
+      }
+    })
     await page.getByRole('button', { name: 'New feature' }).first().click()
     await expect(page).toHaveURL(/\/features\/new/)
     await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -65,12 +76,26 @@ test.describe('the features list', () => {
     // The default aggregation (sum) needs the event field it adds up.
     await page.getByRole('textbox', { name: /^Event field/ }).fill('renders')
 
+    // Filter values are chips: Enter adds one, as in V1.
+    await page.getByRole('button', { name: 'Add filter' }).click()
+    await page.getByLabel('Filter 1 property').fill('region')
+    const values = page.getByLabel('Filter 1 values')
+    await values.fill('us-east')
+    await values.press('Enter')
+    await values.fill('eu-west')
+    await values.press('Enter')
+    await expect(page.getByRole('button', { name: 'Remove us-east' })).toBeVisible()
+    await expect(values).toHaveValue('')
+
     const request = page.waitForRequest(
       (r) => r.method() === 'POST' && new URL(r.url()).pathname.endsWith('/v1/features'),
     )
     await create.click()
     await request
     await expect(page).toHaveURL(/\/features\/(?!new)[^/]+$/)
+    // Both chips went out as the filter's values.
+    const sent = await page.evaluate(() => (window as { __featureBody?: string }).__featureBody)
+    expect(sent).toContain('"values":["us-east","eu-west"]')
   })
 
   test('edits a feature on its own page, with the lookup key read-only', async ({ page }) => {

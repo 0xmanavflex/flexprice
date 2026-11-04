@@ -3719,7 +3719,8 @@
         "FormPage",
         "FormRow",
         "OptionSelect",
-        "PlusIcon"
+        "PlusIcon",
+        "ValuesInput"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureForm.stories.tsx"
@@ -8719,6 +8720,15 @@
       ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
+    "ValuesInput": {
+      "file": "src/compositions/forms/ValuesInput.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "FeatureForm"
+      ],
+      "story": "./src/compositions/forms/ValuesInput.stories.tsx"
+    },
     "Wallet": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -9411,6 +9421,13 @@
       "component": "TimezoneCombobox",
       "uses": [
         "TimezoneCombobox"
+      ]
+    },
+    "./src/compositions/forms/ValuesInput.stories.tsx": {
+      "title": "Building blocks/Forms/ValuesInput",
+      "component": "ValuesInput",
+      "uses": [
+        "ValuesInput"
       ]
     },
     "./src/compositions/forms/WorkflowStepper.stories.tsx": {
