@@ -11328,6 +11328,20 @@
         "PageBody"
       ]
     },
+    "GroupDetailPage": {
+      "file": "apps/console/src/pages/groups/GroupDetailPage.tsx",
+      "pattern": "Detail",
+      "route": "/groups/$groupId",
+      "uses": [
+        "CatalogDetailFrame",
+        "CatalogStatusBadge",
+        "ConfirmDialog",
+        "CopyIcon",
+        "EditableCard",
+        "GroupMembersView",
+        "Pill"
+      ]
+    },
     "GroupFormPage": {
       "file": "apps/console/src/pages/groups/GroupFormPage.tsx",
       "pattern": "Form",
