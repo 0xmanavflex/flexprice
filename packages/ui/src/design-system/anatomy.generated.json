@@ -1186,6 +1186,7 @@
       "layer": "surface",
       "composes": [
         "ActivityLog",
+        "ConfirmDialog",
         "Pill",
         "PlusIcon",
         "Sheet"
@@ -1661,6 +1662,7 @@
         "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "ChargeSheet",
         "ConnectionExports",
         "ContractIntegrations",
         "CustomerTaxSection",
