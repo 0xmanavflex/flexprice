@@ -325,6 +325,32 @@ describe('toTenantBillingWire', () => {
     expect(usage.features[0]).toMatchObject({ limit: 1_000_000, currentUsage: '12345' })
   })
 
+  it('keeps a grant entitlement’s window, which its sources do not carry', () => {
+    const usage = toTenantBillingUsage(
+      toTenantBillingWire({
+        usage: {
+          features: [
+            {
+              feature: { id: 'feat_01', name: 'Events', type: 'metered' },
+              total_limit: 100,
+              grant_duration_unit: 'day',
+              grant_duration_value: 1,
+              grant_measure: 'quantity',
+              sources: [{ entity_type: 'plan', entity_name: 'Pro' }],
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(usage.features[0]).toMatchObject({
+      grantDurationUnit: 'day',
+      grantDurationValue: 1,
+      grantMeasure: 'quantity',
+    })
+    expect(usage.features[0]?.sources[0]?.usageResetPeriod).toBe('')
+  })
+
   it('reads the unit and what grants each entitlement', () => {
     const usage = toTenantBillingUsage(
       toTenantBillingWire({

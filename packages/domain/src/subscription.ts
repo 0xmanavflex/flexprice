@@ -1150,6 +1150,17 @@ export interface SubscriptionEntitlement {
   usageLimit: number | null
   softLimit: boolean
   resetPeriodLabel: string
+  /**
+   * `metered`, `boolean`, `static`, `config`: the feature's own type, so a
+   * contract with no usage reported yet (a draft, a paused one) does not read
+   * a boolean or static entitlement as an unlimited metered one. `''` when
+   * the API did not send it.
+   */
+  featureType?: string | undefined
+  /** A static entitlement's value, or a config one's JSON; `''` otherwise. */
+  staticValue?: string | undefined
+  /** What the allowance is per ("day", "month"), or `''` when it never resets. */
+  period?: string | undefined
 }
 
 export const SUBSCRIPTION_CANCELLATION_TYPES = [

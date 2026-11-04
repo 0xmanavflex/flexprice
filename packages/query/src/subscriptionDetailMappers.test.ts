@@ -49,7 +49,32 @@ describe('subscription detail mappers', () => {
         feature: { id: 'f' },
         entitlement: { isEnabled: true, usageLimit: 10, usageResetPeriod: 'MONTHLY' },
       }),
-    ).toMatchObject({ enabled: true, usageLimit: 10, resetPeriodLabel: 'Monthly' })
+    ).toMatchObject({ enabled: true, usageLimit: 10, resetPeriodLabel: 'Monthly', period: 'month' })
+  })
+
+  it('carries the feature type and value, so no usage read is needed to show them', () => {
+    expect(
+      toSubscriptionEntitlement({
+        feature: { id: 'f', name: 'Seats', type: 'static' },
+        entitlement: { isEnabled: true, staticValues: ['10'] },
+      }),
+    ).toMatchObject({ featureType: 'static', staticValue: '10', usageLimit: null })
+    expect(
+      toSubscriptionEntitlement({
+        feature: { id: 'f', name: 'Support', type: 'config' },
+        entitlement: { isEnabled: true },
+        sources: [{ configValue: { response_hours: 4, support: '24x7' } }],
+      }),
+    ).toMatchObject({
+      featureType: 'config',
+      staticValue: '{"response_hours":4,"support":"24x7"}',
+    })
+    expect(
+      toSubscriptionEntitlement({
+        feature: { id: 'f', name: 'Calls', type: 'metered' },
+        entitlement: { isEnabled: true, usageLimit: 100, grantDurationUnit: 'day' },
+      }),
+    ).toMatchObject({ period: 'day' })
   })
 
   it('reads the wire names when the SDK rejected a 200', () => {
@@ -73,6 +98,9 @@ describe('subscription detail mappers', () => {
         usageLimit: 30,
         softLimit: false,
         resetPeriodLabel: '',
+        featureType: '',
+        staticValue: '',
+        period: '',
       },
     ])
     const failed = new ApiError(ErrorKind.Server, 'no', {

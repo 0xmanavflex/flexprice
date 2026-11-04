@@ -11,6 +11,7 @@ import {
   type AddContractAddon,
   type AddContractCharge,
   type AddContractCoupon,
+  allowancePeriod,
   BILLING_PERIOD_LABEL,
   BillingModel,
   BillingPeriod,
@@ -536,14 +537,22 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
 }
 
 export interface SubscriptionFeatureWire {
-  feature?: { id?: string | undefined; name?: string | undefined } | undefined
+  feature?:
+    { id?: string | undefined; name?: string | undefined; type?: string | undefined } | undefined
   entitlement?:
     | {
         isEnabled?: boolean | undefined
         isSoftLimit?: boolean | undefined
         usageLimit?: number | undefined
         usageResetPeriod?: string | undefined
+        grantDurationUnit?: string | undefined
+        grantDurationValue?: number | undefined
+        staticValues?: string[] | undefined
+        configValues?: Array<Record<string, unknown>> | undefined
       }
+    | undefined
+  sources?:
+    | Array<{ staticValue?: string | undefined; configValue?: Record<string, unknown> | undefined }>
     | undefined
 }
 
@@ -555,6 +564,8 @@ export function toSubscriptionEntitlement(wire: SubscriptionFeatureWire): Subscr
     (NonNullable<SubscriptionFeatureWire['entitlement']> & Record<string, unknown>) | undefined
   const period = stringValue(entitlement?.usageResetPeriod ?? entitlement?.usage_reset_period)
   const limit = entitlement?.usageLimit ?? entitlement?.usage_limit
+  const duration = entitlement?.grantDurationValue ?? entitlement?.grant_duration_value
+  const featureType = stringValue(wire.feature?.type)
   return {
     featureId: wire.feature?.id ?? '',
     name: wire.feature?.name || wire.feature?.id || 'Feature',
@@ -563,7 +574,45 @@ export function toSubscriptionEntitlement(wire: SubscriptionFeatureWire): Subscr
     softLimit: booleanValue(entitlement?.isSoftLimit ?? entitlement?.is_soft_limit),
     resetPeriodLabel:
       period && period !== 'NEVER' ? (BILLING_PERIOD_LABEL[period as BillingPeriod] ?? period) : '',
+    // The feature's type and value come from the entitlement itself, so a
+    // contract with no usage reported (draft, paused) still reads a boolean
+    // as on, a static one as its value and a config one as its JSON.
+    featureType,
+    staticValue:
+      featureType === 'config' ? configText(wire, entitlement) : staticText(wire, entitlement),
+    period:
+      allowancePeriod({
+        usageResetPeriod: period,
+        grantDurationUnit: stringValue(
+          entitlement?.grantDurationUnit ?? entitlement?.grant_duration_unit,
+        ),
+        grantDurationValue: typeof duration === 'number' ? duration : null,
+      }) ?? '',
   }
+}
+
+type EntitlementWire = NonNullable<SubscriptionFeatureWire['entitlement']> & Record<string, unknown>
+
+function staticText(wire: SubscriptionFeatureWire, entitlement: EntitlementWire | undefined) {
+  const values = entitlement?.staticValues ?? entitlement?.static_values
+  const fromEntitlement = Array.isArray(values)
+    ? values.filter((value): value is string => typeof value === 'string' && value !== '')
+    : []
+  if (fromEntitlement.length > 0) return fromEntitlement.join(', ')
+  const source = wire.sources?.[0] as Record<string, unknown> | undefined
+  return stringValue(source?.['staticValue'] ?? source?.['static_value'])
+}
+
+function configText(wire: SubscriptionFeatureWire, entitlement: EntitlementWire | undefined) {
+  const source = wire.sources?.[0] as Record<string, unknown> | undefined
+  const values = entitlement?.configValues ?? entitlement?.config_values
+  const config =
+    source?.['configValue'] ??
+    source?.['config_value'] ??
+    (Array.isArray(values) ? (values[0] as unknown) : undefined)
+  return config && typeof config === 'object' && Object.keys(config).length > 0
+    ? JSON.stringify(config)
+    : ''
 }
 
 function stringValue(value: unknown): string {

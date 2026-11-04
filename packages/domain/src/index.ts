@@ -154,12 +154,20 @@ export {
   meteredAllowance,
   meteredAllowanceLabel,
   meteredResetLabel,
+  allowancePeriod,
+  AMOUNT_ALLOWANCE_SUFFIX,
   EntitlementGrantMeasure,
   EntitlementGrantDurationUnit,
   EntitlementGrantAllocationBehavior,
   EntitlementAggregationMode,
 } from './entitlement'
-export type { CreateEntitlement, Entitlement, EditEntitlement, MeteredGrant } from './entitlement'
+export type {
+  AllowanceWindow,
+  CreateEntitlement,
+  Entitlement,
+  EditEntitlement,
+  MeteredGrant,
+} from './entitlement'
 
 export {
   CREDIT_GRANT_CADENCE_LABEL,

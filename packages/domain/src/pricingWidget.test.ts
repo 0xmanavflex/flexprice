@@ -359,3 +359,43 @@ describe('plan preview', () => {
     ).toBe('from $0.002/unit')
   })
 })
+
+describe('a plan card allowance', () => {
+  const card = (entitlement: Partial<Entitlement>) =>
+    pricingCards({
+      plans: [plan('plan_pro', 'Pro')],
+      chargesByPlan,
+      entitlements: [
+        {
+          id: 'ent_1',
+          entityId: 'plan_pro',
+          featureName: 'AI Messages',
+          featureType: FeatureType.Metered,
+          usageLimit: null,
+          usageResetPeriod: null,
+          ...entitlement,
+        } as Entitlement,
+      ],
+      creditGrantsByPlan: new Map(),
+      selection: { period: 'MONTHLY', currency: 'USD' },
+      now: NOW,
+    })[0]?.included[0]?.label
+
+  it('keeps the period the allowance resets over', () => {
+    expect(card({ usageLimit: 10, usageResetPeriod: 'MONTHLY' })).toBe('10 AI Messages per month')
+    expect(card({ grantQuota: '100', grantDurationUnit: 'day', grantMeasure: 'quantity' })).toBe(
+      '100 AI Messages per day',
+    )
+    expect(card({})).toBe('Unlimited AI Messages')
+  })
+
+  it('names an amount allowance as a value of usage', () => {
+    expect(
+      card({
+        grantQuota: '12.5',
+        grantDurationUnit: 'subscription_period',
+        grantMeasure: 'amount',
+      }),
+    ).toBe('AI Messages: 12.5 of usage value per billing period')
+  })
+})

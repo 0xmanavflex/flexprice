@@ -177,6 +177,15 @@ export interface TenantFeatureUsage {
   nextUsageResetAt: Date | null
   /** The feature's plural unit ("calls"), or `''` when it has none. */
   unit: string
+  /**
+   * The grant window (`day`, `week`, `subscription_period`…) and how many of
+   * them, when the entitlement is a grant; `''` and null otherwise. A grant
+   * entitlement's period lives here, not in its sources' `usageResetPeriod`.
+   */
+  grantDurationUnit: string
+  grantDurationValue: number | null
+  /** `quantity` or `amount`; `''` when not a grant. */
+  grantMeasure: string
   /** What grants it. Empty when the API reported no source. */
   sources: EntitlementUsageSource[]
 }

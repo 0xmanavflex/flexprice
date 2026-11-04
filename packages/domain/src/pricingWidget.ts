@@ -1,7 +1,14 @@
 import { decimalSum } from './customerPortal'
 import { moneyFormatLocale } from './money'
 import { CREDIT_GRANT_PERIOD_LABEL, CreditGrantCadence, type CreditGrant } from './creditGrant'
-import { meteredAllowanceLabel, type Entitlement } from './entitlement'
+import {
+  allowancePeriod,
+  entitlementGrant,
+  EntitlementGrantMeasure,
+  meteredAllowance,
+  meteredAllowanceLabel,
+  type Entitlement,
+} from './entitlement'
 import { FeatureType } from './feature'
 import type { Plan } from './plan'
 import {
@@ -155,8 +162,17 @@ export function defaultPricingSelection(
 function includedLine(entitlement: Entitlement): string {
   const name = entitlement.featureName ?? 'Feature'
   switch (entitlement.featureType) {
-    case FeatureType.Metered:
-      return `${meteredAllowanceLabel(entitlement)} ${name}`
+    case FeatureType.Metered: {
+      // "10 AI Messages per month": the allowance without its window reads as
+      // a one-off. An amount allowance names the feature first, since its
+      // number is a value of usage, not a count of the feature.
+      const allowance = meteredAllowanceLabel(entitlement)
+      const period = meteredAllowance(entitlement) === null ? null : allowancePeriod(entitlement)
+      const per = period ? ` per ${period}` : ''
+      return entitlementGrant(entitlement)?.measure === EntitlementGrantMeasure.Amount
+        ? `${name}: ${allowance}${per}`
+        : `${allowance} ${name}${per}`
+    }
     case FeatureType.Static:
       return entitlement.staticValue ? `${entitlement.staticValue} ${name}` : name
     default:

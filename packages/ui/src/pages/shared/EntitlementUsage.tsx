@@ -1,6 +1,6 @@
 import {
-  BILLING_PERIOD_LABEL,
-  type BillingPeriod,
+  allowancePeriod,
+  AMOUNT_ALLOWANCE_SUFFIX,
   type EntitlementUsageSource as UsageSourceModel,
   type SubscriptionEntitlement,
   type TenantFeatureUsage,
@@ -112,6 +112,13 @@ export interface EntitlementUsageRow {
   softLimit?: boolean | undefined
   /** "Monthly"; `''` or omitted for an allowance that never resets. */
   resetPeriodLabel?: string | undefined
+  /**
+   * What the allowance is per: "day", "2 weeks", "billing period". Wins over
+   * `resetPeriodLabel`, which only knows the older reset periods.
+   */
+  period?: string | undefined
+  /** An amount allowance: a value of usage, not a count of it. */
+  amount?: boolean | undefined
   /** A static entitlement's value. */
   staticValue?: string | undefined
   /** Used this period; omitted when the usage read has not reported it. */
@@ -136,9 +143,10 @@ export function entitlementValue(row: EntitlementUsageRow, locale?: string): str
   if (row.featureType === 'static' || row.featureType === 'config') return row.staticValue || '—'
   if (row.limit === null) return 'Unlimited'
   const amount = new Intl.NumberFormat(locale ?? 'en-US').format(row.limit)
-  return `${amount}${row.softLimit ? ' (soft)' : ''}${
-    row.resetPeriodLabel ? ` / ${row.resetPeriodLabel.toLowerCase()}` : ''
-  }`
+  const per = row.period || row.resetPeriodLabel?.toLowerCase()
+  return `${amount}${row.amount ? ` ${AMOUNT_ALLOWANCE_SUFFIX}` : ''}${
+    row.softLimit ? ' (soft)' : ''
+  }${per ? ` / ${per}` : ''}`
 }
 
 function SourceName({ source }: { source: EntitlementSourceLink }) {
@@ -297,11 +305,6 @@ function toCount(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function periodLabel(period: string): string {
-  if (!period || period === 'NEVER') return ''
-  return BILLING_PERIOD_LABEL[period as BillingPeriod] ?? period
-}
-
 /** The usage half of a row, from one `GET /customers/usage` feature. */
 function usageFields(usage: TenantFeatureUsage) {
   return {
@@ -330,7 +333,15 @@ export function entitlementRowsFromUsage(
       enabled: usage.isEnabled,
       limit: usage.isUnlimited ? null : usage.limit,
       softLimit: usage.isSoftLimit,
-      resetPeriodLabel: periodLabel(first?.usageResetPeriod ?? ''),
+      // A grant's window is on the feature row; the sources only carry the
+      // older usage reset period.
+      period:
+        allowancePeriod({
+          usageResetPeriod: first?.usageResetPeriod,
+          grantDurationUnit: usage.grantDurationUnit,
+          grantDurationValue: usage.grantDurationValue,
+        }) ?? '',
+      amount: usage.grantMeasure === 'amount',
       staticValue: first?.staticValue ?? '',
       ...usageFields(usage),
       sources: usage.sources.map((source) => ({
@@ -353,6 +364,7 @@ export function entitlementRowsForContract(
   const byFeature = new Map((usage ?? []).map((row) => [row.featureId, row]))
   return entitlements.map((entitlement) => {
     const reported = byFeature.get(entitlement.featureId)
+    const fields = reported ? usageFields(reported) : undefined
     return {
       id: entitlement.featureId || entitlement.name,
       feature: entitlement.name,
@@ -360,9 +372,13 @@ export function entitlementRowsForContract(
       limit: entitlement.usageLimit,
       softLimit: entitlement.softLimit,
       resetPeriodLabel: entitlement.resetPeriodLabel,
-      ...(reported
-        ? { ...usageFields(reported), staticValue: reported.sources[0]?.staticValue ?? '' }
-        : {}),
+      period: entitlement.period,
+      ...fields,
+      // The entitlement's own type and value win: a contract with no usage
+      // reported (a draft, a paused one) would otherwise read every boolean,
+      // static and config entitlement as an unlimited metered one.
+      featureType: entitlement.featureType || fields?.featureType,
+      staticValue: entitlement.staticValue || reported?.sources[0]?.staticValue || '',
     }
   })
 }

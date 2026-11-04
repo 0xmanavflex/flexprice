@@ -213,6 +213,9 @@ export interface FeatureUsageWire {
   isEnabled?: boolean | undefined
   isSoftLimit?: boolean | undefined
   nextUsageResetAt?: Date | null | undefined
+  grantDurationUnit?: string | undefined
+  grantDurationValue?: number | undefined
+  grantMeasure?: string | undefined
   sources?:
     | Array<{
         subscriptionId?: string | undefined
@@ -287,6 +290,12 @@ export function toFeatureUsage(wire: FeatureUsageWire): TenantFeatureUsage {
     isSoftLimit: wire.isSoftLimit ?? false,
     nextUsageResetAt: wire.nextUsageResetAt ?? null,
     unit: wire.feature?.unitPlural ?? '',
+    // A grant entitlement's window ("1 day") is on the row, not the sources:
+    // without it "100 / day" reads as a bare 100.
+    grantDurationUnit: wire.grantDurationUnit ?? '',
+    grantDurationValue:
+      typeof wire.grantDurationValue === 'number' ? wire.grantDurationValue : null,
+    grantMeasure: wire.grantMeasure ?? '',
     sources: (wire.sources ?? []).map((source) => ({
       subscriptionId: source.subscriptionId ?? '',
       entityId: source.entityId ?? '',
@@ -363,6 +372,11 @@ export function toTenantBillingWire(raw: unknown): TenantBillingUsageWire {
           isEnabled: row['is_enabled'] === true,
           isSoftLimit: row['is_soft_limit'] === true,
           nextUsageResetAt: asDate(row['next_usage_reset_at']),
+          grantDurationUnit: text(row['grant_duration_unit']),
+          ...(typeof row['grant_duration_value'] === 'number'
+            ? { grantDurationValue: row['grant_duration_value'] }
+            : {}),
+          grantMeasure: text(row['grant_measure']),
           sources: asArray(row['sources']).map((entry) => {
             const source = asRecord(entry)
             return {
