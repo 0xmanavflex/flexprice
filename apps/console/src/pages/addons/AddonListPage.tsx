@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { type Addon, type AddonQuery } from '@fp/domain'
+import { type Addon, type AddonQuery, isAddonQueryFiltered } from '@fp/domain'
 import { useAddonLinkage, useAddons, useDeleteAddon } from '@fp/query'
 import { AddonGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
@@ -34,7 +34,7 @@ export function AddonListPage({
   const rows = useMemo(() => addons.data?.addons ?? [], [addons.data])
   // Entitlement counts for the rows on screen; not on the add-on itself.
   const linked = useAddonLinkage(useMemo(() => rows.map((addon) => addon.id), [rows]))
-  const isFiltered = query.search.length > 0 || query.statuses.length > 0
+  const isFiltered = isAddonQueryFiltered(query)
 
   const clearFilters = () =>
     onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })

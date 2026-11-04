@@ -232,6 +232,7 @@ export {
   PlanView,
   createPlanSchema,
   emptyPlan,
+  isPlanQueryFiltered,
   planKind,
   planKindLabel,
   usageBasedLabel,
@@ -248,6 +249,7 @@ export {
   ADDON_FILTERS,
   createAddonSchema,
   emptyAddon,
+  isAddonQueryFiltered,
 } from './addon'
 export type { Addon, AddonQuery, CreateAddon } from './addon'
 
