@@ -262,7 +262,7 @@ export function SubscriptionGrid({
       onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search by customer name…"
+      searchPlaceholder="Search by customer or plan…"
       /*
        * Status in the dropdown, and not also in a filter builder: two
        * controls writing `query.statuses` disagree on first interaction.

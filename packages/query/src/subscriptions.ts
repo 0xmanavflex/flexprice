@@ -18,6 +18,7 @@ import {
   BucketSize as BucketSizes,
   type BucketSize,
   CommitmentKind,
+  FilterOp,
   type Charge,
   type CancelSubscription,
   type PauseSubscription,
@@ -701,12 +702,37 @@ export function toSubscriptionFilter(
   }
 }
 
-/** How many customers a contract search may match before it narrows no further. */
-const SEARCH_CUSTOMER_LIMIT = 200
+/** One page of a name search, while collecting every customer or plan it matches. */
+const SEARCH_PAGE = 200
+/** Contracts read per page when a search matches both customers and plans. */
+const SEARCH_CONTRACT_PAGE = 500
 
 export interface SubscriptionPage {
   subscriptions: Subscription[]
   total: number
+}
+
+/** Every id a paged name search returns, page by page until the total is reached. */
+async function allMatchingIds(
+  page: (offset: number) => Promise<{
+    items?: Array<{ id?: string | undefined }> | undefined
+    pagination?: { total?: number | undefined } | undefined
+  }>,
+): Promise<string[]> {
+  const ids: string[] = []
+  for (let offset = 0; ; offset += SEARCH_PAGE) {
+    const response = await page(offset)
+    const items = response.items ?? []
+    for (const item of items) if (item.id) ids.push(item.id)
+    const total = response.pagination?.total ?? 0
+    if (items.length < SEARCH_PAGE || offset + SEARCH_PAGE >= total) return ids
+  }
+}
+
+/** A wire's value for the chosen sort, for ordering a merged search. */
+function sortValue(wire: SubscriptionWire, field: SubscriptionQuery['sortBy']): number {
+  const raw = (wire as Record<string, unknown>)[field]
+  return raw instanceof Date ? raw.getTime() : raw ? new Date(String(raw)).getTime() || 0 : 0
 }
 
 export async function fetchSubscriptions(
@@ -715,32 +741,51 @@ export async function fetchSubscriptions(
   signal?: AbortSignal,
 ): Promise<SubscriptionPage> {
   /*
-   * The search is the customer's name, asked of the server. The contract
-   * search has no name field, but it takes `customer_ids`: so the customers
-   * whose name matches are found first and the contracts are narrowed to
-   * them, which keeps paging and the total true. A term no customer matches
-   * is an empty page without a second request. Plans have their own filter.
+   * The search matches a customer's name or a plan's name, asked of the
+   * server. The contract search has no name field, but it narrows by
+   * `customer_ids` and by a `plan_id` filter: so every customer and plan whose
+   * name matches is collected first (all pages), and the contracts are
+   * narrowed to them, which keeps paging and the total true. A term nothing
+   * matches is an empty page. When both customers and plans match, the two
+   * narrowings cannot be OR-ed in one request, so both are read in full,
+   * merged without duplicates, ordered by the chosen sort and paged here.
    */
   const term = query.search.trim()
-  let customerIds: string[] | undefined
+  let request: Record<string, unknown> = toSubscriptionFilter(query)
   if (term) {
-    const customers = await call(
-      (options) =>
-        client.customers.queryCustomer(
-          { filters: nameContainsFilter(term), limit: SEARCH_CUSTOMER_LIMIT, offset: 0 } as never,
-          options,
+    const [customerIds, planIds] = await Promise.all([
+      allMatchingIds((offset) =>
+        call(
+          (options) =>
+            client.customers.queryCustomer(
+              { filters: nameContainsFilter(term), limit: SEARCH_PAGE, offset } as never,
+              options,
+            ),
+          signal,
         ),
-      signal,
-    )
-    customerIds = (customers.items ?? []).flatMap((item) => (item.id ? [item.id] : []))
-    if (customerIds.length === 0) return { subscriptions: [], total: 0 }
+      ),
+      allMatchingIds((offset) =>
+        call(
+          (options) =>
+            client.plans.queryPlan(
+              { filters: nameContainsFilter(term), limit: SEARCH_PAGE, offset } as never,
+              options,
+            ),
+          signal,
+        ),
+      ),
+    ])
+    if (customerIds.length === 0 && planIds.length === 0) return { subscriptions: [], total: 0 }
+    const byPlan: SubscriptionQuery = {
+      ...query,
+      filters: [...(query.filters ?? []), { field: 'plan_id', op: FilterOp.In, value: planIds }],
+    }
+    if (planIds.length === 0) request = toSubscriptionFilter(query, customerIds)
+    else if (customerIds.length === 0) request = toSubscriptionFilter(byPlan)
+    else return mergedSearch(client, query, customerIds, byPlan, signal)
   }
   const response = await call(
-    (options) =>
-      client.subscriptions.querySubscription(
-        toSubscriptionFilter(query, customerIds) as never,
-        options,
-      ),
+    (options) => client.subscriptions.querySubscription(request as never, options),
     signal,
   )
   const wires = await withCustomerNames(
@@ -760,6 +805,50 @@ export async function fetchSubscriptions(
     subscriptions: filtered,
     total: response.pagination?.total ?? 0,
   }
+}
+
+/** A search that matched customers and plans: both narrowings read in full, merged and paged. */
+async function mergedSearch(
+  client: Flexprice,
+  query: SubscriptionQuery,
+  customerIds: readonly string[],
+  byPlan: SubscriptionQuery,
+  signal?: AbortSignal,
+): Promise<SubscriptionPage> {
+  const scan = async (filter: (page: SubscriptionQuery) => Record<string, unknown>) => {
+    const wires: SubscriptionWire[] = []
+    for (let page = 1; ; page++) {
+      const response = await call(
+        (options) =>
+          client.subscriptions.querySubscription(
+            filter({ ...query, page, pageSize: SEARCH_CONTRACT_PAGE }) as never,
+            options,
+          ),
+        signal,
+      )
+      const items = (response.items ?? []) as SubscriptionWire[]
+      wires.push(...items)
+      const total = response.pagination?.total ?? 0
+      if (items.length < SEARCH_CONTRACT_PAGE || page * SEARCH_CONTRACT_PAGE >= total) return wires
+    }
+  }
+  const [byCustomer, byPlanName] = await Promise.all([
+    scan((page) => toSubscriptionFilter(page, customerIds)),
+    scan((page) => toSubscriptionFilter({ ...byPlan, page: page.page, pageSize: page.pageSize })),
+  ])
+  const seen = new Set<string>()
+  const direction = query.sortDirection === 'asc' ? 1 : -1
+  const merged = [...byCustomer, ...byPlanName]
+    .filter((wire) => {
+      const id = wire.id ?? ''
+      if (seen.has(id)) return false
+      seen.add(id)
+      return true
+    })
+    .sort((a, b) => direction * (sortValue(a, query.sortBy) - sortValue(b, query.sortBy)))
+  const start = (query.page - 1) * query.pageSize
+  const page = await withCustomerNames(client, merged.slice(start, start + query.pageSize), signal)
+  return { subscriptions: page.map(toSubscription), total: merged.length }
 }
 
 /**

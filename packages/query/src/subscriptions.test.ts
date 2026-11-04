@@ -127,17 +127,24 @@ describe('toSubscriptionFilter', () => {
 
 describe('the contract search', () => {
   const contract = { id: 'sub_1', customerId: 'cus_1', customer: { name: 'QA Module' } }
-  const fakeClient = (customers: { id: string }[]) => {
-    const queryCustomer = vi.fn(async (_filter: unknown) => ({ items: customers }))
+  const fakeClient = (customers: { id: string }[], plans: { id: string }[] = []) => {
+    // Paged like the API: `limit` and `offset` cut the list, `total` counts all of it.
+    const paged = (rows: { id: string }[]) => async (filter: unknown) => {
+      const { limit = 200, offset = 0 } = filter as { limit?: number; offset?: number }
+      return { items: rows.slice(offset, offset + limit), pagination: { total: rows.length } }
+    }
+    const queryCustomer = vi.fn(paged(customers))
+    const queryPlan = vi.fn(paged(plans))
     const querySubscription = vi.fn(async (_filter: unknown) => ({
       items: [contract],
       pagination: { total: 1 },
     }))
     const client = {
       customers: { queryCustomer },
+      plans: { queryPlan },
       subscriptions: { querySubscription },
     } as unknown as Flexprice
-    return { client, queryCustomer, querySubscription }
+    return { client, queryCustomer, queryPlan, querySubscription }
   }
 
   it('asks the server for the contracts of the customers whose name matches', async () => {
@@ -154,7 +161,38 @@ describe('the contract search', () => {
     expect(page.total).toBe(1)
   })
 
-  it('returns an empty page when no customer matches, without listing contracts', async () => {
+  it('collects every matching customer, past the first page', async () => {
+    const many = Array.from({ length: 201 }, (_, index) => ({ id: `cus_${index}` }))
+    const { client, queryCustomer, querySubscription } = fakeClient(many)
+    await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'QA' })
+    expect(queryCustomer).toHaveBeenCalledTimes(2)
+    const sent = querySubscription.mock.calls[0]?.[0] as { customerIds: string[] }
+    expect(sent.customerIds).toHaveLength(201)
+    expect(sent.customerIds.at(-1)).toBe('cus_200')
+  })
+
+  it('finds contracts by plan name when no customer matches', async () => {
+    const { client, querySubscription } = fakeClient([], [{ id: 'plan_ent' }])
+    const page = await fetchSubscriptions(client, {
+      ...DEFAULT_SUBSCRIPTION_QUERY,
+      search: 'Enterprise',
+    })
+    const sent = querySubscription.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(sent).not.toHaveProperty('customerIds')
+    expect(JSON.stringify(sent['filters'])).toContain('plan_ent')
+    expect(page.subscriptions.map((row) => row.id)).toEqual(['sub_1'])
+  })
+
+  it('merges customer and plan matches without duplicates', async () => {
+    const { client, querySubscription } = fakeClient([{ id: 'cus_1' }], [{ id: 'plan_ent' }])
+    const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'Q' })
+    // One read narrowed by customer, one by plan; both return sub_1, shown once.
+    expect(querySubscription).toHaveBeenCalledTimes(2)
+    expect(page.subscriptions.map((row) => row.id)).toEqual(['sub_1'])
+    expect(page.total).toBe(1)
+  })
+
+  it('returns an empty page when nothing matches, without listing contracts', async () => {
     const { client, querySubscription } = fakeClient([])
     const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'zz' })
     expect(page).toEqual({ subscriptions: [], total: 0 })
