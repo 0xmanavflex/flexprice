@@ -58,6 +58,29 @@ export const EditsAnAlert: Story = {
   },
 }
 
+/** Thresholds entered and then alerts switched off are saved as entered, not swapped for the defaults. */
+export const CreatesADisabledAlert: Story = {
+  play: async ({ args }) => {
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Absolute' }))
+    const warning = dialog.getByRole('textbox', { name: /^Warning threshold/ })
+    await userEvent.clear(warning)
+    await userEvent.type(warning, '-2')
+    await userEvent.click(dialog.getByRole('switch', { name: 'Critical alert' }))
+    await userEvent.type(dialog.getByRole('textbox', { name: /^Critical threshold/ }), '-3')
+    await userEvent.click(dialog.getByRole('switch', { name: 'Alerts on' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Create alert' }))
+    await waitFor(() =>
+      expect(args.onSave).toHaveBeenCalledWith({
+        alertEnabled: false,
+        thresholdType: AlertThresholdType.Absolute,
+        warning: { condition: AlertCondition.Above, threshold: '-2' },
+        critical: { condition: AlertCondition.Above, threshold: '-3' },
+      }),
+    )
+  },
+}
+
 export const Loading: Story = { args: { isLoading: true } }
 
 export const LoadFailed: Story = { args: { loadFailed: true, onRetry: fn() } }
