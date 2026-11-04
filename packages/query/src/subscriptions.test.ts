@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { Flexprice } from '@fp/api'
 import { DEFAULT_SUBSCRIPTION_QUERY, SubscriptionStatus } from '@fp/domain'
-import { toSubscription, toSubscriptionFilter, type SubscriptionWire } from './subscriptions'
+import {
+  fetchSubscriptions,
+  toSubscription,
+  toSubscriptionFilter,
+  type SubscriptionWire,
+} from './subscriptions'
 
 describe('toSubscription', () => {
   it('passes a known status through', () => {
@@ -114,5 +120,43 @@ describe('toSubscriptionFilter', () => {
     expect(toSubscriptionFilter(DEFAULT_SUBSCRIPTION_QUERY)).toMatchObject({
       subscriptionStatus: ['active', 'trialing', 'paused', 'incomplete', 'draft', 'cancelled'],
     })
+  })
+})
+
+describe('the contract search', () => {
+  const contract = { id: 'sub_1', customerId: 'cus_1', customer: { name: 'QA Module' } }
+  const fakeClient = (customers: { id: string }[]) => {
+    const queryCustomer = vi.fn(async () => ({ items: customers }))
+    const querySubscription = vi.fn(async () => ({ items: [contract], pagination: { total: 1 } }))
+    const client = {
+      customers: { queryCustomer },
+      subscriptions: { querySubscription },
+    } as unknown as Flexprice
+    return { client, queryCustomer, querySubscription }
+  }
+
+  it('asks the server for the contracts of the customers whose name matches', async () => {
+    const { client, queryCustomer, querySubscription } = fakeClient([{ id: 'cus_1' }])
+    const page = await fetchSubscriptions(client, {
+      ...DEFAULT_SUBSCRIPTION_QUERY,
+      search: ' QA Module ',
+    })
+    expect(queryCustomer.mock.calls[0]?.[0]).toMatchObject({
+      filters: [{ field: 'name', operator: 'contains', value: { string: 'QA Module' } }],
+    })
+    expect(querySubscription.mock.calls[0]?.[0]).toMatchObject({ customerIds: ['cus_1'] })
+    expect(page.subscriptions.map((row) => row.id)).toEqual(['sub_1'])
+    expect(page.total).toBe(1)
+  })
+
+  it('returns an empty page when no customer matches, without listing contracts', async () => {
+    const { client, querySubscription } = fakeClient([])
+    const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'zz' })
+    expect(page).toEqual({ subscriptions: [], total: 0 })
+    expect(querySubscription).not.toHaveBeenCalled()
+  })
+
+  it('sends no customer narrowing without a search', () => {
+    expect(toSubscriptionFilter(DEFAULT_SUBSCRIPTION_QUERY)).not.toHaveProperty('customerIds')
   })
 })

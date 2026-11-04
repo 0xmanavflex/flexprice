@@ -86,7 +86,7 @@ import { toEntitlementRequest } from './entitlements'
 import { type InvoiceDetailWire, type InvoiceWire, toInvoice, toInvoiceDetail } from './invoices'
 import { ALL_SUBSCRIPTION_STATUSES, LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 import { queryKeys } from './keys'
-import { toFilterConditions } from './search'
+import { nameContainsFilter, toFilterConditions } from './search'
 import {
   type ChargeWire,
   type TierWire,
@@ -633,7 +633,11 @@ function toWireStatuses(statuses: readonly SubscriptionStatus[]): string[] {
   )
 }
 
-export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, unknown> {
+export function toSubscriptionFilter(
+  query: SubscriptionQuery,
+  /** The customers the search matched; see {@link fetchSubscriptions}. */
+  customerIds?: readonly string[],
+): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
@@ -648,8 +652,12 @@ export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, u
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }
       : {}),
+    ...(customerIds ? { customerIds: [...customerIds] } : {}),
   }
 }
+
+/** How many customers a contract search may match before it narrows no further. */
+const SEARCH_CUSTOMER_LIMIT = 200
 
 export interface SubscriptionPage {
   subscriptions: Subscription[]
@@ -661,9 +669,33 @@ export async function fetchSubscriptions(
   query: SubscriptionQuery,
   signal?: AbortSignal,
 ): Promise<SubscriptionPage> {
+  /*
+   * The search is the customer's name, asked of the server. The contract
+   * search has no name field, but it takes `customer_ids`: so the customers
+   * whose name matches are found first and the contracts are narrowed to
+   * them, which keeps paging and the total true. A term no customer matches
+   * is an empty page without a second request. Plans have their own filter.
+   */
+  const term = query.search.trim()
+  let customerIds: string[] | undefined
+  if (term) {
+    const customers = await call(
+      (options) =>
+        client.customers.queryCustomer(
+          { filters: nameContainsFilter(term), limit: SEARCH_CUSTOMER_LIMIT, offset: 0 } as never,
+          options,
+        ),
+      signal,
+    )
+    customerIds = (customers.items ?? []).flatMap((item) => (item.id ? [item.id] : []))
+    if (customerIds.length === 0) return { subscriptions: [], total: 0 }
+  }
   const response = await call(
     (options) =>
-      client.subscriptions.querySubscription(toSubscriptionFilter(query) as never, options),
+      client.subscriptions.querySubscription(
+        toSubscriptionFilter(query, customerIds) as never,
+        options,
+      ),
     signal,
   )
   const wires = await withCustomerNames(
@@ -673,19 +705,11 @@ export async function fetchSubscriptions(
   )
   const subscriptions = wires.map(toSubscription)
 
-  // Search is not a server-side filter, so it is applied on the page. Status is
-  // re-checked here too, which keeps the page's filter exact while the server
-  // narrows the fetch.
-  const term = query.search.trim().toLowerCase()
-  const filtered = subscriptions.filter((subscription) => {
-    const matchesStatus =
-      query.statuses.length === 0 || query.statuses.includes(subscription.status)
-    const matchesSearch =
-      term.length === 0 ||
-      subscription.customerName.toLowerCase().includes(term) ||
-      subscription.planName.toLowerCase().includes(term)
-    return matchesStatus && matchesSearch
-  })
+  // Status is re-checked here, which keeps the page's filter exact while the
+  // server narrows the fetch.
+  const filtered = subscriptions.filter(
+    (subscription) => query.statuses.length === 0 || query.statuses.includes(subscription.status),
+  )
 
   return {
     subscriptions: filtered,
