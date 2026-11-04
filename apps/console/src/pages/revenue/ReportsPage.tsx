@@ -474,7 +474,8 @@ export function ReportsPage({
         compare: search.compare,
         compareOptions: COMPARE_OPTIONS,
         onCompareChange: (next) => onSearchChange({ ...search, compare: next }),
-        currency,
+        // The fallback shows the dashboard currency `shown`; the picker says so.
+        currency: revenueOnly ? shown : currency,
         // In the dashboard fallback the report knows no currencies; the
         // dashboard's own summaries are the ones there are.
         currencyOptions: (revenueOnly

@@ -390,8 +390,12 @@ export function MetricChart({
           </button>
         ))}
       </div>
-      {/* No frame around a chart that is not drawn (`hideChart` with no points). */}
-      {active.hideChart && active.points.length === 0 ? null : (
+      {/* No frame around a chart that is not drawn (`hideChart` with no points),
+          but loading and unavailable keep theirs: the skeleton and Retry live there. */}
+      {active.hideChart &&
+      active.points.length === 0 &&
+      active.status !== 'loading' &&
+      active.status !== 'unavailable' ? null : (
         <div
           id={`${uid}-panel`}
           role="tabpanel"
