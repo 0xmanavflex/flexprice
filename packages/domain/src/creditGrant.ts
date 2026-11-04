@@ -106,6 +106,34 @@ export const CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL: Record<
   [CreditGrantExpiryDurationUnit.Year]: 'Years',
 }
 
+const EXPIRY_UNIT_NOUN: Record<CreditGrantExpiryDurationUnit, [string, string]> = {
+  [CreditGrantExpiryDurationUnit.Day]: ['day', 'days'],
+  [CreditGrantExpiryDurationUnit.Week]: ['week', 'weeks'],
+  [CreditGrantExpiryDurationUnit.Month]: ['month', 'months'],
+  [CreditGrantExpiryDurationUnit.Year]: ['year', 'years'],
+}
+
+/**
+ * When a grant's credits expire, in words: "Never expires", "Expires at the
+ * end of the billing period", or "Expires after 9 days" ("1 day", not "1
+ * days"). A duration grant names its length; only one with no length falls
+ * back to the generic "after a set duration". Takes a saved grant or a draft.
+ */
+export function creditGrantExpiryLabel(grant: {
+  expirationType: CreditGrantExpiryType
+  expirationDuration?: number | null | undefined
+  expirationDurationUnit?: CreditGrantExpiryDurationUnit | null | undefined
+}): string {
+  const length = grant.expirationDuration
+  if (grant.expirationType === CreditGrantExpiryType.Duration && length && length > 0) {
+    // A draft with no unit yet shows the form's default, days.
+    const [one, many] =
+      EXPIRY_UNIT_NOUN[grant.expirationDurationUnit ?? CreditGrantExpiryDurationUnit.Day]
+    return `Expires after ${length} ${length === 1 ? one : many}`
+  }
+  return CREDIT_GRANT_EXPIRY_TYPE_LABEL[grant.expirationType]
+}
+
 /** A credit grant, as the plan's Credit Grants tab reads it. */
 export interface CreditGrant {
   id: string
@@ -209,6 +237,9 @@ export function emptyCreditGrant(): CreateCreditGrant {
     period: CreditGrantPeriod.Monthly,
     periodCount: 1,
     expirationType: CreditGrantExpiryType.Never,
+    // The unit the form shows before anyone picks one, so a duration typed
+    // without touching it is sent in days rather than with no unit (a 400).
+    expirationDurationUnit: CreditGrantExpiryDurationUnit.Day,
     priority: 0,
   }
 }

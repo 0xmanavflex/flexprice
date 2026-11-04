@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, ErrorKind, call, listCreditGrants } from '@fp/api'
 import {
   CreditGrantCadence,
-  type CreditGrantExpiryDurationUnit,
+  CreditGrantExpiryDurationUnit,
   CreditGrantExpiryType,
   type CreditGrantPeriod,
   CreditGrantScope,
@@ -125,9 +125,9 @@ export function toCreditGrantTerms(draft: CreateCreditGrant): Record<string, unk
     ...(draft.expirationType === CreditGrantExpiryType.Duration && draft.expirationDuration != null
       ? {
           expirationDuration: draft.expirationDuration,
-          ...(draft.expirationDurationUnit
-            ? { expirationDurationUnit: draft.expirationDurationUnit }
-            : {}),
+          // A duration is meaningless without its unit, and the API refuses
+          // one; Days is the unit the form shows before one is picked.
+          expirationDurationUnit: draft.expirationDurationUnit ?? CreditGrantExpiryDurationUnit.Day,
         }
       : {}),
     ...(draft.conversionRate ? { conversionRate: draft.conversionRate } : {}),

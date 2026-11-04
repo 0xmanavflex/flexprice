@@ -5,6 +5,7 @@ import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabSta
 import {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
+  creditGrantExpiryLabel,
   type CreditGrant,
   CreditGrantCadence,
 } from '@fp/domain'
@@ -107,11 +108,7 @@ function PlanCreditGrantsViewInner({
           {
             key: 'expires',
             header: 'Expires',
-            cell: (g) => (
-              <span className="text-muted-foreground">
-                {CREDIT_GRANT_EXPIRY_TYPE_LABEL[g.expirationType]}
-              </span>
-            ),
+            cell: (g) => <span className="text-muted-foreground">{creditGrantExpiryLabel(g)}</span>,
           },
           {
             key: 'priority',

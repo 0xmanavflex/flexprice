@@ -31,7 +31,7 @@ import {
 } from '@ui/icons'
 import {
   CREDIT_GRANT_CADENCE_LABEL,
-  CREDIT_GRANT_EXPIRY_TYPE_LABEL,
+  creditGrantExpiryLabel,
   CREDIT_GRANT_PERIOD_LABEL,
   CreditGrantCadence,
   SUBSCRIPTION_SCHEDULE_LABEL,
@@ -1320,11 +1320,7 @@ export function SubscriptionDetailView({
                               {
                                 key: 'expiry',
                                 header: 'Expiry',
-                                cell: (row) => (
-                                  <Muted>
-                                    {CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}
-                                  </Muted>
-                                ),
+                                cell: (row) => <Muted>{creditGrantExpiryLabel(row)}</Muted>,
                               },
                               // When the grant stops issuing credits: kept by the API for a
                               // contract's grant, so it no longer reads as still running.

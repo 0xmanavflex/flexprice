@@ -174,6 +174,7 @@ export {
   CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
   CREDIT_GRANT_PERIOD_LABEL,
+  creditGrantExpiryLabel,
   CreditGrantCadence,
   CreditGrantExpiryDurationUnit,
   CreditGrantExpiryType,

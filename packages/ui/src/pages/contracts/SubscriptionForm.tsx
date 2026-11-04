@@ -52,10 +52,8 @@ import {
   selectContractCharges,
   type ContractChargeSelection,
   CREDIT_GRANT_CADENCE_LABEL,
-  CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
-  CREDIT_GRANT_EXPIRY_TYPE_LABEL,
+  creditGrantExpiryLabel,
   CreditGrantCadence,
-  CreditGrantExpiryType,
   type Entitlement,
   EntitlementGrantDurationUnit,
   EntitlementGrantMeasure,
@@ -3883,7 +3881,7 @@ function CreditsSection({
       ),
     },
     { key: 'granted', header: 'Granted', cell: ({ grant }) => grantCadenceText(grant) },
-    { key: 'expires', header: 'Expires', cell: ({ grant }) => grantExpiryText(grant) },
+    { key: 'expires', header: 'Expires', cell: ({ grant }) => creditGrantExpiryLabel(grant) },
     { key: 'priority', header: 'Priority', cell: ({ grant }) => grant.priority },
     {
       key: 'actions',
@@ -4836,19 +4834,6 @@ function grantCadenceText(grant: CreateSubscription['creditGrants'][number]): st
   }
   const every = everyPeriod(grant.period, grant.periodCount ?? 1)
   return every.charAt(0).toUpperCase() + every.slice(1)
-}
-
-/** "Never expires", "Expires with the billing cycle", or "Expires after 30 days". */
-function grantExpiryText(grant: CreateSubscription['creditGrants'][number]): string {
-  if (
-    grant.expirationType === CreditGrantExpiryType.Duration &&
-    grant.expirationDuration &&
-    grant.expirationDurationUnit
-  ) {
-    const unit = CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL[grant.expirationDurationUnit].toLowerCase()
-    return `Expires after ${grant.expirationDuration} ${unit}${grant.expirationDuration === 1 ? '' : 's'}`
-  }
-  return CREDIT_GRANT_EXPIRY_TYPE_LABEL[grant.expirationType]
 }
 
 function ReviewCard({
