@@ -157,6 +157,27 @@ export const SubmitsAValidatedCharge: Story = {
   },
 }
 
+/**
+ * A custom-unit price carries the unit's base currency exactly as stored ("usd"):
+ * the API compares the two case-sensitively and refused "USD" (QA #39).
+ */
+export const CustomUnitKeepsItsCurrency: Story = {
+  args: {
+    defaultValue: fixedFlatFee,
+    priceUnits: [{ code: 'QAU', name: 'QA units', baseCurrency: 'usd' }],
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^price unit/i }))
+    await userEvent.click(await screen.findByRole('option', { name: 'QA units (QAU)' }))
+    await expect(canvas.getByLabelText(/^currency/i)).toHaveValue('USD')
+    await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ priceUnit: 'QAU', currency: 'usd' }),
+    )
+  },
+}
+
 /** The flat-fee calculator, as V1: 12,000 a year, billed monthly, fills the Amount with 1000.00. */
 export const PriceFromContractAmount: Story = {
   args: { defaultValue: fixedFlatFee },
