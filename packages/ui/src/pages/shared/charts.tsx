@@ -259,6 +259,10 @@ export interface MetricTab {
    * pass something else for a metric that simply has no series.
    */
   emptyMessage?: string | undefined
+  /**
+   * No series exists for this metric. Omit the plot instead of an empty box.
+   */
+  hideChart?: boolean | undefined
 }
 
 export interface MetricChartProps {
@@ -386,14 +390,21 @@ export function MetricChart({
           </button>
         ))}
       </div>
-      <div
-        id={`${uid}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${uid}-tab-${active.id}`}
-        className="bg-background rounded-lg border p-4"
-      >
-        <MetricSeries tab={active} height={height} {...(caption ? { caption } : {})} />
-      </div>
+      {/* No frame around a chart that is not drawn (`hideChart` with no points),
+          but loading and unavailable keep theirs: the skeleton and Retry live there. */}
+      {active.hideChart &&
+      active.points.length === 0 &&
+      active.status !== 'loading' &&
+      active.status !== 'unavailable' ? null : (
+        <div
+          id={`${uid}-panel`}
+          role="tabpanel"
+          aria-labelledby={`${uid}-tab-${active.id}`}
+          className="bg-background rounded-lg border p-4"
+        >
+          <MetricSeries tab={active} height={height} {...(caption ? { caption } : {})} />
+        </div>
+      )}
     </div>
   )
 }
@@ -436,6 +447,8 @@ function MetricSeries({
       </div>
     )
   }
+
+  if (tab.hideChart && tab.points.length === 0) return null
 
   if (tab.points.length === 0) {
     return (

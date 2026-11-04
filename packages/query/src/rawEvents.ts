@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
-import type { RawEvent, RawEventQuery } from '@fp/domain'
+import { rawEventPeriodStart, type RawEvent, type RawEventQuery } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
@@ -36,17 +36,28 @@ export function toRawEvent(wire: RawEventWire): RawEvent {
   }
 }
 
-/** Only the filters that were set are sent; the SDK drops undeclared keys anyway. */
-export function toRawEventFilter(query: RawEventQuery): Record<string, unknown> {
+/**
+ * A page of the list, as the request takes it. Only the filters that were set
+ * are sent; the SDK drops undeclared keys anyway. A period becomes a window
+ * ending `now`: without one the server reads only the last 7 days.
+ */
+export function toRawEventFilter(
+  query: RawEventRead,
+  now: Date = new Date(),
+): Record<string, unknown> {
   return {
     pageSize: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     order: query.sortDirection,
+    ...(query.period ? { startTime: rawEventPeriodStart(query.period, now), endTime: now } : {}),
     ...(query.search ? { eventName: query.search } : {}),
     ...(query.customer ? { externalCustomerId: query.customer } : {}),
     ...(query.source ? { source: query.source } : {}),
   }
 }
+
+/** The list's query; a read without a period takes the server's own window. */
+export type RawEventRead = Omit<RawEventQuery, 'period'> & Partial<Pick<RawEventQuery, 'period'>>
 
 export interface RawEventPage {
   events: RawEvent[]
@@ -55,7 +66,7 @@ export interface RawEventPage {
 
 export async function fetchRawEvents(
   client: Flexprice,
-  query: RawEventQuery,
+  query: RawEventRead,
 ): Promise<RawEventPage> {
   const response = await call(() => client.events.listRawEvents(toRawEventFilter(query) as never))
   const events = (response.events ?? []).map((event) => toRawEvent(event as RawEventWire))
@@ -77,7 +88,7 @@ export function useRawEvents(query: RawEventQuery) {
  * (a customer's Events tab). Pages are fetched in order; there is a next one
  * while the last came back full and fewer than the total have been loaded.
  */
-export function useRawEventsInfinite(query: Omit<RawEventQuery, 'page'>) {
+export function useRawEventsInfinite(query: Omit<RawEventRead, 'page'>) {
   const client = useFlexprice()
 
   return useInfiniteQuery({

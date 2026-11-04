@@ -9,6 +9,14 @@ import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
  *
  * Pass `null` to wait (for a currency not yet chosen, say).
  */
+/**
+ * The report library is off for this environment. Those tenants still have
+ * `POST /dashboard/revenue-dashboard`, which is revenue only.
+ */
+export function reportsUnconfigured(error: unknown): boolean {
+  return error instanceof ApiError && /not configured/i.test(error.message)
+}
+
 export function useReport(key: string, query: ReportQuery | null) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()

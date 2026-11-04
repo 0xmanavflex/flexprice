@@ -87,6 +87,20 @@ export function toWorkflowFilter(query: WorkflowQuery): Record<string, unknown> 
     sort: [{ field: 'start_time', direction: query.sortDirection }],
     ...(query.search ? { workflowId: query.search } : {}),
     ...(only && rest.length === 0 ? { workflowStatus: WORKFLOW_STATUS_WIRE[only] } : {}),
+    // `workflowStatus` takes one value; several travel as an `in` condition on
+    // the same column, so choosing two statuses narrows rather than widens.
+    ...(rest.length > 0
+      ? {
+          filters: [
+            {
+              field: 'workflow_status',
+              operator: 'in',
+              dataType: 'array',
+              value: { array: query.statuses.map((status) => WORKFLOW_STATUS_WIRE[status]) },
+            },
+          ],
+        }
+      : {}),
   }
 }
 

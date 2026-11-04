@@ -166,3 +166,19 @@ export const Searching: Story = {
     )
   },
 }
+
+/** The endpoint cannot search, so a search that misses says it only looked at this page. */
+export const SearchMissOnThisPage: Story = {
+  args: {
+    creditNotes: [],
+    total: 40,
+    query: { ...DEFAULT_CREDIT_NOTE_QUERY, search: 'nothing-here' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No matching credit memos on this page')).toBeVisible()
+    await expect(
+      canvas.getByPlaceholderText('Search this page by number, invoice or customer…'),
+    ).toBeInTheDocument()
+  },
+}

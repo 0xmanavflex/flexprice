@@ -85,6 +85,12 @@ export interface DetailTableProps<T> {
   border?: boolean
   /** Skeleton rows while the set is still loading; `empty` waits until it has arrived. */
   isLoading?: boolean
+  /**
+   * A row that belongs to the row above it, such as a line an expanded row
+   * opens: it is not counted in "1 - 10 of 24", and it pages with its parent
+   * rather than pushing a record onto the next page.
+   */
+  isChild?: (row: T) => boolean
   className?: string
 }
 
@@ -114,6 +120,7 @@ export function DetailTable<T extends object>({
   footer = true,
   border = false,
   isLoading = false,
+  isChild,
   className,
 }: DetailTableProps<T>) {
   const toolsSlot = useContext(SectionToolsContext)
@@ -175,26 +182,36 @@ export function DetailTable<T extends object>({
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase()
-    let next = rows
+    // Filters, search and sort act on whole records: a record with the child
+    // rows beneath it (`isChild`). A child is never matched, kept or moved on
+    // its own, so it can neither stand alone nor land under another record.
+    let groups = rows.reduce<T[][]>((out, row) => {
+      const last = out[out.length - 1]
+      if (last && isChild?.(row)) last.push(row)
+      else out.push([row])
+      return out
+    }, [])
     for (const spec of specs) {
       const chosen = selected[spec.id] ?? []
-      if (chosen.length > 0) next = next.filter((row) => chosen.includes(spec.value(row)))
+      if (chosen.length > 0) groups = groups.filter(([head]) => chosen.includes(spec.value(head!)))
     }
     if (needle) {
-      next = next.filter((row) => {
-        const haystack = searchText
+      const matches = (row: T) =>
+        (searchText
           ? searchText(row)
           : `${plainText(row)} ${columns.map((column) => column.text?.(row) ?? '').join(' ')}`
-        return haystack.toLowerCase().includes(needle)
-      })
+        )
+          .toLowerCase()
+          .includes(needle)
+      groups = groups.filter((group) => group.some(matches))
     }
     const sorting = sortState ? columns.find((column) => column.key === sortState.field) : null
     const by = sorting?.sortBy ?? sorting?.text
     if (sortState && by) {
       const sign = sortState.direction === 'asc' ? 1 : -1
-      next = [...next].sort((a, b) => {
-        const left = by(a)
-        const right = by(b)
+      groups = [...groups].sort(([a], [b]) => {
+        const left = by(a!)
+        const right = by(b!)
         return (
           sign *
           (typeof left === 'number' && typeof right === 'number'
@@ -203,8 +220,8 @@ export function DetailTable<T extends object>({
         )
       })
     }
-    return next
-  }, [rows, columns, search, specs, selected, searchText, sortState])
+    return groups.flat()
+  }, [rows, columns, search, specs, selected, searchText, sortState, isChild])
 
   if (rows.length === 0 && empty && !isLoading) {
     return (
@@ -231,8 +248,15 @@ export function DetailTable<T extends object>({
       ? [{ value: column.key, label: column.header }]
       : [],
   )
+  // Each record with the child rows beneath it: the unit that is counted and paged.
+  const groups = visible.reduce<T[][]>((out, row) => {
+    const last = out[out.length - 1]
+    if (last && isChild?.(row)) last.push(row)
+    else out.push([row])
+    return out
+  }, [])
   const start = (page - 1) * pageSize
-  const slice = visible.slice(start, start + pageSize)
+  const slice = groups.slice(start, start + pageSize).flat()
   const activeSpecs = specs.filter((spec) => (choicesById[spec.id]?.length ?? 0) > 0)
   const isFiltered =
     search.trim().length > 0 || activeSpecs.some((spec) => (selected[spec.id]?.length ?? 0) > 0)
@@ -332,11 +356,11 @@ export function DetailTable<T extends object>({
         // With its tools in the section header the table is usually short
         // enough to need no footer, but a longer one keeps its pager: rows are
         // sliced to one page, so without it the rest could not be reached.
-        hideFooter={!footer || (inHeader && visible.length <= pageSize)}
+        hideFooter={!footer || (inHeader && groups.length <= pageSize)}
         label={`${label} table`}
         noun={noun}
         rows={slice}
-        total={visible.length}
+        total={groups.length}
         columns={entityColumns}
         getRowId={(row) => idOf(row, rows.indexOf(row))}
         page={page}

@@ -144,6 +144,9 @@ export function toWalletTransaction(wire: WalletTransactionWire, index = 0): Wal
         ? { type: wire.referenceType, id: wire.referenceId }
         : null,
     ...(wire.transactionStatus ? { status: wire.transactionStatus.toLowerCase() } : {}),
+    ...(wire.type === 'debit' && wire.transactionReason === 'CREDIT_EXPIRED'
+      ? { expiry: true }
+      : {}),
     ...(wire.consumptionBreakdown?.length
       ? {
           drawnFrom: wire.consumptionBreakdown

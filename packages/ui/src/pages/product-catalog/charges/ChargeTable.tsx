@@ -14,6 +14,8 @@ import {
   PriceType,
   TierMode,
   isChargeCustomised,
+  chargeAmountLabel,
+  chargePricedTiers,
   tierUnitLabel,
 } from '@fp/domain'
 import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
@@ -174,7 +176,12 @@ export function chargePriceLabel(charge: Charge): string {
 }
 
 function valueOf(charge: Charge): string {
-  const display = charge.displayAmount || charge.amount
+  // A custom-unit price reads in its unit ("2.4 QAU"), not the currency it converts to.
+  const display =
+    charge.priceUnit && charge.priceUnitAmount
+      ? chargeAmountLabel(charge, charge.priceUnitAmount)
+      : charge.displayAmount || charge.amount
+  const first = chargePricedTiers(charge)[0]
   switch (charge.billingModel) {
     case BillingModel.FlatFee:
       return display || '—'
@@ -182,8 +189,8 @@ function valueOf(charge: Charge): string {
       return `${display || '0'} per ${charge.transformQuantity?.divideBy?.toLocaleString() ?? '?'}`
     case BillingModel.Tiered:
       // The tier count is its own grey line now, so the price says the price.
-      return charge.tiers[0]?.unitAmount
-        ? `From ${charge.tiers[0].unitAmount}${charge.tiers[0].transformQuantity?.divideBy ? ` ${tierUnitLabel(charge.tiers[0])}` : ''}`
+      return first?.unitAmount
+        ? `From ${chargeAmountLabel(charge, first.unitAmount)}${first.transformQuantity?.divideBy ? ` ${tierUnitLabel(first)}` : ''}`
         : '—'
   }
 }

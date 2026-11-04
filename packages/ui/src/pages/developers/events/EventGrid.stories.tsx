@@ -118,12 +118,23 @@ export const Default: Story = {
 
 export const Loading: Story = { args: { events: [], total: 0, isLoading: true } }
 
+/**
+ * Nothing in the window. Every read covers a window of time, so the list says
+ * what it looked at and keeps its toolbar to widen it, rather than claiming
+ * no event was ever received.
+ */
 export const Empty: Story = {
   args: { events: [], total: 0 },
   play: async ({ canvasElement }) => {
-    await expect(
-      await within(canvasElement).findByText('No events received yet'),
-    ).toBeInTheDocument()
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No events in the last 30 days')).toBeInTheDocument()
+    await expect(canvas.queryByText('No events received yet')).not.toBeInTheDocument()
+    await expect(canvas.getByRole('search', { name: 'Search and filter events' })).toBeVisible()
+    // The window is a filter like any other: open the bar and it is there to widen.
+    await userEvent.click(canvas.getByRole('button', { name: 'Filter' }))
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('Received')).toBeVisible()
+    await expect(body.getByText('Last 30 days')).toBeVisible()
   },
 }
 

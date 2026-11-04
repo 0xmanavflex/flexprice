@@ -169,6 +169,15 @@ export const DEFAULT_PLAN_QUERY: PlanQuery = {
   view: PlanView.Table,
   filters: [],
 }
+
+/**
+ * Whether the list is narrowed: a search, the status facet or a filter chip. A
+ * chip that matches nothing (Archived, say) is "no plans match", not an empty
+ * catalogue.
+ */
+export function isPlanQueryFiltered(query: PlanQuery): boolean {
+  return query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+}
 /** What the plan list can filter on: V1's fields, by their wire names. */
 export const PLAN_FILTERS: readonly ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },

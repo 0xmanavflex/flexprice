@@ -521,8 +521,11 @@ export function ChargeForm({
                     const current = form.getValues()
                     form.reset({
                       ...current,
+                      // The unit's base currency exactly as stored ("usd"): the API
+                      // compares the two case-sensitively and refuses "USD" with a
+                      // 400. The locked Currency field upper-cases it for display.
                       ...(unit
-                        ? { priceUnit: unit.code, currency: unit.baseCurrency.toUpperCase() }
+                        ? { priceUnit: unit.code, currency: unit.baseCurrency }
                         : { priceUnit: undefined }),
                     } as CreateCharge)
                   }}

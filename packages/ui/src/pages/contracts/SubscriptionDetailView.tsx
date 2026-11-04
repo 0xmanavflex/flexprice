@@ -31,7 +31,7 @@ import {
 } from '@ui/icons'
 import {
   CREDIT_GRANT_CADENCE_LABEL,
-  CREDIT_GRANT_EXPIRY_TYPE_LABEL,
+  creditGrantExpiryLabel,
   CREDIT_GRANT_PERIOD_LABEL,
   CreditGrantCadence,
   SUBSCRIPTION_SCHEDULE_LABEL,
@@ -77,6 +77,8 @@ import {
   type Subscription,
   type SubscriptionLine,
   isInheritedContract,
+  isUnstartedSubscription,
+  startingNow,
   lineLineages,
   type SubscriptionSchedule,
   type SubscriptionTax,
@@ -108,6 +110,7 @@ import { RelatedCard, type RelatedItem } from '../../compositions/detail/Related
 import { Section } from '../../compositions/layout/Section'
 import { ConfirmDialog } from '../../compositions/feedback/ConfirmDialog'
 import { FormDialog } from '../../compositions/forms/FormDialog'
+import { formatStoredDay } from '../../compositions/forms/DateInput'
 import type { EmptyScene } from '../../compositions/feedback/SceneIllustration'
 import { SubTabState } from '@ui/compositions/detail/SubTabState'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
@@ -344,7 +347,18 @@ export function parseSubscriptionTab(value: unknown): SubscriptionTab {
     : 'overview'
 }
 
+/**
+ * A contract date (start, period, trial end, cancellation, schedule) as one
+ * rule on every screen: a UTC day boundary (a day sent as midnight UTC) is
+ * that UTC day, any other instant the reader's local day. Formatting every
+ * instant in UTC showed a draft starting 4 Nov 00:00 IST (3 Nov 18:30 UTC) as
+ * 3 Nov here while the customer page and V1 said 4 Nov (QA #34).
+ */
 const day = (date: Date | null | undefined) =>
+  date ? formatStoredDay(date, { locale: 'en-US' }) : '—'
+
+/** An invoice's issue and due dates, read in UTC as the invoice pages read them. */
+const invoiceDay = (date: Date | null | undefined) =>
   date
     ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date)
     : '—'
@@ -543,6 +557,7 @@ export function SubscriptionDetailView({
     label: (row: T) => string,
     removeLabel: string,
     onRemove: ((row: T) => void) | null,
+    canRemove: (row: T) => boolean = () => true,
   ): DetailColumn<T>[] =>
     onRemove && canEditCharges
       ? [
@@ -550,13 +565,14 @@ export function SubscriptionDetailView({
             key: 'actions',
             header: '',
             width: 48,
-            cell: (row: T) => (
-              <RowActionsMenu
-                label={label(row)}
-                onRemove={() => onRemove(row)}
-                removeLabel={removeLabel}
-              />
-            ),
+            cell: (row: T) =>
+              canRemove(row) ? (
+                <RowActionsMenu
+                  label={label(row)}
+                  onRemove={() => onRemove(row)}
+                  removeLabel={removeLabel}
+                />
+              ) : null,
           },
         ]
       : []
@@ -564,8 +580,8 @@ export function SubscriptionDetailView({
   const isCancelled = s.status === SubscriptionStatus.Cancelled
   const isCancelling = !isCancelled && (s.cancelAtPeriodEnd || s.cancelAt !== null)
   const canCancel = !isCancelled && !isCancelling && !s.cancelledAt
-  const canActivate = s.status === SubscriptionStatus.Incomplete && Boolean(onActivate)
-  const canPause = Boolean(onPause) && canPauseSubscription(s.status) && !isCancelling
+  const canActivate = isUnstartedSubscription(s.status) && Boolean(onActivate)
+  const canPause = Boolean(onPause) && canPauseSubscription(s) && !isCancelling
   const canResume = Boolean(onResume) && canResumeSubscription(s.status)
   const title = `${s.customerName} on ${s.planName}`
 
@@ -1306,11 +1322,7 @@ export function SubscriptionDetailView({
                               {
                                 key: 'expiry',
                                 header: 'Expiry',
-                                cell: (row) => (
-                                  <Muted>
-                                    {CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}
-                                  </Muted>
-                                ),
+                                cell: (row) => <Muted>{creditGrantExpiryLabel(row)}</Muted>,
                               },
                               // When the grant stops issuing credits: kept by the API for a
                               // contract's grant, so it no longer reads as still running.
@@ -1352,10 +1364,10 @@ export function SubscriptionDetailView({
                         title="Add-ons"
                         showTitle
                         part={addons ?? NO_PART}
-                        // Add-ons attach only to an active or draft (incomplete) contract.
+                        // Add-ons attach only to an active or not-yet-started (draft) contract.
                         create={
                           s.status === SubscriptionStatus.Active ||
-                          s.status === SubscriptionStatus.Incomplete
+                          isUnstartedSubscription(s.status)
                             ? createFor('addon', 'Add add-on', onAddAddon)
                             : undefined
                         }
@@ -1476,6 +1488,22 @@ export function SubscriptionDetailView({
                                 sortBy: (row) => row.endDate?.getTime() ?? 0,
                                 cell: (row) => <Muted>{day(row.endDate)}</Muted>,
                               },
+                              ...removeColumn<SubscriptionCoupon>(
+                                (row) => row.name,
+                                'Remove coupon',
+                                onRemoveCoupon
+                                  ? (coupon) =>
+                                      askRemoval({
+                                        title: `Remove ${coupon.name}?`,
+                                        description:
+                                          'The discount stops applying to this contract.',
+                                        confirmLabel: 'Remove coupon',
+                                        run: () => onRemoveCoupon(coupon),
+                                      })
+                                  : null,
+                                // An ended coupon has nothing left to remove.
+                                (row) => row.active,
+                              ),
                             ]}
                           />
                         )}
@@ -1792,13 +1820,13 @@ export function SubscriptionDetailView({
                     key: 'issued',
                     header: 'Issue date',
                     sortBy: (row) => row.issuedAt?.getTime() ?? 0,
-                    cell: (row) => <Muted>{day(row.issuedAt)}</Muted>,
+                    cell: (row) => <Muted>{invoiceDay(row.issuedAt)}</Muted>,
                   },
                   {
                     key: 'due',
                     header: 'Due date',
                     sortBy: (row) => row.dueDate?.getTime() ?? 0,
-                    cell: (row) => <Muted>{day(row.dueDate)}</Muted>,
+                    cell: (row) => <Muted>{invoiceDay(row.dueDate)}</Muted>,
                   },
                   {
                     key: 'status',
@@ -1856,7 +1884,8 @@ export function SubscriptionDetailView({
         {...(s.startDate && s.startDate.getTime() > Date.now()
           ? { earliestStart: s.startDate.toISOString() }
           : {})}
-        onAdd={(draft) => void run(onAddCharge?.(draft))}
+        // "Now" is sent as now: the API reads no start as the period start.
+        onAdd={(draft) => void run(onAddCharge?.(startingNow(draft)))}
         onEdit={(line, draft) => void run(onEditCharge?.(line, draft))}
         onEnd={(line, draft) => void run(onEndCharge?.(line, draft))}
       />
@@ -2231,7 +2260,7 @@ function InvoicePreviewSection({
   const byPrice = new Map(contractLines.map((line) => [line.priceId, line]))
   const contractLineOf = (line: InvoicePreviewLine) =>
     line.priceId ? byPrice.get(line.priceId) : undefined
-  if (status === SubscriptionStatus.Cancelled || status === SubscriptionStatus.Incomplete) {
+  if (status === SubscriptionStatus.Cancelled || isUnstartedSubscription(status)) {
     return null
   }
   if (status === SubscriptionStatus.Trialing) {
@@ -2391,7 +2420,7 @@ function Banners({
 }) {
   const banners: ReactNode[] = []
 
-  if (s.status === SubscriptionStatus.Incomplete) {
+  if (isUnstartedSubscription(s.status)) {
     banners.push(
       <Alert key="incomplete" variant="warning">
         <CircleAlertIcon aria-hidden="true" />

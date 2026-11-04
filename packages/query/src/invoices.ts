@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type AuthSource, type Flexprice, call, getInvoice, searchInvoices } from '@fp/api'
+import {
+  type AuthSource,
+  type Flexprice,
+  call,
+  getInvoice,
+  getInvoicePdfUrl,
+  searchInvoices,
+} from '@fp/api'
 import {
   type CreateInvoice,
   type Invoice,
@@ -61,6 +68,16 @@ const STATUS_TO_API: Partial<Record<InvoiceStatus, string>> = {
   [InvoiceStatus.Skipped]: 'SKIPPED',
 }
 
+/**
+ * Every stored `invoice_status`, sent when the list asks for no particular one.
+ *
+ * Leaving the field out is not "any status": the search then drops SKIPPED
+ * invoices, so the ledger came up short and the Invoice status → Skipped
+ * filter (a filter condition, intersected with that default) found nothing.
+ * V1 sends all four for the same reason.
+ */
+export const ALL_INVOICE_STATUSES = ['DRAFT', 'FINALIZED', 'VOIDED', 'SKIPPED'] as const
+
 export function isServerFilterable(status: InvoiceStatus): boolean {
   return status in STATUS_TO_API
 }
@@ -81,7 +98,22 @@ export function toInvoiceFilter(
       ...(derived ? ['FINALIZED'] : []),
     ]),
   ]
-  const conditions = toFilterConditions(query.filters ?? [], specs)
+  const search = query.search.trim()
+  const conditions = [
+    ...toFilterConditions(query.filters ?? [], specs),
+    // The search box finds invoice numbers, as V1's does. It used to be sent as
+    // an external customer id, so a typed number 404'd as an unknown customer.
+    ...(search
+      ? [
+          {
+            field: 'invoice_number',
+            operator: 'contains',
+            dataType: 'string',
+            value: { string: search },
+          },
+        ]
+      : []),
+  ]
   const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, BILLING_ENTITY_FILTER.field)
 
   return {
@@ -91,8 +123,7 @@ export function toInvoiceFilter(
     // Line items are never rendered in a list, and they dominate the payload.
     skipLineItems: true,
     ...(conditions.length > 0 ? { filters: conditions } : {}),
-    ...(statuses.length > 0 ? { invoiceStatus: statuses } : {}),
-    ...(query.search ? { externalCustomerId: query.search } : {}),
+    invoiceStatus: statuses.length > 0 ? statuses : [...ALL_INVOICE_STATUSES],
     ...(scope?.customerId ? { customerId: scope.customerId } : {}),
     ...(billingEntityId ? { billingEntityId } : {}),
   }
@@ -156,7 +187,8 @@ export interface InvoiceWire {
   id?: string | undefined
   invoiceNumber?: string | undefined
   customerId?: string | undefined
-  customer?: { name?: string | undefined; email?: string | undefined } | undefined
+  customer?:
+    { id?: string | undefined; name?: string | undefined; email?: string | undefined } | undefined
   invoiceStatus?: string | undefined
   paymentStatus?: string | undefined
   currency?: string | undefined
@@ -169,9 +201,27 @@ export interface InvoiceWire {
   periodEnd?: Date | undefined
 }
 
+/**
+ * The expanded customer, when it is the one the invoice bills.
+ *
+ * An invoice raised for a contract with a separate invoicing customer stores
+ * that customer in `customer_id`, but the API expands the contract's customer.
+ * Read as the invoice's own, it put the wrong name under Bill to; a mismatched
+ * expansion is dropped instead, and the id stands until the page looks it up.
+ */
+function billedCustomer<C extends { id?: string | undefined }>(wire: {
+  customerId?: string | undefined
+  customer?: C | undefined
+}): C | undefined {
+  const customer = wire.customer
+  if (!customer) return undefined
+  return customer.id && wire.customerId && customer.id !== wire.customerId ? undefined : customer
+}
+
 export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
   const currency = wire.currency
   const amountRemaining = moneyOr(wire.amountRemaining, currency)
+  const customer = billedCustomer(wire)
 
   return {
     id: wire.id ?? '',
@@ -181,7 +231,7 @@ export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
     number: wire.invoiceNumber?.trim() ?? '',
     customerId: wire.customerId ?? '',
     // Resolved here so no cell has to fall back, and no grid joins data.
-    customerName: wire.customer?.name || wire.customer?.email || (wire.customerId ?? 'Unknown'),
+    customerName: customer?.name || customer?.email || (wire.customerId ?? 'Unknown'),
     status: deriveInvoiceStatus({
       invoiceStatus: wire.invoiceStatus,
       paymentStatus: wire.paymentStatus,
@@ -266,7 +316,8 @@ export function useInvoices(
       // Whether the entity filter is sent, so turning entities on refetches.
       ...(billingEntityId ? { billingEntityId } : {}),
     }),
-    queryFn: ({ signal }) => fetchInvoices(serverURL, auth, query, signal, undefined, options.specs),
+    queryFn: ({ signal }) =>
+      fetchInvoices(serverURL, auth, query, signal, undefined, options.specs),
     // Keeps the previous page on screen while the next one loads, so sorting a
     // grid does not blank it. TanStack's replacement for keepPreviousData.
     enabled: options.enabled ?? true,
@@ -278,6 +329,7 @@ export function useInvoices(
 export interface InvoiceDetailWire extends InvoiceWire {
   customer?:
     | {
+        id?: string | undefined
         name?: string | undefined
         email?: string | undefined
         addressLine1?: string | undefined
@@ -332,7 +384,7 @@ function toLinePriceType(value: string | undefined): InvoiceLinePriceType | null
 
 export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDetail {
   const base = toInvoice(wire, now)
-  const customer = wire.customer
+  const customer = billedCustomer(wire)
   return {
     ...base,
     currency: wire.currency ?? '',
@@ -400,25 +452,37 @@ export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
   })
 }
 
+/** Reads one invoice on demand, through the detail page's cache: a row's CSV download. */
+export function useInvoiceDetailLoader() {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const queryClient = useQueryClient()
+
+  return (id: string): Promise<InvoiceDetail> =>
+    queryClient.fetchQuery({
+      queryKey: queryKeys.invoices.detail(id),
+      queryFn: ({ signal }) => fetchInvoice(serverURL, auth, id, signal),
+    })
+}
+
 /**
- * An invoice's PDF link, read on demand for a row's "Download invoice".
+ * An invoice's PDF link, read on demand for "Download invoice".
  *
- * Rows come from the list, which does not carry `invoice_pdf_url`; this reads
- * the invoice through the same query the detail page uses (so a later visit is
- * cached) and resolves to its link, or null when no PDF exists yet.
+ * The invoice's own `invoice_pdf_url` when it has one; otherwise the PDF route
+ * (`/invoices/{id}/pdf?url=true`), which renders it and answers a presigned
+ * link. Null when neither gives one.
  */
 export function useInvoicePdfLink() {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
   const queryClient = useQueryClient()
 
-  return (id: string): Promise<string | null> =>
-    queryClient
-      .fetchQuery({
-        queryKey: queryKeys.invoices.detail(id),
-        queryFn: ({ signal }) => fetchInvoice(serverURL, auth, id, signal),
-      })
-      .then((invoice) => invoice.invoicePdfUrl)
+  return async (id: string): Promise<string | null> => {
+    const cached = queryClient.getQueryData<InvoiceDetail>(queryKeys.invoices.detail(id))
+    if (cached?.invoicePdfUrl) return cached.invoicePdfUrl
+    const { token, environmentId } = await credentials(auth, 'Sign in to download this invoice.')
+    return getInvoicePdfUrl(serverURL, token, environmentId, id)
+  }
 }
 
 /** Builds `POST /invoices`. Money stays a string; the form's total is sent as given. */

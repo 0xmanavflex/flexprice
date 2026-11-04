@@ -132,7 +132,7 @@ export interface LinePricing {
 /**
  * A new charge on one contract. `startDate` is a day (`YYYY-MM-DD`, midnight
  * UTC), or an exact ISO instant when the charge starts with a contract that
- * starts later in the day; empty means now.
+ * starts later in the day; empty means now (see `startingNow`).
  */
 export interface AddContractCharge {
   charge: CreateCharge
@@ -143,6 +143,23 @@ export interface AddContractCharge {
   proration: Proration
   /** Metered charges only. */
   terms: UsageTerms
+}
+
+/**
+ * A charge added to a running contract with "Now" (empty) or today picked, as
+ * the exact instant now.
+ *
+ * The API reads a missing start as the contract's current period start, so an
+ * empty start backdated the charge by hours (QA #66); today as midnight UTC is
+ * earlier still, or yesterday west of UTC. Any other day, or an instant already
+ * chosen (a charge starting with a contract that starts later), is left as is.
+ */
+export function startingNow(draft: AddContractCharge, now: Date = new Date()): AddContractCharge {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  return draft.startDate === '' || draft.startDate === today
+    ? { ...draft, startDate: now.toISOString() }
+    : draft
 }
 
 /** A new price and terms for one metered charge. Empty `effectiveFrom` means now. */

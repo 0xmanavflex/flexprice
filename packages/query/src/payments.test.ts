@@ -81,6 +81,13 @@ describe('toPaymentFilter', () => {
     expect(filter).toMatchObject({ limit: 25, offset: 50 })
   })
 
+  it('sends the chosen order as the API column and direction', () => {
+    expect(toPaymentFilter({ ...DEFAULT_PAYMENT_QUERY, sortDirection: 'asc' })).toMatchObject({
+      sort: 'created_at',
+      order: 'asc',
+    })
+  })
+
   it('offsets to zero on the first page', () => {
     expect(toPaymentFilter({ ...DEFAULT_PAYMENT_QUERY, page: 1, pageSize: 25 })).toMatchObject({
       limit: 25,

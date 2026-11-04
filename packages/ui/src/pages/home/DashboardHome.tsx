@@ -176,6 +176,8 @@ export interface RevenuePanel extends PanelMeta {
    * revenue analytics, in which case the headline stands alone.
    */
   points: { label: string; value: number; extra?: Record<string, number> }[]
+  /** The source has a total and no series. The headline stands without an empty chart. */
+  hideChart?: boolean | undefined
   /** One line per currency on the revenue chart. */
   series?: { id: string; label: string }[] | undefined
   /** The customers billed most in the window, highest first. */
@@ -594,6 +596,7 @@ function MetricsSection({
           ),
         ...changeOf(revenue.status === 'ready' ? revenue.changePercent : null),
         points: revenue.status === 'ready' ? revenue.points : [],
+        ...(revenue.hideChart ? { hideChart: true } : {}),
         ...(revenue.series?.length
           ? {
               series: revenue.series.map((line) => ({

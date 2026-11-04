@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  activationStartDate,
+  activationStartDay,
   contractDateToInstant,
   contractDay,
   createSubscriptionSchema,
@@ -127,5 +129,27 @@ describe('contract dates with a time', () => {
       '2026-10-21T04:00:00.000Z',
     )
     expect(contractDay(new Date(2026, 9, 21, 23, 0).toISOString())).toBe('2026-10-21')
+  })
+})
+
+describe('activating a draft', () => {
+  // Local midnight 4 Nov: in IST this is 2026-11-03T18:30Z, the QA case (#26).
+  const saved = new Date(2026, 10, 4)
+  const now = new Date(2026, 10, 2, 10, 15)
+
+  it('opens the dialog on the saved start day, else today', () => {
+    expect(activationStartDay(saved, now)).toBe('2026-11-04')
+    expect(activationStartDay(null, now)).toBe('2026-11-02')
+  })
+
+  it('keeps the saved start instant when its day is kept', () => {
+    expect(activationStartDate('2026-11-04', saved, now)).toBe(saved)
+    expect(activationStartDate('', saved, now)).toBe(saved)
+  })
+
+  it('starts now when today is picked, and at local midnight on another day', () => {
+    expect(activationStartDate('2026-11-02', saved, now)).toBe(now)
+    expect(activationStartDate('2026-11-10', saved, now)).toEqual(new Date(2026, 10, 10))
+    expect(activationStartDate('', null, now)).toBe(now)
   })
 })

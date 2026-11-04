@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
-import { DEFAULT_EXPORT_RUN_QUERY, type ExportRunQuery } from '@fp/domain'
+import { DEFAULT_EXPORT_RUN_QUERY, type ExportRunQuery, type S3Connection } from '@fp/domain'
 import {
   type DataExportTab,
   DataExportDetail,
@@ -90,13 +90,13 @@ export const NoConnections: Story = {
 
 const setEnabled = fn(async (_enabled: boolean) => undefined)
 
-function Detail() {
+function Detail({ connection = CONNECTIONS[0] }: { connection?: S3Connection | undefined }) {
   const [tab, setTab] = useState<DataExportTab>('overview')
   const [query, setQuery] = useState<ExportRunQuery>(DEFAULT_EXPORT_RUN_QUERY)
   return (
     <DataExportDetail
       dataExport={EXPORT}
-      connection={CONNECTIONS[0]}
+      connection={connection}
       tab={tab}
       onTabChange={setTab}
       trail={[{ label: 'Exports', onClick: fn() }, { label: 'Credit usage export' }]}
@@ -130,6 +130,17 @@ export const ExportDetail: Story = {
     await waitFor(() => expect(setEnabled).toHaveBeenCalledWith(false))
     await userEvent.click(canvas.getByRole('tab', { name: 'Runs' }))
     await expect(await canvas.findByText('run_001')).toBeVisible()
+  },
+}
+
+/** A Flexprice-managed connection still names its bucket and region: both are shown. */
+export const ManagedBucketDetail: Story = {
+  render: () => <Detail connection={CONNECTIONS[1]} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('acme-warehouse')).toBeVisible()
+    await expect(canvas.getByText('eu-west-1')).toBeVisible()
+    await expect(canvas.queryByText('Managed by Flexprice')).not.toBeInTheDocument()
   },
 }
 

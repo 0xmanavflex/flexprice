@@ -2,7 +2,12 @@ import { useMemo } from 'react'
 import { BookOpenIcon, CopyIcon, RefreshCwIcon, ScrollTextIcon, SendIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { cn } from '@ui/lib/cn'
-import { DEFAULT_RAW_EVENT_QUERY, type RawEvent, type RawEventQuery } from '@fp/domain'
+import {
+  DEFAULT_RAW_EVENT_QUERY,
+  RAW_EVENT_PERIODS,
+  type RawEvent,
+  type RawEventQuery,
+} from '@fp/domain'
 import { EMPTY_CATALOGUE } from '@ui/compositions/feedback/emptyCatalogue'
 import type { FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
@@ -16,9 +21,13 @@ import { type EntityColumn, EmDash, Tag, idColumn } from '../../shared/cells'
  *
  * Read-only by nature: an event is a record of something that already
  * happened, so there is no create action and no status. The search box matches
- * the event name and the filter builder takes a customer and a source: all
- * three are server-side filters on `POST /events/query`, so the list is the
- * page the server sent, not a page narrowed after the fact.
+ * the event name and the filter builder takes a customer, a source and how far
+ * back to look: all server-side filters on `POST /events/query`, so the list is
+ * the page the server sent, not a page narrowed after the fact.
+ *
+ * The window always applies (the server reads a window even when none is
+ * sent), so its chip is always shown and an empty list says "nothing in this
+ * window", never "nothing received yet".
  */
 export const EventGridProvenance = provenance({
   source: 'composition',
@@ -45,6 +54,15 @@ const FILTER_FIELDS: FilterField[] = [
     operators: IS_OPERATOR,
     defaultOperator: 'is',
     placeholder: 'e.g. sdk',
+  },
+  {
+    id: 'period',
+    label: 'Received',
+    type: 'select',
+    options: RAW_EVENT_PERIODS.map((period) => ({ value: period.id, label: period.label })),
+    operators: [{ value: 'is', label: 'in' }],
+    defaultOperator: 'is',
+    searchable: false,
   },
 ]
 
@@ -194,6 +212,13 @@ export function EventGrid({
       createFilterRule({ id: 'source', path: ['source'], operator: 'is', value: query.source }),
     )
   }
+  filterRules.push(
+    createFilterRule({ id: 'period', path: ['period'], operator: 'is', value: query.period }),
+  )
+  const isNarrowed = query.search.length > 0 || query.customer.length > 0 || query.source.length > 0
+  const periodLabel =
+    RAW_EVENT_PERIODS.find((period) => period.id === query.period)?.label.toLowerCase() ??
+    'chosen window'
 
   const rowActions = (event: RawEvent): EntityRowAction[] => {
     const actions: EntityRowAction[] = []
@@ -231,11 +256,23 @@ export function EventGrid({
       filter={{
         fields: FILTER_FIELDS,
         query: createFilterQuery(filterRules),
-        activeCount: (query.customer ? 1 : 0) + (query.source ? 1 : 0),
+        activeCount:
+          (query.customer ? 1 : 0) +
+          (query.source ? 1 : 0) +
+          (query.period === DEFAULT_RAW_EVENT_QUERY.period ? 0 : 1),
         onQueryChange: (_next, flat: FlatFilter[]) => {
           const read = (field: string) =>
             String(flat.find((e) => e.field === field)?.values?.[0] ?? '').trim()
-          onQueryChange({ ...query, customer: read('customer'), source: read('source'), page: 1 })
+          const period =
+            RAW_EVENT_PERIODS.find((option) => option.id === read('period'))?.id ??
+            DEFAULT_RAW_EVENT_QUERY.period
+          onQueryChange({
+            ...query,
+            customer: read('customer'),
+            source: read('source'),
+            period,
+            page: 1,
+          })
         },
       }}
       sort={{
@@ -268,9 +305,19 @@ export function EventGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.customer.length > 0 || query.source.length > 0}
-      {...(onClearFilters ? { onClearFilters } : {})}
-      filteredEmptyTitle="No events match these filters"
+      // The window always narrows the list: an empty page is never proof that
+      // no event was ever received.
+      isFiltered
+      {...(onClearFilters && isNarrowed ? { onClearFilters } : {})}
+      filteredEmptyTitle={
+        isNarrowed ? 'No events match these filters' : `No events in the ${periodLabel}`
+      }
+      {...(isNarrowed
+        ? {}
+        : {
+            filteredEmptyDescription:
+              'Older events are not shown: to look further back, change Received under Filter. An event also takes a moment to land after it is sent.',
+          })}
       empty={{
         scene: 'developers',
         title: EMPTY_CATALOGUE.events.title,

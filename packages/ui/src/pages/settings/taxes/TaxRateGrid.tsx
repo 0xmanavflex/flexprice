@@ -207,8 +207,8 @@ export function TaxRateGrid({
       searchPlaceholder="Search tax rates…"
       /*
        * No counts: `GET /taxes/rates` exposes paging and an order direction
-       * and nothing else, so `fetchTaxRates` narrows status on the page it
-       * received. There is no per-status server total to read.
+       * and nothing else, so `fetchTaxRates` reads every rate and applies the
+       * facet, search and sort itself. There is no per-status server total.
        */
       filter={statusFilter({
         values: query.statuses,

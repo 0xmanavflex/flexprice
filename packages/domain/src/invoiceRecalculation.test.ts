@@ -10,6 +10,12 @@ describe('invoiceRecalculation', () => {
     })
   })
 
+  it('refuses a one-off draft, which has no contract to recalculate from', () => {
+    expect(
+      invoiceRecalculation({ status: InvoiceStatus.Draft, subscriptionId: null, amountPaid: '0' }),
+    ).toEqual({ kind: 'unavailable', reason: 'Only contract invoices can be recalculated' })
+  })
+
   it('replaces a voided contract invoice', () => {
     expect(invoiceRecalculation({ ...contract, status: InvoiceStatus.Void }).kind).toBe('replace')
   })

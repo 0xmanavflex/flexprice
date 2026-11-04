@@ -5,6 +5,8 @@ import {
   reportCurrencies,
   reportScalar,
   reportSeries,
+  reportsUnconfigured,
+  useCustomerNames,
   useReport,
   useRevenueOverview,
   type ReportPoint,
@@ -26,11 +28,13 @@ import {
   GRAIN_OPTIONS,
   DAY_MS,
   RANGE_OPTIONS,
+  agingTotals,
   amountOf,
   customerRows as dashboardCustomerRows,
   creditRows,
   creditTypeRows,
   alignToWindow,
+  eventsWindow,
   formatAmount,
   largestCurrency,
   percentOf,
@@ -59,7 +63,6 @@ import {
  * it stays on the revenue dashboard (`POST /dashboard/revenue-dashboard`).
  */
 
-/** The widest range the events report answers (its `max_range_days`). */
 /** How many customers a breakdown lists. */
 const TOP = 50
 
@@ -75,7 +78,6 @@ const AGING: Record<
   '61-90': { id: 'd90', label: '61–90 days', tone: 'critical', days: 90 },
   '90+': { id: 'd90p', label: '90+ days', tone: 'critical', days: 91 },
 }
-const NOT_DUE = 'Current'
 
 const isoDay = (date: Date) => date.toISOString().slice(0, 10)
 const dayLabel = new Intl.DateTimeFormat('en-US', {
@@ -127,6 +129,11 @@ export function ReportsPage({
 
   // Revenue across every currency first: it says which currencies there are.
   const revenueAll = useCardReport('invoice_total', { ...base, shape: 'scalar' })
+  // An environment without the report library answers every report the same
+  // way, so once the first says so the rest are not asked: the page falls back
+  // to the revenue dashboard and hides them.
+  const revenueOnly = reportsUnconfigured(revenueAll.error)
+  const gated = <Q,>(query: Q): Q | null => (revenueOnly ? null : query)
   const currencies = reportCurrencies(revenueAll.data)
   // Without a choice, the currency with the most revenue: the report lists
   // currencies alphabetically, and the first can be one with next to nothing.
@@ -139,81 +146,113 @@ export function ReportsPage({
         )) ?? 'USD'
   const inCurrency = { ...base, currency: currency.toLowerCase() }
 
-  const revenueSeries = useCardReport('invoice_total', {
-    ...inCurrency,
-    shape: 'timeseries',
-    grain,
-  })
-  const revenueByCustomer = useCardReport('invoice_total', {
-    ...inCurrency,
-    shape: 'breakdown',
-    dimensions: ['customer_id'],
-    limit: TOP,
-  })
-  const creditReport = useCardReport('credit_consumption', {
-    range,
-    currency: currency.toLowerCase(),
-    shape: 'breakdown',
-    dimensions: ['customer_id', 'credit_type'],
-  })
+  const revenueSeries = useCardReport(
+    'invoice_total',
+    gated({
+      ...inCurrency,
+      shape: 'timeseries',
+      grain,
+    }),
+  )
+  const revenueByCustomer = useCardReport(
+    'invoice_total',
+    gated({
+      ...inCurrency,
+      shape: 'breakdown',
+      dimensions: ['customer_id'],
+      limit: TOP,
+    }),
+  )
+  const creditReport = useCardReport(
+    'credit_consumption',
+    gated({
+      range,
+      currency: currency.toLowerCase(),
+      shape: 'breakdown',
+      dimensions: ['customer_id', 'credit_type'],
+    }),
+  )
   const [offset, setOffset] = useState(0)
   useEffect(() => setOffset(0), [search.range, currency])
-  const customerPage = useCardReport('invoice_total', {
-    range,
-    currency: currency.toLowerCase(),
-    shape: 'breakdown',
-    dimensions: ['customer_id'],
-    limit: PAGE + 1,
-    offset,
-  })
-  const arpuReport = useCardReport('arpu', { ...inCurrency, shape: 'scalar' })
-  const receivablesReport = useCardReport('total_receivables', {
-    range,
-    currency: currency.toLowerCase(),
-    shape: 'scalar',
-  })
-  const agingReport = useCardReport('receivables_aging', {
-    range,
-    currency: currency.toLowerCase(),
-    shape: 'breakdown',
-    dimensions: ['aging_bucket'],
-  })
-  const agingByCustomer = useCardReport('receivables_aging', {
-    range,
-    currency: currency.toLowerCase(),
-    shape: 'breakdown',
-    dimensions: ['customer_id', 'aging_bucket'],
-  })
+  const customerPage = useCardReport(
+    'invoice_total',
+    gated({
+      range,
+      currency: currency.toLowerCase(),
+      shape: 'breakdown',
+      dimensions: ['customer_id'],
+      limit: PAGE + 1,
+      offset,
+    }),
+  )
+  const arpuReport = useCardReport('arpu', gated({ ...inCurrency, shape: 'scalar' }))
+  const receivablesReport = useCardReport(
+    'total_receivables',
+    gated({
+      range,
+      currency: currency.toLowerCase(),
+      shape: 'scalar',
+    }),
+  )
+  const agingReport = useCardReport(
+    'receivables_aging',
+    gated({
+      range,
+      currency: currency.toLowerCase(),
+      shape: 'breakdown',
+      dimensions: ['aging_bucket'],
+    }),
+  )
+  const agingByCustomer = useCardReport(
+    'receivables_aging',
+    gated({
+      range,
+      currency: currency.toLowerCase(),
+      shape: 'breakdown',
+      dimensions: ['customer_id', 'aging_bucket'],
+    }),
+  )
   // Days to pay has no daily grain.
   const payGrain = grain === 'day' ? 'week' : grain
-  const daysReport = useCardReport('days_to_pay', { ...inCurrency, shape: 'scalar' })
-  const daysSeries = useCardReport('days_to_pay', {
-    ...inCurrency,
-    shape: 'timeseries',
-    grain: payGrain,
-  })
-  const daysByCustomer = useCardReport('days_to_pay', {
-    ...inCurrency,
-    shape: 'breakdown',
-    dimensions: ['customer_id'],
-    limit: TOP,
-  })
+  const daysReport = useCardReport('days_to_pay', gated({ ...inCurrency, shape: 'scalar' }))
+  const daysSeries = useCardReport(
+    'days_to_pay',
+    gated({
+      ...inCurrency,
+      shape: 'timeseries',
+      grain: payGrain,
+    }),
+  )
+  const daysByCustomer = useCardReport(
+    'days_to_pay',
+    gated({
+      ...inCurrency,
+      shape: 'breakdown',
+      dimensions: ['customer_id'],
+      limit: TOP,
+    }),
+  )
   // `POST /events/analytics` returns no rows without a customer: the tenant
   // path is disabled on the server. `events_volume` is the count that works,
   // and it covers at most seven days.
-  const eventsStart = new Date(Math.max(window.start.getTime(), window.end.getTime() - 6 * DAY_MS))
-  const eventsLimited = eventsStart.getTime() > window.start.getTime()
-  const eventsReport = useCardReport('events_volume', {
-    range: `${isoDay(eventsStart)}..${isoDay(new Date(window.end.getTime() + DAY_MS))}`,
-    shape: 'timeseries',
-    grain: 'day',
-  })
-  const topupReport = useCardReport('credit_topups', {
-    range,
-    currency: currency.toLowerCase(),
-    shape: 'breakdown',
-    dimensions: ['transaction_reason', 'customer_id'],
-  })
+  const eventsSpan = eventsWindow(window)
+  const eventsReport = useCardReport(
+    'events_volume',
+    gated({
+      range: eventsSpan.range,
+      shape: 'timeseries',
+      grain: 'day',
+    }),
+  )
+  const topupReport = useCardReport(
+    'credit_topups',
+    gated({
+      range,
+      currency: currency.toLowerCase(),
+      shape: 'breakdown',
+      dimensions: ['transaction_reason', 'customer_id'],
+    }),
+  )
   // The usage and contract split: no report gives it.
   const overview = useRevenueOverview(environmentId, window)
 
@@ -221,12 +260,7 @@ export function ReportsPage({
   const arpu = reportScalar(arpuReport.data, 'arpu', currency)
   const outstanding = reportScalar(receivablesReport.data, 'total_receivables', currency).value ?? 0
   const aging = reportBreakdown(agingReport.data, 'receivables_aging', ['aging_bucket'], currency)
-  const notYetDue = aging
-    .filter((row) => row.keys['aging_bucket'] === NOT_DUE)
-    .reduce((sum, row) => sum + row.value, 0)
-  const overdue = aging
-    .filter((row) => row.keys['aging_bucket'] !== NOT_DUE)
-    .reduce((sum, row) => sum + row.value, 0)
+  const { notYetDue, overdue, noDueDate } = agingTotals(aging)
   const days = reportScalar(daysReport.data, 'days_to_pay', currency)
 
   // Customer names for every breakdown, in one lookup.
@@ -249,11 +283,35 @@ export function ReportsPage({
     currency,
   )
   // Names come from the revenue dashboard, which already returns them with the
-  // usage and contract split. Customer search is not called for this page.
+  // usage and contract split. It lists only some customers, so the rest are
+  // looked up in one customer search by id.
   const split = new Map(
     dashboardCustomerRows(overview.data?.customers ?? [], currency).map((row) => [row.id, row]),
   )
-  const nameOf = (id: string) => split.get(id)?.name ?? id
+  const creditBreakdown = reportBreakdown(
+    creditReport.data,
+    'credit_consumption',
+    ['customer_id', 'credit_type'],
+    currency,
+  )
+  const pageBreakdown = reportBreakdown(
+    customerPage.data,
+    'invoice_total',
+    ['customer_id'],
+    currency,
+  )
+  const unnamed = [
+    ...customerRevenue,
+    ...customerAging,
+    ...customerDays,
+    ...creditBreakdown,
+    ...pageBreakdown.slice(0, PAGE),
+  ].flatMap((row) => {
+    const id = row.keys['customer_id']
+    return id && !split.get(id)?.name ? [id] : []
+  })
+  const looked = useCustomerNames(overview.isPending ? [] : unnamed)
+  const nameOf = (id: string) => split.get(id)?.name || looked.data?.[id] || id
 
   const money = (value: number) => formatAmount(value, currency)
   const moneyOrDash = (value: number | null) => (value === null ? '—' : money(value))
@@ -287,12 +345,6 @@ export function ReportsPage({
     },
   }))
 
-  const creditBreakdown = reportBreakdown(
-    creditReport.data,
-    'credit_consumption',
-    ['customer_id', 'credit_type'],
-    currency,
-  )
   const topupBreakdown = reportBreakdown(
     topupReport.data,
     'credit_topups',
@@ -319,12 +371,6 @@ export function ReportsPage({
   }
   // A customer with nothing billed is not one to rank or chart.
   const customerRows = customerRevenue.filter((row) => row.value > 0).map(toRow)
-  const pageBreakdown = reportBreakdown(
-    customerPage.data,
-    'invoice_total',
-    ['customer_id'],
-    currency,
-  )
   const pageRows = pageBreakdown.slice(0, PAGE).map(toRow)
 
   // Aging by customer: overdue is every bucket past due; the oldest bucket is the worst.
@@ -363,14 +409,50 @@ export function ReportsPage({
 
   const events = reportSeries(eventsReport.data, 'events_volume')
   const eventsTotal = events.reduce((sum, point) => sum + point.value, 0)
-  const eventDays = Math.max(Math.ceil((window.end.getTime() - eventsStart.getTime()) / DAY_MS), 1)
+  const eventDays = Math.max(
+    Math.ceil((eventsSpan.end.getTime() - eventsSpan.start.getTime()) / DAY_MS),
+    1,
+  )
+  // The events report reaches back a week at most: a wider range says so,
+  // under the chart and in the empty state alike.
+  const eventsNote = eventsSpan.limited
+    ? 'Only the last 7 days are counted: usage analytics has no tenant-wide series, and the events report covers at most a week.'
+    : undefined
   const peak = events.reduce<ReportPoint | null>(
     (best, point) => (best === null || point.value > best.value ? point : best),
     null,
   )
   const count = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
 
-  const revenueStatus: ReportStatus = statusOf(revenueAll, revenue.value === null)
+  const shown = revenueOnly
+    ? (overview.data?.summaries.find((row) => row.currency === search.currency)?.currency ??
+      overview.data?.summaries[0]?.currency ??
+      currency)
+    : currency
+  const dashSummary = overview.data?.summaries.find((row) => row.currency === shown)
+  const dashRows = dashboardCustomerRows(overview.data?.customers ?? [], shown)
+  const dashTotal = amountOf(dashSummary?.total)
+  const dashUsage = amountOf(dashSummary?.usage)
+  const dashContract = amountOf(dashSummary?.fixed)
+  const dashMoney = (value: number) => formatAmount(value, shown)
+  const dashStatus: ReportStatus = overview.isPending
+    ? 'loading'
+    : overview.isError && !overview.data
+      ? 'error'
+      : dashSummary
+        ? 'ready'
+        : 'empty'
+  const shownView =
+    revenueOnly &&
+    search.view !== 'overview' &&
+    search.view !== 'revenue' &&
+    search.view !== 'customers'
+      ? 'overview'
+      : search.view
+
+  const revenueStatus: ReportStatus = revenueOnly
+    ? dashStatus
+    : statusOf(revenueAll, revenue.value === null)
   const openCustomer = (customerId: string) =>
     void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
   const retry =
@@ -392,22 +474,36 @@ export function ReportsPage({
         compare: search.compare,
         compareOptions: COMPARE_OPTIONS,
         onCompareChange: (next) => onSearchChange({ ...search, compare: next }),
-        currency,
-        currencyOptions: currencies.map((code) => ({ id: code, label: code })),
+        // The fallback shows the dashboard currency `shown`; the picker says so.
+        currency: revenueOnly ? shown : currency,
+        // In the dashboard fallback the report knows no currencies; the
+        // dashboard's own summaries are the ones there are.
+        currencyOptions: (revenueOnly
+          ? (overview.data?.summaries ?? []).map((row) => row.currency)
+          : currencies
+        ).map((code) => ({ id: code, label: code })),
         onCurrencyChange: (next) => onSearchChange({ ...search, currency: next }),
       }}
       rangeLabel={rangeLabel}
       comparing={comparing}
-      view={search.view}
+      {...(revenueOnly ? { revenueOnly: true } : {})}
+      view={shownView}
       onViewChange={(view) => onSearchChange({ ...search, view })}
       headline={{
         status: revenueStatus === 'loading' || revenueStatus === 'error' ? revenueStatus : 'ready',
-        revenue: {
-          ...figure(revenue, moneyOrDash),
-          ...(comparing
-            ? {}
-            : { detail: `${rangeLabel.charAt(0).toUpperCase()}${rangeLabel.slice(1)}` }),
-        },
+        revenue: revenueOnly
+          ? {
+              value: dashSummary ? dashMoney(dashTotal) : '—',
+              // The dashboard counts invoice lines by service period, not
+              // invoices by finalization date as the report does: said so.
+              detail: `Service in ${rangeLabel}`,
+            }
+          : {
+              ...figure(revenue, moneyOrDash),
+              ...(comparing
+                ? {}
+                : { detail: `${rangeLabel.charAt(0).toUpperCase()}${rangeLabel.slice(1)}` }),
+            },
         arpu: figure(arpu, moneyOrDash),
         outstanding: {
           value: receivablesReport.data ? money(outstanding) : '—',
@@ -424,40 +520,84 @@ export function ReportsPage({
       revenue={{
         // An all-zero series is drawn as the empty state by the chart itself;
         // the totals come from their own read and still show.
-        status: statusOf(revenueSeries, points.length === 0),
-        reason: revenueSeries.isError ? 'The billing report did not respond.' : undefined,
-        onRetry: retry(revenueAll, revenueSeries),
-        total: figure(revenue, moneyOrDash),
-        usage: { value: summary ? money(usage) : '—' },
-        contract: { value: summary ? money(contract) : '—' },
-        usageShare: percentOf(usage, usage + contract),
+        status: revenueOnly ? dashStatus : statusOf(revenueSeries, points.length === 0),
+        reason: revenueOnly
+          ? overview.isError
+            ? 'Revenue could not be loaded.'
+            : undefined
+          : revenueSeries.isError
+            ? 'The billing report did not respond.'
+            : undefined,
+        onRetry: revenueOnly ? retry(overview) : retry(revenueAll, revenueSeries),
+        total: revenueOnly
+          ? { value: dashSummary ? dashMoney(dashTotal) : '—' }
+          : figure(revenue, moneyOrDash),
+        usage: {
+          value: revenueOnly
+            ? dashSummary
+              ? dashMoney(dashUsage)
+              : '—'
+            : summary
+              ? money(usage)
+              : '—',
+        },
+        contract: {
+          value: revenueOnly
+            ? dashSummary
+              ? dashMoney(dashContract)
+              : '—'
+            : summary
+              ? money(contract)
+              : '—',
+        },
+        usageShare: percentOf(
+          revenueOnly ? dashUsage : usage,
+          (revenueOnly ? dashUsage : usage) + (revenueOnly ? dashContract : contract),
+        ),
         grain,
-        series: points,
+        series: revenueOnly ? [] : points,
       }}
       customers={{
-        status: statusOf(revenueByCustomer, customerRows.length === 0),
-        reason: revenueByCustomer.isError ? 'The billing report did not respond.' : undefined,
-        onRetry: retry(revenueByCustomer, arpuReport),
-        rows: customerRows,
-        billed: customerRows.length,
+        status: revenueOnly ? dashStatus : statusOf(revenueByCustomer, customerRows.length === 0),
+        reason: revenueOnly
+          ? overview.isError
+            ? 'Revenue could not be loaded.'
+            : undefined
+          : revenueByCustomer.isError
+            ? 'The billing report did not respond.'
+            : undefined,
+        onRetry: revenueOnly ? retry(overview) : retry(revenueByCustomer, arpuReport),
+        rows: revenueOnly ? dashRows : customerRows,
+        billed: (revenueOnly ? dashRows : customerRows).length,
         arpu: figure(arpu, moneyOrDash),
         topTenShare: percentOf(
-          customerRows.slice(0, 10).reduce((sum, row) => sum + row.revenue, 0),
-          total,
+          (revenueOnly ? dashRows : customerRows)
+            .slice(0, 10)
+            .reduce((sum, row) => sum + row.revenue, 0),
+          revenueOnly ? dashTotal : total,
         ),
         onOpenCustomer: openCustomer,
-        all: {
-          status: customerPage.isPlaceholderData
-            ? 'loading'
-            : statusOf(customerPage, pageRows.length === 0 && offset === 0),
-          reason: 'The customer list did not respond.',
-          onRetry: retry(customerPage),
-          rows: pageRows,
-          offset,
-          size: PAGE,
-          hasMore: pageBreakdown.length > PAGE,
-          onPage: setOffset,
-        },
+        all: revenueOnly
+          ? {
+              status: dashStatus,
+              rows: dashRows,
+              offset: 0,
+              size: dashRows.length || PAGE,
+              hasMore: false,
+              onPage: setOffset,
+            }
+          : {
+              status: customerPage.isPlaceholderData
+                ? 'loading'
+                : statusOf(customerPage, pageRows.length === 0 && offset === 0),
+              reason: 'The customer list did not respond.',
+              onRetry: retry(customerPage),
+              rows: pageRows,
+              offset,
+              size: PAGE,
+              hasMore: pageBreakdown.length > PAGE,
+              onPage: setOffset,
+            },
         credits: {
           status: statusOf(
             {
@@ -468,7 +608,11 @@ export function ReportsPage({
             },
             credits.length === 0 && topupBreakdown.length === 0,
           ),
-          reason: 'The credit reports did not respond.',
+          // Only a failed read did not respond; an empty one simply has nothing.
+          ...((creditReport.isError && !creditReport.data) ||
+          (topupReport.isError && !topupReport.data)
+            ? { reason: 'The credit reports did not respond.' }
+            : {}),
           onRetry: retry(creditReport, topupReport),
           rows: credits,
           total: money(credits.reduce((sum, row) => sum + row.total, 0)),
@@ -502,7 +646,7 @@ export function ReportsPage({
         overdue: money(overdue),
         overdueShare: percentOf(overdue, outstanding),
         notYetDue: money(notYetDue),
-        noDueDate: '—',
+        noDueDate: agingReport.data ? money(noDueDate) : '—',
         customers: overdueRows,
         onOpenCustomer: openCustomer,
       }}
@@ -538,17 +682,12 @@ export function ReportsPage({
       }}
       usage={{
         status: statusOf(eventsReport, eventsTotal === 0),
-        reason: eventsReport.isError ? 'The events report did not respond.' : undefined,
+        reason: eventsReport.isError ? 'The events report did not respond.' : eventsNote,
         onRetry: retry(eventsReport),
-        ...(eventsLimited
-          ? {
-              basedOn:
-                'The last 7 days. Usage analytics has no tenant-wide series, and the events report covers at most a week.',
-            }
-          : {}),
+        ...(eventsNote ? { basedOn: eventsNote } : {}),
         series: alignToWindow(
           events.map((point) => ({ at: point.bucket, value: point.value })),
-          { start: eventsStart, end: window.end },
+          eventsSpan,
           'day',
         ).map((point) => ({
           label: point.label,

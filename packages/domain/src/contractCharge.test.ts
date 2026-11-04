@@ -3,7 +3,9 @@ import {
   CommitmentKind,
   NO_USAGE_TERMS,
   hasTermsErrors,
+  startingNow,
   validateContractTerms,
+  type AddContractCharge,
 } from './contractCharge'
 
 const commitment = {
@@ -52,5 +54,22 @@ describe('validateContractTerms', () => {
     expect(validateContractTerms({ terms: at('1.5') })).toEqual({})
     expect(validateContractTerms({ terms: at('0.5') }).overageFactor).toBeDefined()
     expect(validateContractTerms({ terms: at('') }).overageFactor).toBeDefined()
+  })
+})
+
+describe('startingNow', () => {
+  const now = new Date(2026, 10, 4, 12, 39)
+  const draft = (startDate: string) => ({ startDate }) as unknown as AddContractCharge
+
+  it('sends "Now" (empty) and today as the instant now (QA #66)', () => {
+    expect(startingNow(draft(''), now).startDate).toBe(now.toISOString())
+    expect(startingNow(draft('2026-11-04'), now).startDate).toBe(now.toISOString())
+  })
+
+  it('leaves another day and a chosen instant alone', () => {
+    expect(startingNow(draft('2026-11-20'), now).startDate).toBe('2026-11-20')
+    expect(startingNow(draft('2099-03-01T15:30:00.000Z'), now).startDate).toBe(
+      '2099-03-01T15:30:00.000Z',
+    )
   })
 })

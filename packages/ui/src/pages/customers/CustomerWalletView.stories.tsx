@@ -413,6 +413,72 @@ export const DebitFromUnloadedTopUp: Story = {
   },
 }
 
+/** Opening a debit adds lines under it, not transactions: the count stays. */
+export const ExpandingKeepsCount: Story = {
+  render: () => (
+    <WalletLedgerTable transactions={[SPLIT_DEBIT, WITH_BREAKDOWN, BARE_TOP_UP]} now={NOW} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/1 - 3 of 3 transactions/)).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: /expand manual debit/i }))
+    await expect(await canvas.findByText('From Subscription grant')).toBeInTheDocument()
+    await expect(canvas.getByText(/1 - 3 of 3 transactions/)).toBeInTheDocument()
+  },
+}
+
+/** A search that matches only a debit's source line keeps the debit with it, never an orphaned line. */
+export const SearchKeepsSourcesWithTheirDebit: Story = {
+  render: () => (
+    <WalletLedgerTable transactions={[SPLIT_DEBIT, WITH_BREAKDOWN, BARE_TOP_UP]} now={NOW} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: /expand manual debit/i }))
+    await userEvent.type(canvas.getByPlaceholderText('Search transactions…'), 'credit memo')
+    // The credit memo top-up, and the debit that drew from it with its lines.
+    await expect(await canvas.findByText(/of 2 transactions/)).toBeInTheDocument()
+    await expect(canvas.getByText('Manual debit')).toBeInTheDocument()
+    await expect(canvas.getByText('From Credit memo')).toBeInTheDocument()
+  },
+}
+
+/** A 30-credit top-up whose last 10 credits lapsed: 20 consumed, 10 expired, not 100% consumed. */
+const EXPIRED_TOP_UP: WalletTransaction = {
+  id: 'wtx_expired_topup',
+  direction: 'in',
+  reason: 'Free credit grant',
+  description: '',
+  credits: '30',
+  amount: money('30.00', 'USD'),
+  createdAt: new Date('2026-08-01T00:00:00Z'),
+  creditsAvailable: '0',
+  expiresAt: new Date('2026-09-01T00:00:00Z'),
+}
+
+const EXPIRY_DEBIT: WalletTransaction = {
+  id: 'wtx_expiry',
+  direction: 'out',
+  reason: 'Credits expired',
+  description: '',
+  credits: '10',
+  amount: money('10.00', 'USD'),
+  createdAt: new Date('2026-09-01T00:00:00Z'),
+  creditsAvailable: null,
+  expiresAt: null,
+  expiry: true,
+  drawnFrom: [{ topUpId: 'wtx_expired_topup', credits: '10' }],
+}
+
+export const ExpiredNotConsumed: Story = {
+  args: { transactions: [EXPIRY_DEBIT, EXPIRED_TOP_UP] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('img', { name: '67% consumed' })).toBeInTheDocument()
+    await expect(canvas.getByText('10 expired')).toBeInTheDocument()
+  },
+}
+
 export const LongLedger: Story = { args: { transactions: makeTransactions(40) } }
 
 /** A debit raised for an invoice: its reference and metadata show, and search finds them. */

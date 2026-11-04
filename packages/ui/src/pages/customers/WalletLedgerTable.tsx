@@ -111,6 +111,31 @@ function detailLine(tx: WalletTransaction): string {
     .join(' · ')
 }
 
+/**
+ * Credits of each top-up that lapsed rather than were used, by top-up id.
+ *
+ * An expiry is its own debit (`CREDIT_EXPIRED`). It names the top-up it
+ * lapsed from in its breakdown, or failing that in its reference; without
+ * this, a top-up whose last credits expired reads as fully consumed.
+ */
+export function expiredByTopUp(transactions: readonly WalletTransaction[]): Map<string, number> {
+  const topUps = new Set(transactions.filter((tx) => tx.direction === 'in').map((tx) => tx.id))
+  const out = new Map<string, number>()
+  const add = (id: string, credits: string) => {
+    const value = toNumber(credits)
+    if (value !== null && value > 0) out.set(id, (out.get(id) ?? 0) + value)
+  }
+  for (const tx of transactions) {
+    if (!tx.expiry) continue
+    if (tx.drawnFrom?.length) {
+      for (const line of tx.drawnFrom) add(line.topUpId, line.credits)
+    } else if (tx.reference && topUps.has(tx.reference.id)) {
+      add(tx.reference.id, tx.credits)
+    }
+  }
+  return out
+}
+
 const hasBreakdown = (tx: WalletTransaction) => (tx.drawnFrom?.length ?? 0) > 0
 
 /** An open debit's line: how many top-ups the lines under it come from. */
@@ -236,6 +261,14 @@ export function WalletLedgerTable({
       : [{ kind: 'topup', id: tx.id, tx }],
   )
   const anyBreakdown = ordered.some(hasBreakdown)
+  const expiredOf = expiredByTopUp(ordered)
+  /** The share of a top-up drawn down by usage: neither left nor lapsed. */
+  const consumedShare = (tx: WalletTransaction) => {
+    const left = toNumber(tx.creditsAvailable)
+    const total = Number(tx.credits)
+    if (left === null || !(total > 0)) return null
+    return Math.max(0, total - left - (expiredOf.get(tx.id) ?? 0)) / total
+  }
 
   /** Sources sort and search with their debit, so they stay beneath it. */
   const sortKey = (pick: (tx: WalletTransaction) => number) => (row: LedgerRow) => pick(row.tx)
@@ -247,6 +280,8 @@ export function WalletLedgerTable({
         label="Transactions"
         noun={noun}
         rows={rows}
+        // The lines a debit opens to are not transactions of their own.
+        isChild={(row) => row.kind === 'source'}
         empty="No transactions yet."
         searchText={(row) =>
           row.kind === 'source'
@@ -359,11 +394,7 @@ export function WalletLedgerTable({
             key: 'consumed',
             header: 'Consumed',
             width: 150,
-            sortBy: sortKey((tx) => {
-              const left = toNumber(tx.creditsAvailable)
-              const total = Number(tx.credits)
-              return left === null || total <= 0 ? -1 : (total - left) / total
-            }),
+            sortBy: sortKey((tx) => consumedShare(tx) ?? -1),
             cell: (row) => {
               if (row.kind === 'source') {
                 // How much of that top-up this one debit took.
@@ -377,15 +408,17 @@ export function WalletLedgerTable({
                 ) : null
               }
               if (row.kind === 'debit') return null
-              const left = toNumber(row.tx.creditsAvailable)
-              const total = Number(row.tx.credits)
               const expired = row.tx.expiresAt !== null && daysUntil(row.tx.expiresAt, now) < 0
+              const lapsed = expiredOf.get(row.tx.id) ?? 0
               return (
-                <ConsumedBar
-                  share={left === null || !(total > 0) ? null : (total - left) / total}
-                  label="consumed"
-                  expired={expired}
-                />
+                <div>
+                  <ConsumedBar share={consumedShare(row.tx)} label="consumed" expired={expired} />
+                  {lapsed > 0 ? (
+                    <p className="text-destructive-foreground dark:text-destructive text-xs tabular-nums">
+                      {formatCredits(String(lapsed))} expired
+                    </p>
+                  ) : null}
+                </div>
               )
             },
           },

@@ -75,6 +75,13 @@ export interface ListOffer {
   /** Usually "New thing". Only the toolbar draws it, at its end; the empty body never does. */
   action?: ReactNode
   secondaryAction?: ReactNode
+  /**
+   * A filtered request failed. The grid stays up so its search box and filters
+   * can be changed or cleared, and its empty body says the request failed
+   * instead of claiming that nothing matched. `action` sits beside the clear
+   * button: usually "Try again".
+   */
+  failure?: { title: string; description?: string | undefined; action?: ReactNode } | undefined
 }
 
 const ListOfferContext = createContext<ListOffer | null>(null)
@@ -139,9 +146,14 @@ export function EmptyState({
    * used to happen, and it took the search box and the create button with it.
    */
   const offer = useListOffer()
-  const firstRun = isFiltered && offer?.isFirstRun ? offer : null
+  // A failed search is not a miss: say it failed, and keep the way out.
+  const failure = isFiltered ? (offer?.failure ?? null) : null
+  const firstRun = isFiltered && !failure && offer?.isFirstRun ? offer : null
 
-  const shown = firstRun ?? { title, description, action, secondaryAction }
+  const shown: Pick<ListOffer, 'title' | 'description' | 'action' | 'secondaryAction'> = failure
+    ? { title: failure.title, description: failure.description }
+    : (firstRun ?? { title, description, action, secondaryAction })
+  const figureName = failure ? 'fault' : figure
   /* A first-run offer is not a filtered miss, whatever slot it renders in. */
   const showsFilterMiss = isFiltered && firstRun === null
   /*
@@ -149,7 +161,16 @@ export function EmptyState({
    * is the toolbar's, top right, and a second copy in the middle of the table
    * is the duplicate the console no longer draws.
    */
-  const actions = showsFilterMiss ? onClearFilters : firstRun ? null : shown.action
+  const actions = failure ? (
+    <>
+      {onClearFilters}
+      {failure.action}
+    </>
+  ) : showsFilterMiss ? (
+    onClearFilters
+  ) : firstRun ? null : (
+    shown.action
+  )
 
   return (
     <Empty
@@ -178,9 +199,9 @@ export function EmptyState({
     >
       <EmptyHeader className={cn('max-w-[27rem]', isPage ? 'gap-4' : 'gap-2')}>
         <EmptyMedia className="mb-0">
-          {figure ? (
+          {figureName ? (
             <Figure
-              name={figure}
+              name={figureName}
               motion={motion ?? (isPage ? 'interactive' : 'static')}
               className={isPage ? 'w-40' : 'w-24'}
             />

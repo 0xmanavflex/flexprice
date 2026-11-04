@@ -678,6 +678,19 @@ export const Incomplete: Story = {
   },
 }
 
+/** A draft is labelled Draft (QA #17) and still offers Activate, like an incomplete contract. */
+export const Draft: Story = {
+  args: withSubscription({ status: SubscriptionStatus.Draft, currentPeriodStart: null }),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByText('Draft').length).toBeGreaterThan(0)
+    await expect(canvas.queryByText('Incomplete')).toBeNull()
+    const banner = within(canvas.getByRole('alert'))
+    await userEvent.click(banner.getByRole('button', { name: 'Activate' }))
+    await expect(args.onActivate).toHaveBeenCalledOnce()
+  },
+}
+
 export const CancelsAtPeriodEnd: Story = {
   args: withSubscription({ cancelAtPeriodEnd: true }),
   parameters: menuA11y,
@@ -714,6 +727,27 @@ export const Cancelled: Story = {
   },
 }
 
+/**
+ * Contract dates saved at local midnight read on that local day (QA #34): a
+ * draft starting 4 Nov 00:00 IST (3 Nov 18:30 UTC) read 3 Nov here and 4 Nov on
+ * the customer page, and a trial ending at midnight on 11 Nov read 10 Nov.
+ */
+export const LocalMidnightDatesReadOnTheirDay: Story = {
+  args: withSubscription({
+    status: SubscriptionStatus.Trialing,
+    startDate: new Date(2026, 10, 4),
+    currentPeriodStart: new Date(2026, 10, 4),
+    currentPeriodEnd: new Date(2026, 11, 4),
+    trialEnd: new Date(2026, 10, 11),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/The trial ends on Nov 11, 2026/)).toBeVisible()
+    await openInformation(canvasElement)
+    await expect(await canvas.findByText('Nov 4, 2026 – Dec 4, 2026')).toBeVisible()
+  },
+}
+
 /** A cancelled contract's metadata is read-only: no edit pencil on the card. */
 export const CancelledMetadataReadOnly: Story = {
   args: {
@@ -728,6 +762,39 @@ export const CancelledMetadataReadOnly: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('tab', { name: 'Information' }))
     await expect(canvas.queryByRole('button', { name: /^Edit metadata/ })).toBeNull()
+  },
+}
+
+/**
+ * Pause is offered only where the API takes it (QA #53): a trial ("Only active
+ * subscriptions can be paused") and an inherited child ("Pause the parent
+ * subscription instead") offer none.
+ */
+export const NoPauseOnTrial: Story = {
+  args: {
+    ...withSubscription({ status: SubscriptionStatus.Trialing }),
+    onPause: fn(async () => undefined),
+  },
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Cancel contract' })).toBeVisible()
+    await expect(screen.queryByRole('menuitem', { name: 'Pause contract' })).toBeNull()
+  },
+}
+
+export const NoPauseOnInheritedChild: Story = {
+  args: {
+    ...withSubscription({ subscriptionType: 'inherited', parentSubscriptionId: 'sub_parent' }),
+    onPause: fn(async () => undefined),
+  },
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Cancel contract' })).toBeVisible()
+    await expect(screen.queryByRole('menuitem', { name: 'Pause contract' })).toBeNull()
   },
 }
 
@@ -1721,7 +1788,9 @@ export const AddCharge: Story = {
         billingPeriod: 'MONTHLY',
       }),
       quantity: '3',
-      startDate: '',
+      // "Now" goes out as the instant now, not empty: the API reads no start
+      // as the period start and backdated the charge (QA #66).
+      startDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       proration: 'create_prorations',
       terms: NO_USAGE_TERMS,
     })
@@ -1770,7 +1839,7 @@ export const AddUsageCharge: Story = {
         amount: '0.002',
       }),
       quantity: '1',
-      startDate: '',
+      startDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       proration: 'create_prorations',
       terms: {
         bucketSize: '',
@@ -2104,6 +2173,29 @@ export const RemovesATax: Story = {
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.click(dialog.getByRole('button', { name: 'Remove tax' }))
     await expect(args.onRemoveTax).toHaveBeenCalledOnce()
+  },
+}
+
+/** A contract-wide coupon comes off through its row menu and a confirm; an ended one offers nothing. */
+export const RemovesAContractCoupon: Story = {
+  parameters: menuA11y,
+  args: {
+    ...BASE,
+    onRemoveCoupon: fn(async () => undefined),
+    coupons: ready([
+      COUPONS[0]!,
+      { ...COUPONS[0]!, id: 'sc_ended', name: 'Old promo', code: 'OLD', active: false },
+    ]),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('OLD')).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Actions for Old promo' })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Launch partner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove coupon' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove coupon' }))
+    await expect(args.onRemoveCoupon).toHaveBeenCalledWith(expect.objectContaining({ id: 'sc_1' }))
   },
 }
 

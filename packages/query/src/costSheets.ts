@@ -71,7 +71,13 @@ const SORT_FIELD: Record<CostSheetSortField, string> = {
 export function toCostSheetFilter(query: CostSheetQuery): Record<string, unknown> {
   return {
     // Paging nests under `queryFilter` for this endpoint: see the note above.
-    queryFilter: { limit: query.pageSize, offset: (query.page - 1) * query.pageSize },
+    // `prices` is expanded because the list counts them as line items; without
+    // it every sheet read 0, however many charges it had.
+    queryFilter: {
+      limit: query.pageSize,
+      offset: (query.page - 1) * query.pageSize,
+      expand: 'prices',
+    },
     sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     /*
      * Status, server-side: it used to narrow the fetched page in the browser,

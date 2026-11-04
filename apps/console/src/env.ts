@@ -44,7 +44,8 @@
 const MOCK_API_URL = 'https://mock.flexprice.test/v1'
 
 /**
- * An empty variable is an unset variable.
+ * An empty variable is an unset variable, and so is one of only spaces: a
+ * value pasted into a dashboard with a stray space is not a different value.
  *
  * Takes the value, not the name. That is not a style preference: it is what
  * makes the API key strippable. The previous version took a name and did
@@ -56,22 +57,98 @@ const MOCK_API_URL = 'https://mock.flexprice.test/v1'
  * minifier can drop the ones behind a false branch.
  */
 function clean(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length > 0 ? value : undefined
+  const trimmed = typeof value === 'string' ? value.trim() : ''
+  return trimmed.length > 0 ? trimmed : undefined
 }
 
-const explicitMocks = clean(import.meta.env.VITE_USE_MOCKS)
-const apiUrl = clean(import.meta.env.VITE_FLEXPRICE_API_URL)
+/** A configuration problem, as a value the app can render. */
+export interface ConfigProblem {
+  title: string
+  detail: string
+  fix: string
+}
+
+/** What the console talks to: the mocks, an API, or a problem to show instead. */
+export interface ApiConfig {
+  useMocks: boolean
+  /** Always a valid URL, so nothing downstream throws on `new URL()`. */
+  apiUrl: string
+  problem: ConfigProblem | null
+}
+
+function httpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value)
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 /**
- * Mocks are used when asked for, or when there is nothing else to talk to.
+ * Mocks are used when asked for, or, in development, when there is nothing
+ * else to talk to.
  *
  * The earlier rule was "opt-in, never inferred", so that someone debugging a
  * real integration could not silently get mocks. That reasoning holds when an
- * API URL is configured: and does not apply when none is, because then there
- * is no integration to debug and the only alternative is a broken app. The
- * fallback announces itself in the console rather than happening quietly.
+ * API URL is configured: and does not apply to a local run with none, because
+ * then there is no integration to debug and the only alternative is a broken
+ * app. The fallback announces itself in the console rather than happening
+ * quietly.
+ *
+ * A production build never infers mocks: a deployment missing its API URL
+ * would otherwise serve demo data as if it were real. It shows the
+ * configuration problem instead; `VITE_USE_MOCKS=true` still opts in (the
+ * end-to-end suite runs on such a build). An API URL that is not a URL is a
+ * problem too, rather than a blank page when the first request builds one.
  */
-const useMocks = explicitMocks === 'true' || (explicitMocks !== 'false' && apiUrl === undefined)
+export function resolveApiConfig(
+  rawUrl: string | undefined,
+  mocksFlag: string | undefined,
+  production: boolean,
+): ApiConfig {
+  const url = clean(rawUrl)
+  const flag = clean(mocksFlag)
+  if (flag === 'true') {
+    return { useMocks: true, apiUrl: url && httpUrl(url) ? url : MOCK_API_URL, problem: null }
+  }
+  if (url !== undefined && !httpUrl(url)) {
+    return {
+      useMocks: false,
+      apiUrl: MOCK_API_URL,
+      problem: {
+        title: 'Flexprice is not configured',
+        detail: `VITE_FLEXPRICE_API_URL is set to "${url}", which is not an http(s) URL.`,
+        fix: 'Set it to the API base URL, for example https://api.cloud.flexprice.io/v1.',
+      },
+    }
+  }
+  if (url !== undefined) return { useMocks: false, apiUrl: url, problem: null }
+  if (flag !== 'false' && !production) {
+    return { useMocks: true, apiUrl: MOCK_API_URL, problem: null }
+  }
+  return {
+    useMocks: false,
+    apiUrl: MOCK_API_URL,
+    problem: production
+      ? {
+          title: 'Flexprice is not configured',
+          detail:
+            'VITE_FLEXPRICE_API_URL was not set when this build was made. A production build does not fall back to demo data.',
+          fix: 'Set VITE_FLEXPRICE_API_URL for this deployment and build again, or set VITE_USE_MOCKS=true for a demo build.',
+        }
+      : {
+          title: 'Flexprice is not configured',
+          detail: 'VITE_FLEXPRICE_API_URL is not set, and mocks are switched off.',
+          fix: 'Copy apps/console/.env.example to .env.local, or set VITE_USE_MOCKS=true to use the bundled fixtures.',
+        },
+  }
+}
+
+const explicitMocks = clean(import.meta.env.VITE_USE_MOCKS)
+const configuredApiUrl = clean(import.meta.env.VITE_FLEXPRICE_API_URL)
+const api = resolveApiConfig(configuredApiUrl, explicitMocks, import.meta.env.PROD)
+const useMocks = api.useMocks
 
 /**
  * The development-only API-key override. See the note at the top of this file.
@@ -246,23 +323,9 @@ function parseRegionUrls(): Record<RegionId, string> {
 
 const regionUrls = parseRegionUrls()
 
-/** A configuration problem, as a value the app can render. */
-export interface ConfigProblem {
-  title: string
-  detail: string
-  fix: string
-}
+const problem = api.problem
 
-const problem: ConfigProblem | null =
-  !useMocks && apiUrl === undefined
-    ? {
-        title: 'Flexprice is not configured',
-        detail: 'VITE_FLEXPRICE_API_URL is not set, and mocks are switched off.',
-        fix: 'Copy apps/console/.env.example to .env.local, or set VITE_USE_MOCKS=true to use the bundled fixtures.',
-      }
-    : null
-
-if (useMocks && apiUrl === undefined && explicitMocks !== 'true') {
+if (useMocks && configuredApiUrl === undefined && explicitMocks !== 'true') {
   console.warn(
     '[flexprice] No VITE_FLEXPRICE_API_URL set: serving the bundled fixture corpus. ' +
       'Set VITE_USE_MOCKS=false and a real URL to talk to a backend.',
@@ -434,7 +497,7 @@ const marketplace = {
 export const env = {
   useMocks,
   problem,
-  apiUrl: apiUrl ?? MOCK_API_URL,
+  apiUrl: api.apiUrl,
   /**
    * Where the current dashboard lives, if anywhere.
    *

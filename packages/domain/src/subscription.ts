@@ -36,6 +36,8 @@ export const SubscriptionStatus = {
   Paused: 'paused',
   Cancelled: 'cancelled',
   Incomplete: 'incomplete',
+  /** Saved with "Save as draft": not started, waiting to be activated. */
+  Draft: 'draft',
 } as const
 export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus]
 
@@ -45,6 +47,15 @@ export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
   [SubscriptionStatus.Paused]: 'Paused',
   [SubscriptionStatus.Cancelled]: 'Cancelled',
   [SubscriptionStatus.Incomplete]: 'Incomplete',
+  [SubscriptionStatus.Draft]: 'Draft',
+}
+
+/**
+ * A contract that has not started billing: a draft, or one left incomplete.
+ * Both read "not started" and are the ones Activate is offered on.
+ */
+export function isUnstartedSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Draft || status === SubscriptionStatus.Incomplete
 }
 
 /** The read model the list renders. */
@@ -218,6 +229,32 @@ export function contractDay(value: string): string {
   const date = new Date(value)
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+/**
+ * The start an Activate sends for a draft, from the day picked in its dialog.
+ *
+ * The dialog opens on the draft's saved start (`activationStartDay`). Keeping
+ * that day keeps the saved instant exactly: sending the day as midnight UTC
+ * instead moved a draft saved for 4 Nov 00:00 IST to 3 Nov 05:30 IST, and its
+ * renewal a day earlier with it. Today is now, as a new contract starts; any
+ * other day is that day's local midnight, as the date picker means it.
+ */
+export function activationStartDate(
+  pickedDay: string,
+  savedStart: Date | null,
+  now: Date = new Date(),
+): Date {
+  if (savedStart && (pickedDay === '' || pickedDay === contractDay(savedStart.toISOString()))) {
+    return savedStart
+  }
+  if (pickedDay === '' || pickedDay === contractDay(now.toISOString())) return now
+  return new Date(contractMoment(pickedDay))
+}
+
+/** The day an Activate dialog opens on: the draft's saved start, else today (both local). */
+export function activationStartDay(savedStart: Date | null, now: Date = new Date()): string {
+  return contractDay((savedStart ?? now).toISOString())
 }
 
 /** A decimal amount, or blank for none. */
@@ -1113,6 +1150,17 @@ export interface SubscriptionEntitlement {
   usageLimit: number | null
   softLimit: boolean
   resetPeriodLabel: string
+  /**
+   * `metered`, `boolean`, `static`, `config`: the feature's own type, so a
+   * contract with no usage reported yet (a draft, a paused one) does not read
+   * a boolean or static entitlement as an unlimited metered one. `''` when
+   * the API did not send it.
+   */
+  featureType?: string | undefined
+  /** A static entitlement's value, or a config one's JSON; `''` otherwise. */
+  staticValue?: string | undefined
+  /** What the allowance is per ("day", "month"), or `''` when it never resets. */
+  period?: string | undefined
 }
 
 export const SUBSCRIPTION_CANCELLATION_TYPES = [
@@ -1149,9 +1197,20 @@ export interface ResumeSubscription {
   prorate: boolean
 }
 
-/** Pause is offered on a running contract; resume only on a paused one. */
-export function canPauseSubscription(status: SubscriptionStatus): boolean {
-  return status === SubscriptionStatus.Active || status === SubscriptionStatus.Trialing
+/**
+ * Pause is offered only where the API takes it (`validatePause`): an active
+ * contract (not a trial: "Only active subscriptions can be paused") that is not
+ * a child following its parent (an inherited or grouped-invoicing contract:
+ * "Pause the parent subscription instead"). Resume only on a paused one.
+ */
+export function canPauseSubscription(
+  contract: Pick<SubscriptionDetail, 'status' | 'subscriptionType'>,
+): boolean {
+  return (
+    contract.status === SubscriptionStatus.Active &&
+    contract.subscriptionType !== 'inherited' &&
+    contract.subscriptionType !== 'grouped_invoicing'
+  )
 }
 
 export function canResumeSubscription(status: SubscriptionStatus): boolean {

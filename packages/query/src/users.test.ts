@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest'
-import { MemberType, matchesMemberQuery, type Member, type MemberQuery } from '@fp/domain'
+import { describe, expect, it, vi } from 'vitest'
+import type { Flexprice } from '@fp/api'
 import {
+  DEFAULT_MEMBER_QUERY,
+  MemberType,
+  matchesMemberQuery,
+  type Member,
+  type MemberQuery,
+} from '@fp/domain'
+import {
+  fetchAllMembers,
   toCreateServiceAccountRequest,
   toInviteMemberRequest,
   toMember,
@@ -205,5 +213,29 @@ describe('the member domain model', () => {
       'tenantName',
       'type',
     ])
+  })
+})
+
+describe('fetchAllMembers', () => {
+  it('reads every page, so the table searches the whole team', async () => {
+    const people = Array.from({ length: 130 }, (_, index) => ({
+      id: `user_${index}`,
+      email: `person${index}@example.com`,
+      name: index === 120 ? 'Zed Late' : `Person ${index}`,
+      type: 'user',
+    }))
+    const queryUser = vi.fn(async ({ limit, offset }: { limit: number; offset: number }) => ({
+      items: people.slice(offset, offset + limit),
+      pagination: { total: people.length },
+    }))
+    const client = { users: { queryUser } } as unknown as Flexprice
+
+    const all = await fetchAllMembers(client, DEFAULT_MEMBER_QUERY)
+    expect(all.members).toHaveLength(130)
+    expect(queryUser).toHaveBeenCalledTimes(2)
+
+    const found = await fetchAllMembers(client, { ...DEFAULT_MEMBER_QUERY, search: 'zed' })
+    expect(found.members.map((member) => member.id)).toEqual(['user_120'])
+    expect(found.total).toBe(1)
   })
 })

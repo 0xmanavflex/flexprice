@@ -50,6 +50,12 @@ describe('toCostSheetFilter', () => {
     })
   })
 
+  it('asks for the prices, which the list counts as line items', () => {
+    expect(toCostSheetFilter(DEFAULT_COST_SHEET_QUERY)).toMatchObject({
+      queryFilter: { expand: 'prices' },
+    })
+  })
+
   it('omits the name key when the query has no search term', () => {
     expect(toCostSheetFilter(DEFAULT_COST_SHEET_QUERY)).not.toHaveProperty('name')
     expect(toCostSheetFilter({ ...DEFAULT_COST_SHEET_QUERY, search: 'infra' })).toHaveProperty(

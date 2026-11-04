@@ -30,7 +30,8 @@ import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provide
 /**
  * Scheduled exports, through `GET /tasks/scheduled`
  * (`client.scheduledTasks.listScheduledTasks`). Whether an export is enabled is
- * a server-side filter; search narrows the returned page.
+ * a server-side filter. The endpoint has no search, so every export is read
+ * (an account keeps a handful) and the search and page are cut from the set.
  */
 
 export interface DataExportWire {
@@ -100,33 +101,65 @@ export interface DataExportPage {
   total: number
 }
 
-export async function fetchDataExports(
-  client: Flexprice,
-  query: DataExportQuery,
-): Promise<DataExportPage> {
-  const response = await call(() =>
-    client.scheduledTasks.listScheduledTasks(toDataExportFilter(query) as never),
-  )
-  const all = (response.items ?? []).map((item) => toDataExport(item as DataExportWire))
+/** Exports read per request while reading them all. */
+const SCAN_PAGE_SIZE = 500
 
+/** Every export of the query's connection and state, read page by page. */
+export async function fetchAllDataExports(
+  client: Flexprice,
+  query: Pick<DataExportQuery, 'connectionId' | 'state'>,
+): Promise<DataExport[]> {
+  const all: DataExport[] = []
+  for (let page = 1; ; page += 1) {
+    const response = await call(() =>
+      client.scheduledTasks.listScheduledTasks(
+        toDataExportFilter({ ...query, page, pageSize: SCAN_PAGE_SIZE, search: '' }) as never,
+      ),
+    )
+    const items = response.items ?? []
+    all.push(...items.map((item) => toDataExport(item as DataExportWire)))
+    const total = response.pagination?.total ?? 0
+    if (items.length < SCAN_PAGE_SIZE || all.length >= total) break
+  }
+  return all
+}
+
+/** The page the query asks for, cut from every export: search, then page. */
+export function selectDataExportPage(
+  all: readonly DataExport[],
+  query: DataExportQuery,
+): DataExportPage {
   const term = query.search.trim().toLowerCase()
-  const exports = term
+  const matching = term
     ? all.filter((row) =>
         [row.bucket, row.keyPrefix, row.entityLabel, row.region].some((field) =>
           field.toLowerCase().includes(term),
         ),
       )
-    : all
+    : [...all]
+  const start = (query.page - 1) * query.pageSize
+  return { exports: matching.slice(start, start + query.pageSize), total: matching.length }
+}
 
-  return { exports, total: response.pagination?.total ?? all.length }
+export async function fetchDataExports(
+  client: Flexprice,
+  query: DataExportQuery,
+): Promise<DataExportPage> {
+  return selectDataExportPage(await fetchAllDataExports(client, query), query)
 }
 
 export function useDataExports(query: DataExportQuery) {
   const client = useFlexprice()
 
+  // One cached read per connection and state; search and paging cut from it.
   return useQuery({
-    queryKey: queryKeys.dataExports.list({ ...query }),
-    queryFn: () => fetchDataExports(client, query),
+    queryKey: queryKeys.dataExports.list({
+      connectionId: query.connectionId ?? '',
+      state: query.state,
+      scan: true,
+    }),
+    queryFn: () => fetchAllDataExports(client, query),
+    select: (all: DataExport[]) => selectDataExportPage(all, query),
     placeholderData: (previous) => previous,
   })
 }

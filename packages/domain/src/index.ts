@@ -33,6 +33,7 @@ export {
   InvalidMoneyError,
   compareMoney,
   formatMoney,
+  formatUnitAmount,
   moneyFormatLocale,
   absoluteMoney,
   isNegativeMoney,
@@ -115,6 +116,8 @@ export {
   priceTierSchema,
   tiersSchema,
   tierUnitLabel,
+  chargeAmountLabel,
+  chargePricedTiers,
   withPackageSize,
   chargeLineages,
   chargeHasEnded,
@@ -154,18 +157,27 @@ export {
   meteredAllowance,
   meteredAllowanceLabel,
   meteredResetLabel,
+  allowancePeriod,
+  AMOUNT_ALLOWANCE_SUFFIX,
   EntitlementGrantMeasure,
   EntitlementGrantDurationUnit,
   EntitlementGrantAllocationBehavior,
   EntitlementAggregationMode,
 } from './entitlement'
-export type { CreateEntitlement, Entitlement, EditEntitlement, MeteredGrant } from './entitlement'
+export type {
+  AllowanceWindow,
+  CreateEntitlement,
+  Entitlement,
+  EditEntitlement,
+  MeteredGrant,
+} from './entitlement'
 
 export {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
   CREDIT_GRANT_PERIOD_LABEL,
+  creditGrantExpiryLabel,
   CreditGrantCadence,
   CreditGrantExpiryDurationUnit,
   CreditGrantExpiryType,
@@ -232,6 +244,7 @@ export {
   PlanView,
   createPlanSchema,
   emptyPlan,
+  isPlanQueryFiltered,
   planKind,
   planKindLabel,
   usageBasedLabel,
@@ -248,6 +261,7 @@ export {
   ADDON_FILTERS,
   createAddonSchema,
   emptyAddon,
+  isAddonQueryFiltered,
 } from './addon'
 export type { Addon, AddonQuery, CreateAddon } from './addon'
 
@@ -364,6 +378,8 @@ export {
   phaseStarts,
   contractDateToInstant,
   contractDay,
+  activationStartDate,
+  activationStartDay,
   subscriptionDiscountSchema,
   subscriptionPhaseSchema,
   chargeCommitmentSchema,
@@ -384,6 +400,7 @@ export {
   isInheritedContract,
   canPauseSubscription,
   canResumeSubscription,
+  isUnstartedSubscription,
 } from './subscription'
 export type {
   ChangeLineQuantity,
@@ -426,6 +443,7 @@ export {
   PRORATION,
   PRORATION_LABEL,
   hasTermsErrors,
+  startingNow,
   validateContractTerms,
 } from './contractCharge'
 export type {
@@ -489,8 +507,8 @@ export {
 } from './taxRate'
 export type { TaxRate, TaxRateQuery, CreateTaxRate, EditTaxRate } from './taxRate'
 
-export { DEFAULT_RAW_EVENT_QUERY } from './rawEvent'
-export type { RawEvent, RawEventQuery } from './rawEvent'
+export { DEFAULT_RAW_EVENT_QUERY, RAW_EVENT_PERIODS, rawEventPeriodStart } from './rawEvent'
+export type { RawEvent, RawEventPeriod, RawEventQuery } from './rawEvent'
 
 /**
  * Settings: who is in the organisation, what they may do, and what it pays.

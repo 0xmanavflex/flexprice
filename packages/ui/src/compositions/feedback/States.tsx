@@ -242,8 +242,14 @@ export function ListState({
   // A failed refresh must not take away rows that were true a moment ago: they
   // stay, with a plain note that they are the last good copy.
   const failedRefresh = error !== null && hasRows
+  /*
+   * A search or filter that fails keeps the grid: the error replacing it would
+   * also take away the search box that caused it, leaving nothing on screen to
+   * clear. The grid's empty body says the request failed (see `ListOffer`).
+   */
+  const failedFilter = error !== null && !hasRows && isFiltered
 
-  if (error && !failedRefresh) {
+  if (error && !failedRefresh && !failedFilter) {
     return (
       <ErrorState
         title={error.message}
@@ -280,6 +286,24 @@ export function ListState({
     description: emptyDescription,
     ...(emptySecondaryAction ? { secondaryAction: emptySecondaryAction } : {}),
     ...(createAction ? { action: createAction } : {}),
+    ...(failedFilter && error
+      ? {
+          failure: {
+            title: error.message,
+            description: 'Change or clear the search and filters, then try again.',
+            ...(error.canRetry && onRetry
+              ? {
+                  action: (
+                    <RetryAction
+                      onRetry={onRetry}
+                      {...(isRetrying !== undefined ? { isRetrying } : {})}
+                    />
+                  ),
+                }
+              : {}),
+          },
+        }
+      : {}),
   }
 
   return (

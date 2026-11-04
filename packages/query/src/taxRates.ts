@@ -6,6 +6,7 @@ import {
   type TaxRate,
   type TaxRateQuery,
   TaxRateScope,
+  TaxRateSortField,
   TaxRateStatus,
 } from '@fp/domain'
 import { queryKeys } from './keys'
@@ -77,86 +78,82 @@ export function toTaxRate(wire: TaxRateWire): TaxRate {
 }
 
 /**
- * The GET request `getTaxRates` takes (`GetTaxRatesRequest`).
+ * The GET request `getTaxRates` takes (`GetTaxRatesRequest`): one page of the
+ * scan in {@link fetchAllTaxRates}.
  *
  * The request exposes `limit`/`offset` for paging and an `order` *direction*,
- * but no sort *field* and no name search, so only paging is sent here. Search
- * and status are applied on the page: the same split coupons use.
+ * but no sort *field* and no name search, so only paging is sent.
  */
-export function toTaxRateFilter(query: TaxRateQuery) {
+export function toTaxRateFilter(query: Pick<TaxRateQuery, 'page' | 'pageSize'>) {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
   }
 }
 
-/** Enough to hold every tax rate an account keeps, when the status facet is on. */
-const STATUS_SCAN_LIMIT = 500
+/** Enough to hold every tax rate an account keeps in a request or two. */
+const SCAN_PAGE_SIZE = 500
 
 export interface TaxRatePage {
   taxRates: TaxRate[]
   total: number
 }
 
-export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Promise<TaxRatePage> {
-  /*
-   * The Status facet reads what the row shows: archived is the rate's
-   * `taxRateStatus` (what Archive and Edit write) before the record's own
-   * `status`, which an update cannot change. `GET /taxes/rates` only filters on
-   * the latter, so a republished rate would sit under Archived. With the facet
-   * on, every rate is read and the facet, search and page are applied here, so
-   * the rows, their labels and the total agree.
-   */
+/**
+ * Every tax rate, read page by page.
+ *
+ * `GET /taxes/rates` cannot search by name or code, cannot sort by name or
+ * update time, and filters on the record's own `status` rather than the
+ * `taxRateStatus` the row shows (archived is what Archive and Edit write; an
+ * update cannot change `status`, so a republished rate would sit under
+ * Archived). Anything the list narrowed or ordered on the server would
+ * therefore cover one page only. An account keeps a handful of tax rates, so
+ * the whole set is read and {@link selectTaxRatePage} does the rest: the
+ * search, the facet, the sort and the total then all cover every rate.
+ */
+export async function fetchAllTaxRates(client: Flexprice): Promise<TaxRate[]> {
+  // Read every page: a single capped read would drop rates past the limit.
+  const all: unknown[] = []
+  for (let offset = 0; ; offset += SCAN_PAGE_SIZE) {
+    const response = await call(() =>
+      client.taxRates.getTaxRates({ limit: SCAN_PAGE_SIZE, offset }),
+    )
+    const items = response.items ?? []
+    all.push(...items)
+    const total = response.pagination?.total ?? 0
+    if (items.length < SCAN_PAGE_SIZE || offset + SCAN_PAGE_SIZE >= total) break
+  }
+  return all.map((item) => toTaxRate(item as TaxRateWire))
+}
+
+const SORT_KEY: Record<TaxRateSortField, (taxRate: TaxRate) => string | number> = {
+  [TaxRateSortField.Name]: (taxRate) => taxRate.name.toLowerCase(),
+  [TaxRateSortField.CreatedAt]: (taxRate) => taxRate.createdAt?.getTime() ?? 0,
+  [TaxRateSortField.UpdatedAt]: (taxRate) => taxRate.updatedAt?.getTime() ?? 0,
+}
+
+/** The page the query asks for, cut from every rate: facet, search, sort, then page. */
+export function selectTaxRatePage(all: readonly TaxRate[], query: TaxRateQuery): TaxRatePage {
   const wanted = new Set(query.statuses)
-  if (wanted.size > 0 && wanted.size < Object.values(TaxRateStatus).length) {
-    // Read every page: a single capped read would drop rates past the limit.
-    const all: unknown[] = []
-    for (let offset = 0; ; offset += STATUS_SCAN_LIMIT) {
-      const response = await call(() =>
-        client.taxRates.getTaxRates({ limit: STATUS_SCAN_LIMIT, offset }),
-      )
-      const items = response.items ?? []
-      all.push(...items)
-      const total = response.pagination?.total ?? 0
-      if (items.length < STATUS_SCAN_LIMIT || offset + STATUS_SCAN_LIMIT >= total) break
-    }
-    const search = query.search.trim().toLowerCase()
-    const matching = all
-      .map((item) => toTaxRate(item as TaxRateWire))
-      .filter((taxRate) => wanted.has(taxRate.status))
-      .filter(
-        (taxRate) => !search || `${taxRate.name} ${taxRate.code}`.toLowerCase().includes(search),
-      )
-    const start = (query.page - 1) * query.pageSize
-    return { taxRates: matching.slice(start, start + query.pageSize), total: matching.length }
-  }
-
-  const response = await call(() => client.taxRates.getTaxRates(toTaxRateFilter(query)))
-  const taxRates = (response.items ?? []).map((item) => toTaxRate(item as TaxRateWire))
-
-  /*
-   * Search still narrows the fetched page, and here that is the endpoint's
-   * limit rather than a shortcut.
-   *
-   * `GET /taxes/rates` is not one of the `/search` routes: it takes `limit`,
-   * `offset`, `status`, `scope`, codes and ids, and has neither the filter DSL
-   * nor any name field. So there is nothing to push a name or code search down
-   * to. Status *is* a declared parameter and has moved server-side.
-   *
-   * The consequence is worth being precise about: with a search term, the
-   * matches shown are the matches **on this page**, and `total` counts every
-   * tax rate rather than every match. Closing that needs a server-side search
-   * on this route: it cannot be fixed from here.
-   */
   const search = query.search.trim().toLowerCase()
-  const filtered = search
-    ? taxRates.filter((taxRate) => `${taxRate.name} ${taxRate.code}`.toLowerCase().includes(search))
-    : taxRates
+  const key = SORT_KEY[query.sortBy] ?? SORT_KEY[TaxRateSortField.UpdatedAt]
+  const sign = query.sortDirection === 'asc' ? 1 : -1
+  const matching = all
+    .filter((taxRate) => wanted.size === 0 || wanted.has(taxRate.status))
+    .filter(
+      (taxRate) => !search || `${taxRate.name} ${taxRate.code}`.toLowerCase().includes(search),
+    )
+    .sort((left, right) => {
+      const a = key(left)
+      const b = key(right)
+      return (a < b ? -1 : a > b ? 1 : 0) * sign
+    })
+  const start = (query.page - 1) * query.pageSize
+  return { taxRates: matching.slice(start, start + query.pageSize), total: matching.length }
+}
 
-  return {
-    taxRates: filtered,
-    total: response.pagination?.total ?? 0,
-  }
+export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Promise<TaxRatePage> {
+  return selectTaxRatePage(await fetchAllTaxRates(client), query)
 }
 
 export function useTaxRates(
@@ -167,25 +164,13 @@ export function useTaxRates(
   } = {},
 ) {
   const client = useFlexprice()
-  // With the status facet on, every rate is scanned: cache that scan once per
-  // search and status, and cut each page from it, so paging makes no request.
-  const scanned =
-    query.statuses.length > 0 && query.statuses.length < Object.values(TaxRateStatus).length
-  const statuses = [...query.statuses].sort()
 
-  const { page: _page, pageSize: _pageSize, ...unpaged } = query
-
+  // One cached read of every rate; each search, facet, sort and page is cut
+  // from it, so none of them makes a request.
   return useQuery({
-    queryKey: scanned
-      ? queryKeys.taxRates.list({ ...unpaged, statuses, scan: true })
-      : queryKeys.taxRates.list({ ...query, statuses }),
-    queryFn: () =>
-      fetchTaxRates(client, scanned ? { ...query, page: 1, pageSize: Infinity } : query),
-    select: (data: TaxRatePage): TaxRatePage => {
-      if (!scanned) return data
-      const start = (query.page - 1) * query.pageSize
-      return { taxRates: data.taxRates.slice(start, start + query.pageSize), total: data.total }
-    },
+    queryKey: queryKeys.taxRates.list({ scan: true }),
+    queryFn: () => fetchAllTaxRates(client),
+    select: (all: TaxRate[]) => selectTaxRatePage(all, query),
     placeholderData: (previous) => previous,
     ...(options.refetchOnWindowFocus ? { refetchOnWindowFocus: 'always' as const } : {}),
   })

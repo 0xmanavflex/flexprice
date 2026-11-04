@@ -19,6 +19,8 @@ export interface ListCreditNotesParams {
   invoiceId?: string
   /** Only credit notes of this billing entity; sent only while entities are enabled. */
   billingEntityId?: string
+  /** Related records to embed, e.g. `invoice,customer`, as V1's list asks. */
+  expand?: string
 }
 
 export async function listCreditNotes(
@@ -34,6 +36,7 @@ export async function listCreditNotes(
   for (const status of params.statuses ?? []) search.append('credit_note_status', status)
   if (params.invoiceId) search.set('invoice_id', params.invoiceId)
   if (params.billingEntityId) search.set('billing_entity_id', params.billingEntityId)
+  if (params.expand) search.set('expand', params.expand)
   return request(serverURL, `/creditnotes?${search.toString()}`, {
     method: 'GET',
     token,

@@ -86,6 +86,7 @@ export {
   useUpdateInvoicePaymentStatus,
   useInvoice,
   useInvoicePdfLink,
+  useInvoiceDetailLoader,
   useInvoices,
   useRecalculateInvoice,
   useReplaceVoidedInvoice,
@@ -384,6 +385,7 @@ export {
   useCreateBulkPrices,
   useFeatureCharges,
   useEntitiesCharges,
+  useChargesByIds,
   usePrices,
   usePriceHistory,
   usePlanPriceVersions,
@@ -429,6 +431,7 @@ export type { CreditGrantWire } from './creditGrants'
  * `session.ts` reaches the other undocumented routes.
  */
 export {
+  fetchAllMembers,
   fetchMembers,
   toCreateServiceAccountRequest,
   toInviteMemberRequest,
@@ -607,6 +610,7 @@ export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
 export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
 export type { UsageSyncPage, UsageSyncWire, UsageSyncEntryWire } from './usageSyncs'
 export {
+  fetchAllDataExports,
   fetchDataExports,
   toCreateDataExportRequest,
   toCreateS3ConnectionRequest,
@@ -761,7 +765,14 @@ export type { PortalAction, PortalQuery } from './customerPortal'
 export type { PortalAuth } from '@fp/api'
 export { useCreateCustomerPortalSession } from './customerPortalSession'
 export { useInvoiceHostedLink, useInvoiceHostedUrl } from './invoiceHostedLink'
-export { reportBreakdown, reportCurrencies, reportScalar, reportSeries, useReport } from './reports'
+export {
+  reportBreakdown,
+  reportCurrencies,
+  reportScalar,
+  reportSeries,
+  reportsUnconfigured,
+  useReport,
+} from './reports'
 export type { ReportBreakdownRow, ReportPoint, ReportScalar } from './reports'
 export type { ReportQuery, ReportResult } from '@fp/api'
 export { useAddCustomerCard, usePushCustomerToIntegrations } from './integrationSync'

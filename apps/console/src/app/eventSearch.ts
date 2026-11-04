@@ -1,4 +1,4 @@
-import { DEFAULT_RAW_EVENT_QUERY, type RawEventQuery } from '@fp/domain'
+import { DEFAULT_RAW_EVENT_QUERY, RAW_EVENT_PERIODS, type RawEventQuery } from '@fp/domain'
 
 /**
  * The Events Debugger query, as URL search params.
@@ -34,5 +34,8 @@ export function parseEventSearch(raw: Record<string, unknown>): RawEventQuery {
     source: text(raw['source']),
     sortDirection:
       param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_RAW_EVENT_QUERY.sortDirection,
+    period:
+      RAW_EVENT_PERIODS.find((option) => option.id === raw['period'])?.id ??
+      DEFAULT_RAW_EVENT_QUERY.period,
   }
 }

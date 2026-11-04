@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { CreateTaxAssociationRequest$outboundSchema } from '@flexprice/sdk/sdk/models'
 import { emptyTaxAssociation } from '@fp/domain'
-import { toCreateTaxAssociationRequest, toTaxAssociation } from './taxAssociations'
+import { toCreateTaxAssociationRequest, toTaxAssociation, withTaxRates } from './taxAssociations'
 
 describe('tax association mapping', () => {
   it('builds a customer-scoped request the SDK accepts', () => {
@@ -31,5 +31,35 @@ describe('tax association mapping', () => {
         taxRate: { name: 'OR', code: 'US-OR', percentageValue: '0' },
       }),
     ).toMatchObject({ taxRateName: 'OR', taxBehavior: 'exclusive', autoApply: false })
+  })
+})
+
+describe('withTaxRates', () => {
+  it('reads each rate the list left unexpanded, once, so rows show name, code and rate', async () => {
+    const readRate = vi.fn(async (id: string) => {
+      if (id === 'gone') throw new Error('not found')
+      return { name: 'Test', code: 'cms90', percentageValue: '2' }
+    })
+
+    const wires = await withTaxRates(
+      [
+        { id: 'a', taxRateId: 'r1' },
+        { id: 'b', taxRateId: 'r1' },
+        { id: 'c', taxRateId: 'gone' },
+        { id: 'd', taxRateId: 'r2', taxRate: { name: 'Kept', code: 'K' } },
+      ],
+      readRate,
+    )
+
+    expect(readRate).toHaveBeenCalledTimes(2)
+    expect(toTaxAssociation(wires[0]!)).toMatchObject({
+      taxRateName: 'Test',
+      taxRateCode: 'cms90',
+      percentage: '2',
+    })
+    expect(wires[1]?.taxRate?.code).toBe('cms90')
+    // An unreadable rate keeps the row as the API sent it rather than failing the list.
+    expect(wires[2]?.taxRate).toBeUndefined()
+    expect(wires[3]?.taxRate?.name).toBe('Kept')
   })
 })

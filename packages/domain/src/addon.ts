@@ -79,6 +79,11 @@ export const DEFAULT_ADDON_QUERY: AddonQuery = {
   view: AddonView.Table,
   filters: [],
 }
+
+/** Whether the list is narrowed: a search, the status facet or a filter chip. */
+export function isAddonQueryFiltered(query: AddonQuery): boolean {
+  return query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+}
 /** What the add-on list can filter on: V1's fields, by their wire names. */
 export const ADDON_FILTERS: readonly ListFilterSpec[] = [
   { field: 'name', label: 'Name', kind: 'text' },

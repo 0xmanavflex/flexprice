@@ -7,6 +7,7 @@ import {
   type PaymentDetail,
   type PaymentQuery,
   type RecordPayment,
+  PaymentSortField,
   PaymentStatus,
   moneyOr,
   toPaymentStatus,
@@ -78,15 +79,22 @@ export function toPayment(wire: PaymentWire): Payment {
  * Builds the request. Page numbers are 1-based for people, offsets are not.
  *
  * `listPayments` is a GET whose query params (`ListPaymentsRequest`) take
- * `limit` and `offset`; status and search are not among the filters this list
- * pushes down, so they are applied on the page instead: see {@link
- * fetchPayments}.
+ * `limit`, `offset` and the order (`sort` column, `order` direction); status
+ * and search are not among the filters this list pushes down, so they are
+ * applied on the page instead: see {@link fetchPayments}.
  */
-export function toPaymentFilter(query: PaymentQuery): Record<string, unknown> {
+export function toPaymentFilter(query: PaymentQuery) {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
+    sort: PAYMENT_SORT_COLUMN[query.sortBy],
+    order: query.sortDirection,
   }
+}
+
+/** The list's sort fields as the API's column names. */
+const PAYMENT_SORT_COLUMN: Record<PaymentSortField, string> = {
+  [PaymentSortField.CreatedAt]: 'created_at',
 }
 
 export interface PaymentPage {
@@ -113,8 +121,7 @@ export async function fetchPayments(
       token,
       environmentId,
       {
-        limit: query.pageSize,
-        offset: (query.page - 1) * query.pageSize,
+        ...toPaymentFilter(query),
         ...(billingEntityId ? { billingEntityId } : {}),
       },
       signal,

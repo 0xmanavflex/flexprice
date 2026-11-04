@@ -6,6 +6,7 @@ import {
   PriceType,
   PriceWindowSize,
   TierMode,
+  chargeToDraft,
 } from '@fp/domain'
 import { toCharge, toChargeRequest, toTier, toUpdatePriceRequest } from './prices'
 
@@ -45,6 +46,28 @@ describe('toCharge', () => {
 
   it('falls back to the amount when the API sends no display amount', () => {
     expect(toCharge({ id: 'p', amount: '49.00' }).displayAmount).toBe('49.00')
+  })
+
+  it('keeps a custom-unit price in its unit, as the response sends it', () => {
+    // The response's shape (QA #40): no `price_unit_config`, the unit at the top level.
+    const charge = toCharge({
+      id: 'p',
+      billingModel: 'FLAT_FEE',
+      amount: '3',
+      displayAmount: '$3.00',
+      currency: 'usd',
+      priceUnitType: 'CUSTOM',
+      priceUnit: 'QAU',
+      priceUnitAmount: '2.4',
+    })
+    expect(charge).toMatchObject({ priceUnit: 'QAU', priceUnitAmount: '2.4', amount: '3' })
+    expect(chargeToDraft(charge)).toMatchObject({ priceUnit: 'QAU', amount: '2.4' })
+  })
+
+  it('ignores the unit fields on a currency price', () => {
+    expect(toCharge({ id: 'p', priceUnitType: 'FIAT', priceUnit: 'QAU' })).not.toHaveProperty(
+      'priceUnit',
+    )
   })
 })
 

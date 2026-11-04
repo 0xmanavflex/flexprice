@@ -4,10 +4,13 @@ import { useSession } from '@/app/session'
 import { SubscriptionJournalPanel } from './SubscriptionJournalPanel'
 import { SubscriptionRevenuePanel } from './SubscriptionRevenuePanel'
 import {
+  activationStartDate,
+  activationStartDay,
   AlertEntityType,
   DEFAULT_ADDON_QUERY,
   DEFAULT_COUPON_QUERY,
   DEFAULT_TAX_RATE_QUERY,
+  isUnstartedSubscription,
   PriceEntityType,
   SubscriptionStatus,
   type SubscriptionCancellationType,
@@ -227,7 +230,7 @@ export function SubscriptionDetailPage({
   const [prorate, setProrate] = useState(false)
   const [finalInvoice, setFinalInvoice] = useState(false)
   const [cancelProblem, setCancelProblem] = useState<string | null>(null)
-  const [startDate, setStartDate] = useState(today())
+  const [startDate, setStartDate] = useState('')
 
   const activityLog = useActivityLog({ entityType: 'subscription', entityId: subscriptionId })
   const activity = activityLog.data ? railActivity(activityLog.data) : []
@@ -402,8 +405,14 @@ export function SubscriptionDetailPage({
           ? { inheritedContracts: part(inheritedContracts) }
           : {})}
         onOpenInvoice={onOpenInvoice}
-        {...(data.status === SubscriptionStatus.Incomplete
-          ? { onActivate: () => setDialog('activate') }
+        {...(isUnstartedSubscription(data.status)
+          ? {
+              onActivate: () => {
+                // Opens on the draft's own start, not today: see activationStartDate.
+                setStartDate(activationStartDay(data.startDate))
+                setDialog('activate')
+              },
+            }
           : {})}
         onCancel={() => setDialog('cancel')}
         onPause={(draft) => pause.mutateAsync({ id: data.id, draft })}
@@ -528,7 +537,7 @@ export function SubscriptionDetailPage({
         error={toError(activate.error, 'activate')}
         onConfirm={() =>
           activate.mutate(
-            { id: data.id, startDate: new Date(`${startDate || today()}T00:00:00Z`) },
+            { id: data.id, startDate: activationStartDate(startDate, data.startDate) },
             { onSuccess: close },
           )
         }

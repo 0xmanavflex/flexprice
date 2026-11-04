@@ -23,7 +23,12 @@ import {
   XCircleIcon,
 } from '@ui/icons'
 import { toast } from 'sonner'
-import { DRAFT_INVOICE_NUMBER_LABEL, InvoiceStatus, PaymentStatus, moneyFormatLocale } from '@fp/domain'
+import {
+  DRAFT_INVOICE_NUMBER_LABEL,
+  InvoiceStatus,
+  PaymentStatus,
+  moneyFormatLocale,
+} from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -89,6 +94,8 @@ export interface InvoiceDetailViewProps {
   isFinalizing?: boolean
   /** More menu: Download PDF. Omitted, the item is disabled. */
   onDownload?: () => void
+  /** More menu: Download CSV of the line items. Omitted, the item is not offered. */
+  onDownloadCsv?: () => void
   onRecordPayment?: () => void
   /** Recompute a draft in place, or replace a (voided) contract invoice with a fresh one. */
   onRecalculate?: () => void
@@ -156,6 +163,7 @@ export function InvoiceDetailView({
   onFinalize,
   isFinalizing = false,
   onDownload,
+  onDownloadCsv,
   onRecordPayment,
   onRecalculate,
   recalculateBlocked,
@@ -346,10 +354,13 @@ export function InvoiceDetailView({
               ) : null}
               <MenuAction
                 icon={<DownloadIcon />}
-                label="Download invoice"
+                label="Download PDF"
                 onSelect={onDownload}
-                hint="Available once the invoice has a PDF"
+                hint="Available once the invoice is finalized"
               />
+              {onDownloadCsv ? (
+                <MenuAction icon={<DownloadIcon />} label="Download CSV" onSelect={onDownloadCsv} />
+              ) : null}
               <MenuAction
                 icon={<ExternalLinkIcon />}
                 label="Open hosted invoice"
@@ -758,6 +769,12 @@ function InvoiceDocumentArticle({
           <p className="text-muted-foreground text-[13px]">Amount due</p>
         </div>
         <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1 text-[13px]">
+          {invoice.number ? (
+            <>
+              <dt className="text-muted-foreground">Invoice number</dt>
+              <dd className="font-mono">{invoice.number}</dd>
+            </>
+          ) : null}
           <dt className="text-muted-foreground">Date of issue</dt>
           <dd className="tabular-nums">{invoice.issuedAt ?? 'On finalize'}</dd>
           <dt className="text-muted-foreground">Date due</dt>
@@ -814,6 +831,11 @@ function InvoiceDocumentArticle({
                     {line.kind === 'usage' ? 'Usage charge' : 'Fixed charge'}
                   </span>
                 ) : null}
+                {line.note ? (
+                  <span className="text-muted-foreground text-xs whitespace-pre-line">
+                    {line.note}
+                  </span>
+                ) : null}
               </span>
               <span role="cell" className="text-muted-foreground min-w-0 text-xs tabular-nums">
                 {line.detail ? <IntervalLabel short={line.detail} full={line.detailFull} /> : '—'}
@@ -833,6 +855,13 @@ function InvoiceDocumentArticle({
           ))}
         </div>
       </div>
+
+      {invoice.memo ? (
+        <div className="mx-8 space-y-1.5 border-t py-6 text-[13px]">
+          <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Memo</p>
+          <p className="whitespace-pre-line">{invoice.memo}</p>
+        </div>
+      ) : null}
 
       <div className="mx-8 flex justify-end border-t py-6">
         <TotalsList>

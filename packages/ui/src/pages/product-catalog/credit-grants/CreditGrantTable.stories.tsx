@@ -113,7 +113,7 @@ export const Default: Story = {
     await expect(canvas.getByText('Welcome credits')).toBeInTheDocument()
     await expect(canvas.getAllByText('One-time').length).toBeGreaterThan(0)
     await expect(canvas.getByText('Recurring · Monthly')).toBeInTheDocument()
-    await expect(canvas.getByText('Expires after a set duration')).toBeInTheDocument()
+    await expect(canvas.getByText('Expires after 90 days')).toBeInTheDocument()
   },
 }
 

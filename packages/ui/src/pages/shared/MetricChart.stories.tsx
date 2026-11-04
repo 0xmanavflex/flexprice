@@ -273,6 +273,30 @@ export const Unavailable: Story = {
   },
 }
 
+/** A tab whose chart is hidden (`hideChart`) still shows its failure and Retry. */
+export const HiddenChartStillRetries: Story = {
+  args: {
+    tabs: [
+      {
+        id: 'revenue',
+        label: 'Revenue',
+        value: '',
+        points: [],
+        hideChart: true,
+        status: 'unavailable',
+        onRetry: fn(),
+      },
+    ],
+    activeTab: 'revenue',
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('alert')).toHaveTextContent(/couldn.t be loaded/i)
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.tabs[0]?.onRetry).toHaveBeenCalled()
+  },
+}
+
 /** A ready tab with no series can say something truer than "No events in this period". */
 export const CustomEmptyMessage: Story = {
   args: {

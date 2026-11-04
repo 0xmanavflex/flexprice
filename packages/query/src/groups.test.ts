@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_GROUP_QUERY, GroupEntityType, GroupStatus } from '@fp/domain'
-import { toGroup, toGroupFilter, type GroupWire } from './groups'
+import { toGroup, toGroupFilter, withGroupMembers, type GroupWire } from './groups'
 
 describe('toGroup', () => {
   it('counts the members from the entityIds array, and keeps the ids', () => {
@@ -64,5 +64,42 @@ describe('toGroupFilter', () => {
       'name',
       'storage',
     )
+  })
+})
+
+describe('withGroupMembers', () => {
+  it('counts members from the features and prices that carry the group, one search per type', async () => {
+    const search = vi.fn(async (entityType: GroupEntityType) =>
+      entityType === GroupEntityType.Feature
+        ? [
+            { id: 'feat_1', groupId: 'grp_f' },
+            { id: 'feat_2', groupId: 'grp_f' },
+          ]
+        : [{ id: 'price_1', groupId: 'grp_p' }],
+    )
+
+    const wires = await withGroupMembers(
+      [
+        // The API sends `entity_ids: null` for every group.
+        { id: 'grp_f', entityType: 'feature' },
+        { id: 'grp_p', entityType: 'price' },
+        { id: 'grp_empty', entityType: 'feature' },
+      ],
+      search,
+    )
+
+    expect(search).toHaveBeenCalledTimes(2)
+    expect(search).toHaveBeenCalledWith(GroupEntityType.Feature, ['grp_f', 'grp_empty'], 0, 1000)
+    expect(wires.map((wire) => toGroup(wire).entityCount)).toEqual([2, 1, 0])
+  })
+
+  it('leaves alone a group the API already sent members for', async () => {
+    const search = vi.fn(async () => [])
+    const [wire] = await withGroupMembers(
+      [{ id: 'grp', entityType: 'feature', entityIds: ['feat_1'] }],
+      search,
+    )
+    expect(search).not.toHaveBeenCalled()
+    expect(wire?.entityIds).toEqual(['feat_1'])
   })
 })

@@ -357,14 +357,17 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/service-accounts',
     reference: 'pages/developers.tsx',
     pattern: 'list',
-    ready: { text: 'Service accounts' },
+    // The page's own action and rows, not the nav label: "Service accounts" is
+    // also on an access-error page, which a baseline once captured.
+    ready: { text: 'New service account', rows: true },
   },
   {
     name: 'webhooks',
     route: '/webhooks',
     reference: 'pages/developers.tsx',
     pattern: 'list',
-    ready: { text: 'Webhooks' },
+    // As above: the endpoint list itself, not the nav label.
+    ready: { text: 'Add endpoint', rows: true },
   },
   {
     name: 'exports',

@@ -395,12 +395,64 @@ const GRANT_WINDOW_LABEL: Record<EntitlementGrantDurationUnit, string> = {
   [EntitlementGrantDurationUnit.Week]: 'Weekly',
 }
 
-/** "Unlimited" or "10,000": a metered allowance for a table cell. */
+/** What follows an amount allowance's number, as the grant form words it. */
+export const AMOUNT_ALLOWANCE_SUFFIX = 'of usage value'
+
+/**
+ * "Unlimited", "10,000" or "12.5 of usage value": a metered allowance for a
+ * table cell. An amount allowance is the priced value of the usage, not a
+ * count of it, so it says so rather than reading like a quantity.
+ */
 export function meteredAllowanceLabel(entitlement: Entitlement): string {
   const allowance = meteredAllowance(entitlement)
   if (allowance === null) return 'Unlimited'
   const [whole = '0', fraction] = allowance.split('.')
-  return BigInt(whole).toLocaleString('en-US') + (fraction ? `.${fraction}` : '')
+  const number = BigInt(whole).toLocaleString('en-US') + (fraction ? `.${fraction}` : '')
+  return entitlementGrant(entitlement)?.measure === EntitlementGrantMeasure.Amount
+    ? `${number} ${AMOUNT_ALLOWANCE_SUFFIX}`
+    : number
+}
+
+const RESET_PERIOD_NOUN: Partial<Record<string, string>> = {
+  [UsageResetPeriod.Daily]: 'day',
+  [UsageResetPeriod.Weekly]: 'week',
+  [UsageResetPeriod.Monthly]: 'month',
+  [UsageResetPeriod.Quarterly]: 'quarter',
+  [UsageResetPeriod.HalfYearly]: 'half-year',
+  [UsageResetPeriod.Annual]: 'year',
+}
+
+const GRANT_UNIT_NOUN: Partial<Record<string, string>> = {
+  [EntitlementGrantDurationUnit.Hour]: 'hour',
+  [EntitlementGrantDurationUnit.Day]: 'day',
+  [EntitlementGrantDurationUnit.Week]: 'week',
+  [EntitlementGrantDurationUnit.SubscriptionPeriod]: 'billing period',
+}
+
+/** The window an allowance renews over, in the API's spellings, from any read of it. */
+export interface AllowanceWindow {
+  usageResetPeriod?: string | null | undefined
+  grantDurationUnit?: string | null | undefined
+  grantDurationValue?: number | null | undefined
+}
+
+/**
+ * What an allowance is "per": "day", "2 weeks", "month", "billing period", or
+ * null when it never resets (or nothing says). Grant config wins over the
+ * older usage reset period, as `meteredResetLabel` reads it, so "100 / day"
+ * keeps its day whichever field the API filled.
+ */
+export function allowancePeriod(window: AllowanceWindow): string | null {
+  const unit = window.grantDurationUnit ? window.grantDurationUnit.toLowerCase() : ''
+  const noun = GRANT_UNIT_NOUN[unit]
+  if (noun) {
+    const every = window.grantDurationValue ?? 1
+    return every > 1 && unit !== EntitlementGrantDurationUnit.SubscriptionPeriod
+      ? `${every} ${noun}s`
+      : noun
+  }
+  const period = window.usageResetPeriod ? window.usageResetPeriod.toUpperCase() : ''
+  return RESET_PERIOD_NOUN[period] ?? null
 }
 
 /** How often a metered allowance renews, or null when it has no reset set. */

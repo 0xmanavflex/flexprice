@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { Flexprice } from '@fp/api'
 import { DEFAULT_SUBSCRIPTION_QUERY, SubscriptionStatus } from '@fp/domain'
-import { toSubscription, toSubscriptionFilter, type SubscriptionWire } from './subscriptions'
+import {
+  fetchSubscriptions,
+  toSubscription,
+  toSubscriptionFilter,
+  type SubscriptionWire,
+} from './subscriptions'
 
 describe('toSubscription', () => {
   it('passes a known status through', () => {
@@ -8,10 +14,8 @@ describe('toSubscription', () => {
     expect(toSubscription({ subscriptionStatus: 'paused' }).status).toBe(SubscriptionStatus.Paused)
   })
 
-  it("collapses the wire's draft into Incomplete", () => {
-    expect(toSubscription({ subscriptionStatus: 'draft' }).status).toBe(
-      SubscriptionStatus.Incomplete,
-    )
+  it("reads the wire's draft as Draft, not Incomplete", () => {
+    expect(toSubscription({ subscriptionStatus: 'draft' }).status).toBe(SubscriptionStatus.Draft)
   })
 
   it('falls back to Incomplete for an unknown or missing status', () => {
@@ -99,13 +103,17 @@ describe('toSubscriptionFilter', () => {
     })
   })
 
-  it('sends chosen statuses to the server, and Incomplete asks for drafts too', () => {
+  it('sends chosen statuses to the server, Draft and Incomplete each as itself', () => {
     // The search returns only active subscriptions when no status is given, so
     // a page-only filter could never find a trialing one.
     expect(
       toSubscriptionFilter({
         ...DEFAULT_SUBSCRIPTION_QUERY,
-        statuses: [SubscriptionStatus.Trialing, SubscriptionStatus.Incomplete],
+        statuses: [
+          SubscriptionStatus.Trialing,
+          SubscriptionStatus.Incomplete,
+          SubscriptionStatus.Draft,
+        ],
       }),
     ).toMatchObject({ subscriptionStatus: ['trialing', 'incomplete', 'draft'] })
   })
@@ -114,5 +122,128 @@ describe('toSubscriptionFilter', () => {
     expect(toSubscriptionFilter(DEFAULT_SUBSCRIPTION_QUERY)).toMatchObject({
       subscriptionStatus: ['active', 'trialing', 'paused', 'incomplete', 'draft', 'cancelled'],
     })
+  })
+})
+
+describe('the contract search', () => {
+  const contract = { id: 'sub_1', customerId: 'cus_1', customer: { name: 'QA Module' } }
+  const fakeClient = (customers: { id: string }[], plans: { id: string }[] = []) => {
+    // Paged like the API: `limit` and `offset` cut the list, `total` counts all of it.
+    const paged = (rows: { id: string }[]) => async (filter: unknown) => {
+      const { limit = 200, offset = 0 } = filter as { limit?: number; offset?: number }
+      return { items: rows.slice(offset, offset + limit), pagination: { total: rows.length } }
+    }
+    const queryCustomer = vi.fn(paged(customers))
+    const queryPlan = vi.fn(paged(plans))
+    const querySubscription = vi.fn(async (_filter: unknown) => ({
+      items: [contract],
+      pagination: { total: 1 },
+    }))
+    const client = {
+      customers: { queryCustomer },
+      plans: { queryPlan },
+      subscriptions: { querySubscription },
+    } as unknown as Flexprice
+    return { client, queryCustomer, queryPlan, querySubscription }
+  }
+
+  it('asks the server for the contracts of the customers whose name matches', async () => {
+    const { client, queryCustomer, querySubscription } = fakeClient([{ id: 'cus_1' }])
+    const page = await fetchSubscriptions(client, {
+      ...DEFAULT_SUBSCRIPTION_QUERY,
+      search: ' QA Module ',
+    })
+    expect(queryCustomer.mock.calls[0]?.[0]).toMatchObject({
+      filters: [{ field: 'name', operator: 'contains', value: { string: 'QA Module' } }],
+    })
+    expect(querySubscription.mock.calls[0]?.[0]).toMatchObject({ customerIds: ['cus_1'] })
+    expect(page.subscriptions.map((row) => row.id)).toEqual(['sub_1'])
+    expect(page.total).toBe(1)
+  })
+
+  it('collects every matching customer, past the first page', async () => {
+    const many = Array.from({ length: 201 }, (_, index) => ({ id: `cus_${index}` }))
+    const { client, queryCustomer, querySubscription } = fakeClient(many)
+    await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'QA' })
+    expect(queryCustomer).toHaveBeenCalledTimes(2)
+    const sent = querySubscription.mock.calls[0]?.[0] as { customerIds: string[] }
+    expect(sent.customerIds).toHaveLength(201)
+    expect(sent.customerIds.at(-1)).toBe('cus_200')
+  })
+
+  it('finds contracts by plan name when no customer matches', async () => {
+    const { client, querySubscription } = fakeClient([], [{ id: 'plan_ent' }])
+    const page = await fetchSubscriptions(client, {
+      ...DEFAULT_SUBSCRIPTION_QUERY,
+      search: 'Enterprise',
+    })
+    const sent = querySubscription.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(sent).not.toHaveProperty('customerIds')
+    expect(JSON.stringify(sent['filters'])).toContain('plan_ent')
+    expect(page.subscriptions.map((row) => row.id)).toEqual(['sub_1'])
+  })
+
+  it('merges customer and plan matches without duplicates', async () => {
+    const { client, querySubscription } = fakeClient([{ id: 'cus_1' }], [{ id: 'plan_ent' }])
+    const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'Q' })
+    // One read narrowed by customer, one by plan; both return sub_1, shown once.
+    expect(querySubscription).toHaveBeenCalledTimes(2)
+    expect(page.subscriptions.map((row) => row.id)).toEqual(['sub_1'])
+    expect(page.total).toBe(1)
+  })
+
+  it('orders a merged search newest first, breaking ties by id as the server does', async () => {
+    const at = (iso: string) => new Date(iso)
+    const byCustomer = [
+      { id: 'sub_b', customerId: 'cus_1', updatedAt: at('2026-10-01T00:00:00Z') },
+      { id: 'sub_old', customerId: 'cus_1', updatedAt: at('2026-01-01T00:00:00Z') },
+    ]
+    const byPlan = [
+      { id: 'sub_new', customerId: 'cus_2', updatedAt: at('2026-11-01T00:00:00Z') },
+      { id: 'sub_c', customerId: 'cus_2', updatedAt: at('2026-10-01T00:00:00Z') },
+    ]
+    const querySubscription = vi.fn(async (filter: unknown) => {
+      const items = (filter as { customerIds?: string[] }).customerIds ? byCustomer : byPlan
+      return { items, pagination: { total: items.length } }
+    })
+    const paged = (rows: { id: string }[]) => async () => ({
+      items: rows,
+      pagination: { total: rows.length },
+    })
+    const client = {
+      customers: { queryCustomer: vi.fn(paged([{ id: 'cus_1' }])) },
+      plans: { queryPlan: vi.fn(paged([{ id: 'plan_ent' }])) },
+      subscriptions: { querySubscription },
+    } as unknown as Flexprice
+    const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'e' })
+    // updatedAt desc; the two Oct 1 contracts tie and fall to id desc (sub_c, sub_b).
+    expect(page.subscriptions.map((row) => row.id)).toEqual([
+      'sub_new',
+      'sub_c',
+      'sub_b',
+      'sub_old',
+    ])
+  })
+
+  it('fails the search when a name lookup fails, rather than showing a partial list', async () => {
+    const { client, querySubscription } = fakeClient([{ id: 'cus_1' }])
+    ;(client.plans as unknown as { queryPlan: unknown }).queryPlan = vi.fn(async () => {
+      throw new Error('plans down')
+    })
+    await expect(
+      fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'QA' }),
+    ).rejects.toThrow('plans down')
+    expect(querySubscription).not.toHaveBeenCalled()
+  })
+
+  it('returns an empty page when nothing matches, without listing contracts', async () => {
+    const { client, querySubscription } = fakeClient([])
+    const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'zz' })
+    expect(page).toEqual({ subscriptions: [], total: 0 })
+    expect(querySubscription).not.toHaveBeenCalled()
+  })
+
+  it('sends no customer narrowing without a search', () => {
+    expect(toSubscriptionFilter(DEFAULT_SUBSCRIPTION_QUERY)).not.toHaveProperty('customerIds')
   })
 })

@@ -160,6 +160,31 @@ export const CreateWithBillingConfiguration: Story = {
   },
 }
 
+/**
+ * The billing currency is edited with the rest of the billing configuration
+ * (QA #16), and clearing it goes out as `''`: bill in each contract's currency.
+ */
+export const EditBillingCurrency: Story = {
+  args: {
+    mode: 'edit',
+    customerName: 'Acme Corp',
+    trail: [{ label: 'Customers' }, { label: 'Edit' }],
+    defaultValue: { externalId: 'acme', name: 'Acme Corp', billingCurrency: 'usd' },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const currency = canvas.getByRole('combobox', { name: 'Billing currency' })
+    await expect(currency).toHaveValue('USD')
+    await userEvent.clear(currency)
+    await userEvent.type(currency, 'eur')
+    await userEvent.click(await within(document.body).findByRole('option', { name: 'EUR' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ billingCurrency: 'eur' }),
+    )
+  },
+}
+
 export const SubmitError: Story = {
   args: { submitError: 'A customer with that external ID already exists.' },
   play: async ({ canvasElement }) => {

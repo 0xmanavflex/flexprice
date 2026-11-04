@@ -222,6 +222,27 @@ export const ErrorRetryable: Story = {
 }
 
 /**
+ * A search that fails keeps the grid: the error says so in the table body, and
+ * the search box that caused it stays on screen with a way to clear it.
+ */
+export const ErrorFiltered: Story = {
+  args: {
+    isFiltered: true,
+    error: { message: 'Could not load features.', canRetry: true },
+    children: <FakeGrid rows={0} onClearFilters={fn()} />,
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Could not load features.')).toBeInTheDocument()
+    await expect(canvas.queryByText('No features match these filters')).not.toBeInTheDocument()
+    await expect(canvas.getByRole('textbox', { name: 'Search features' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Clear filters' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Try again' }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
+  },
+}
+
+/**
  * Permission denied offers no retry.
  *
  * "Try again" on a permission error is worse than nothing: it invites someone

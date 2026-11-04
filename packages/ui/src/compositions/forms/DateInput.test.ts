@@ -65,6 +65,17 @@ describe('stored day fields', () => {
     expect(formatStoredDay(legacy, { locale: 'en-US' })).toBe('Oct 21, 2026')
   })
 
+  it('reads the QA #34 dates on the day every screen shows (IST)', () => {
+    process.env.TZ = 'Asia/Kolkata'
+    const read = (iso: string) => formatStoredDay(new Date(iso), { locale: 'en-US' })
+    // A draft saved for 4 Nov, local midnight: the contract page said 3 Nov.
+    expect(read('2026-11-03T18:30:00Z')).toBe('Nov 4, 2026')
+    // A trial ending at midnight IST on 11 Nov: the banners said 10 Nov.
+    expect(read('2026-11-10T18:30:00Z')).toBe('Nov 11, 2026')
+    // A coupon redeemable until 30 Nov: the detail page said 1 Dec.
+    expect(read('2026-11-30T23:59:59.999Z')).toBe('Nov 30, 2026')
+  })
+
   it('has no day for none', () => {
     expect(storedDayOf(undefined)).toBe('')
     expect(storedDayOf(new Date('nope'))).toBe('')

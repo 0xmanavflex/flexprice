@@ -160,6 +160,12 @@ export interface RevenueReportProps {
   /** e.g. "last 90 days", lower case: it is read inside sentences. */
   rangeLabel: string
   comparing: boolean
+  /**
+   * The report library is not configured. Only what the revenue dashboard
+   * returns is shown: the revenue total, its usage and contract split, and
+   * customers. Charts, receivables, payments and usage stay off the page.
+   */
+  revenueOnly?: boolean | undefined
   view: RevenueView
   onViewChange: (view: RevenueView) => void
 
@@ -724,7 +730,10 @@ function EventsChart({
  * than drawing a zero.
  */
 export function RevenueReport(props: RevenueReportProps) {
-  const { filters, headline, comparing, view, onViewChange } = props
+  const { filters, headline, comparing, view, onViewChange, revenueOnly = false } = props
+  const tabs = revenueOnly
+    ? TABS.filter((tab) => tab.value === 'overview' || tab.value === 'revenue' || tab.value === 'customers')
+    : TABS
   const figure = (value: ReportFigure): ReportFigure =>
     headline.status === 'ready'
       ? value
@@ -744,22 +753,26 @@ export function RevenueReport(props: RevenueReportProps) {
               icon: <CalendarIcon aria-hidden className="size-3.5" />,
             }}
           />
-          <FilterSelect
-            filter={{
-              label: 'Granularity',
-              value: filters.grain,
-              options: filters.grainOptions,
-              onChange: filters.onGrainChange,
-            }}
-          />
-          <FilterSelect
-            filter={{
-              label: 'Compare',
-              value: filters.compare,
-              options: filters.compareOptions,
-              onChange: filters.onCompareChange,
-            }}
-          />
+          {revenueOnly ? null : (
+            <FilterSelect
+              filter={{
+                label: 'Granularity',
+                value: filters.grain,
+                options: filters.grainOptions,
+                onChange: filters.onGrainChange,
+              }}
+            />
+          )}
+          {revenueOnly ? null : (
+            <FilterSelect
+              filter={{
+                label: 'Compare',
+                value: filters.compare,
+                options: filters.compareOptions,
+                onChange: filters.onCompareChange,
+              }}
+            />
+          )}
           {filters.currencyOptions.length > 1 ? (
             <FilterSelect
               filter={{
@@ -776,19 +789,23 @@ export function RevenueReport(props: RevenueReportProps) {
       {/* Outstanding and overdue are as of today, so they never carry a change. */}
       <OverviewTiles
         variant="row"
-        tiles={[
-          tile('Revenue', figure(headline.revenue), comparing),
-          tile('ARPU', figure(headline.arpu), comparing),
-          tile('Outstanding', figure(headline.outstanding), false),
-          tile('Overdue', figure(headline.overdue), false),
-        ]}
+        tiles={
+          revenueOnly
+            ? [tile('Revenue', figure(headline.revenue), false)]
+            : [
+                tile('Revenue', figure(headline.revenue), comparing),
+                tile('ARPU', figure(headline.arpu), comparing),
+                tile('Outstanding', figure(headline.outstanding), false),
+                tile('Overdue', figure(headline.overdue), false),
+              ]
+        }
       />
 
-      <DetailTabs tabs={TABS} value={view} onChange={(next) => onViewChange(next as RevenueView)} />
+      <DetailTabs tabs={tabs} value={view} onChange={(next) => onViewChange(next as RevenueView)} />
 
       {/* Names the report for assistive tech, so the panels' headings sit under it. */}
       <h2 className="sr-only">
-        {TABS.find((tab) => tab.value === view)?.label ?? 'Overview'} report
+        {tabs.find((tab) => tab.value === view)?.label ?? 'Overview'} report
       </h2>
       {view === 'overview' ? <OverviewTab {...props} /> : null}
       {view === 'revenue' ? <RevenueTab {...props} /> : null}
@@ -849,7 +866,7 @@ function OverviewTab(props: RevenueReportProps) {
                     ]}
                   />
                 </>
-              ) : (
+              ) : props.revenueOnly ? null : (
                 <NoChartData title="No revenue in this range" />
               )}
             </>
@@ -860,6 +877,7 @@ function OverviewTab(props: RevenueReportProps) {
         </Surface>
       </Panel>
 
+      {props.revenueOnly ? null : (
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel
           title="Receivables aging"
@@ -933,8 +951,9 @@ function OverviewTab(props: RevenueReportProps) {
           </Surface>
         </Panel>
       </div>
+      )}
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className={props.revenueOnly ? 'grid gap-5' : 'grid gap-5 lg:grid-cols-2'}>
         <Panel
           title="Top 5 customers"
           description="Highest revenue in the period"
@@ -967,6 +986,7 @@ function OverviewTab(props: RevenueReportProps) {
           </Surface>
         </Panel>
 
+        {props.revenueOnly ? null : (
         <Panel
           title="Events volume"
           description="Usage events ingested per day"
@@ -1002,6 +1022,7 @@ function OverviewTab(props: RevenueReportProps) {
             )}
           </Surface>
         </Panel>
+        )}
       </div>
     </div>
   )
@@ -1117,7 +1138,7 @@ function RevenueTab(props: RevenueReportProps) {
                 />
                 <RevenueTable series={revenue.series} comparing={comparing} />
               </>
-            ) : (
+            ) : props.revenueOnly ? null : (
               <NoChartData title="No revenue in this range" />
             )}
           </>
@@ -1196,7 +1217,7 @@ function CustomersTab(props: RevenueReportProps) {
                 variant="flush"
                 tiles={[
                   { label: 'Billed customers', value: String(customers.billed) },
-                  tile('ARPU', customers.arpu, comparing),
+                  ...(props.revenueOnly ? [] : [tile('ARPU', customers.arpu, comparing)]),
                   { label: 'Top 10 share', value: customers.topTenShare },
                   {
                     label: 'Largest customer',
@@ -1225,7 +1246,7 @@ function CustomersTab(props: RevenueReportProps) {
         </Surface>
       </Panel>
 
-      {customers.credits ? (
+      {!props.revenueOnly && customers.credits ? (
         <>
           {/* Consumed and topped up are two reports: each its own titled panel. */}
           <div className="grid gap-5 lg:grid-cols-2">

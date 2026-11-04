@@ -102,15 +102,20 @@ test.describe('a tax rate detail page', () => {
 
     await page.getByRole('button', { name: 'Tax rate actions' }).click()
     await page.getByRole('menuitem', { name: 'Archive' }).click()
-    // Archive is a status change (PUT), never a delete.
+    // Archive is a status change (PUT), never a delete. The SDK streams the
+    // body, so the outcome is read off the page: the mock only reads the rate
+    // as Archived once the update carried `tax_rate_status: INACTIVE`.
+    const deletes: string[] = []
+    page.on('request', (r) => {
+      if (isWrite('DELETE', /\/v1\/taxes\/rates\//)(r)) deletes.push(r.url())
+    })
     const request = page.waitForRequest(isWrite('PUT', /\/v1\/taxes\/rates\/[^/]+$/))
     await page.getByRole('button', { name: 'Archive tax rate' }).click()
-    const sent = await request
-    expect(sent.postDataJSON()).toMatchObject({ tax_rate_status: 'INACTIVE' })
-    expect((await sent.response())?.ok()).toBe(true)
+    expect((await (await request).response())?.ok()).toBe(true)
     // The page stays, and the refreshed rate reads as archived.
     await expect(page).toHaveURL(/\/taxes\/tax_[^/]+$/)
     await expect(page.getByText('Archived', { exact: true }).first()).toBeVisible()
+    expect(deletes).toEqual([])
 
     // An archived rate can still be opened in Edit, to publish it again.
     await page.getByRole('button', { name: 'Tax rate actions' }).click()

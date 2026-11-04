@@ -47,6 +47,7 @@ import {
 } from '@fp/ui/pages'
 import { ConfirmDialog, FormDialog } from '@fp/ui/compositions'
 import { usePlanFormOptions } from '../plans/planFormOptions'
+import { entitlementSubmitError } from './entitlementSubmitError'
 import { priceHistoryRows, usePlanChargeHistory } from './priceHistory'
 import { subTab } from './subTab'
 import { TerminateChargeDialog } from './TerminateChargeDialog'
@@ -265,9 +266,7 @@ export function CatalogEntitlementsSection({ entity, entityId }: CatalogSectionP
             }
             onCancel={close}
             isSubmitting={updateEntitlement.isPending}
-            submitError={
-              updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null
-            }
+            submitError={entitlementSubmitError(updateEntitlement, 'save')}
           />
         ) : (
           <EntitlementCreateForm
@@ -279,7 +278,7 @@ export function CatalogEntitlementsSection({ entity, entityId }: CatalogSectionP
             }
             onCancel={close}
             isSubmitting={create.isPending}
-            submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
+            submitError={entitlementSubmitError(create, 'add')}
           />
         )}
       </FormDialog>

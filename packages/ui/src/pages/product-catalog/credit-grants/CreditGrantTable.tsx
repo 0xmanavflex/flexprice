@@ -2,7 +2,7 @@ import { RBAC_ENTITY } from '@fp/domain'
 import { AccessScope, WriteGate } from '@ui/compositions/access/Access'
 import {
   CREDIT_GRANT_CADENCE_LABEL,
-  CREDIT_GRANT_EXPIRY_TYPE_LABEL,
+  creditGrantExpiryLabel,
   CREDIT_GRANT_PERIOD_LABEL,
   type CreditGrant,
   CreditGrantCadence,
@@ -134,9 +134,7 @@ function CreditGrantTableInner({
             key: 'expiry',
             header: 'Expiry',
             cell: (grant) => (
-              <span className="text-muted-foreground">
-                {CREDIT_GRANT_EXPIRY_TYPE_LABEL[grant.expirationType]}
-              </span>
+              <span className="text-muted-foreground">{creditGrantExpiryLabel(grant)}</span>
             ),
           },
           // When an add-on's grant stops issuing credits, once an end date is set.

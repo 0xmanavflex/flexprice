@@ -111,10 +111,12 @@ export function configuredSeverities(setting: AlertSetting): AlertSeverity[] {
 
 const threshold = z.object({
   condition: z.enum([AlertCondition.Above, AlertCondition.Below]),
+  // Signed: an absolute threshold can sit below zero, since a wallet balance
+  // can go negative ("critical below -3"). A percentage is kept to 0–100 below.
   threshold: z
     .string()
     .trim()
-    .regex(/^\d+(\.\d+)?$/, 'Enter a number, for example 80'),
+    .regex(/^-?\d+(\.\d+)?$/, 'Enter a number, for example 80'),
 })
 
 /**
@@ -122,8 +124,8 @@ const threshold = z.object({
  *
  * Every severity is optional, but at least one must be set while the alert is
  * enabled: an enabled alert with no thresholds never fires, which reads as a
- * bug to whoever configured it. A percentage threshold above 100 is rejected
- * for the same reason: it can never trigger.
+ * bug to whoever configured it. A percentage threshold above 100 or below 0 is
+ * rejected for the same reason: it can never trigger.
  */
 export const alertSettingConfigSchema = z
   .object({
@@ -152,6 +154,12 @@ export const alertSettingConfigSchema = z
             code: 'custom',
             path: [severity],
             message: 'A percentage cannot exceed 100',
+          })
+        } else if (value < 0) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [severity],
+            message: 'A percentage cannot be below 0',
           })
         }
       }

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { InvoiceStatus, PaymentStatus, money, type Invoice, type Payment } from '@fp/domain'
 import { parseRevenueSearch } from '@/app/revenueSearch'
 import {
+  agingTotals,
   change,
+  eventsWindow,
   customerRows,
   daysToPay,
   creditRows,
@@ -41,6 +43,13 @@ describe('windows', () => {
     expect(window.grain).toBe('week')
     expect(rangeWindow('12m', NOW).grain).toBe('month')
     expect(rangeWindow('month', NOW).start).toEqual(day('2026-10-01'))
+  })
+
+  it('counts last 30 and 90 days as exactly that many days, today included', () => {
+    const now = new Date('2026-11-04T12:00:00Z')
+    expect(rangeWindow('30d', now).start).toEqual(day('2026-10-06'))
+    expect(rangeWindow('90d', now).start).toEqual(day('2026-08-07'))
+    expect(alignToWindow([], rangeWindow('30d', now), 'day')).toHaveLength(30)
   })
 
   it('puts the comparison window immediately before, the same length', () => {
@@ -279,7 +288,7 @@ describe('alignToWindow at a partial first bucket', () => {
     expect(out.reduce((sum, point) => sum + (point.value ?? 0), 0)).toBe(0)
   })
 
-  it('does not add two weekly averages when the series is not additive', () => {
+  it('keeps two weekly averages in their own Monday weeks when not additive', () => {
     const out = alignToWindow(
       [
         { at: new Date('2026-09-21T00:00:00Z'), value: 7 },
@@ -291,7 +300,18 @@ describe('alignToWindow at a partial first bucket', () => {
       null,
       false,
     )
-    expect(out[0]?.value).toBe(5)
+    expect(out.slice(0, 2).map((point) => point.value)).toEqual([7, 5])
+  })
+
+  it('labels each week with the Monday the report buckets it under', () => {
+    const quarter = rangeWindow('quarter', new Date('2026-11-04T12:00:00Z'))
+    const out = alignToWindow(
+      [{ at: new Date('2026-11-02T00:00:00Z'), value: 216.23 }],
+      quarter,
+      'week',
+    )
+    expect(out[0]?.label).toBe('Sep 28')
+    expect(out.at(-1)).toEqual({ label: 'Nov 2', value: 216.23 })
   })
 
   it('keeps a partial first average when the series is not additive', () => {
@@ -341,5 +361,36 @@ describe('creditTypeRows', () => {
     )
     expect(rows[0]).toMatchObject({ id: 'paid', label: 'Paid credits', customers: 2, amount: 50 })
     expect(rows[1]).toMatchObject({ id: 'free', customers: 1, amount: 5 })
+  })
+})
+
+describe('agingTotals', () => {
+  it('keeps invoices with no due date out of overdue', () => {
+    const row = (bucket: string, value: number) => ({ keys: { aging_bucket: bucket }, value })
+    expect(
+      agingTotals([
+        row('Current', 100),
+        row('No due date', 386.01),
+        row('1-30', 5000),
+        row('90+', 31.87),
+      ]),
+    ).toEqual({ notYetDue: 100, noDueDate: 386.01, overdue: 5031.87 })
+  })
+})
+
+describe('eventsWindow', () => {
+  const now = new Date('2026-11-04T12:00:00Z')
+
+  it('counts the last 7 days, today included, of a wider range and says so', () => {
+    const span = eventsWindow(rangeWindow('30d', now))
+    expect(span.range).toBe('2026-10-29..2026-11-05')
+    expect(span.limited).toBe(true)
+    expect(alignToWindow([], span, 'day')).toHaveLength(7)
+  })
+
+  it('keeps a range that fits in a week whole', () => {
+    const span = eventsWindow(rangeWindow('month', now))
+    expect(span.range).toBe('2026-11-01..2026-11-05')
+    expect(span.limited).toBe(false)
   })
 })

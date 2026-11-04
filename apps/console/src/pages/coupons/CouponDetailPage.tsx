@@ -23,7 +23,14 @@ import {
   Money,
   Pill,
 } from '@fp/ui/pages'
-import { ConfirmDialog, EditableCard, MetadataCard, Properties, Section } from '@fp/ui/compositions'
+import {
+  ConfirmDialog,
+  EditableCard,
+  formatStoredDay,
+  MetadataCard,
+  Properties,
+  Section,
+} from '@fp/ui/compositions'
 import { ArchiveIcon, PencilIcon, TicketPercentIcon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
 
@@ -99,16 +106,17 @@ export function CouponDetailPage({
       }
       id={record.code || record.id}
       menuLabel="Coupon actions"
-      menu={[
-        {
-          id: 'edit-details',
-          label: 'Edit details',
-          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
-          onSelect: () => setTab('information'),
-        },
-        ...(isArchived
+      // An archived coupon is read-only, so it offers neither edit nor archive.
+      menu={
+        isArchived
           ? []
           : [
+              {
+                id: 'edit-details',
+                label: 'Edit details',
+                icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+                onSelect: () => setTab('information'),
+              },
               {
                 id: 'archive',
                 label: 'Archive',
@@ -116,8 +124,8 @@ export function CouponDetailPage({
                 destructive: true,
                 onSelect: () => setArchiving(true),
               },
-            ]),
-      ]}
+            ]
+      }
       tab={tab}
       onTabChange={(next) => setTab(next as CouponTab)}
       tabs={[
@@ -282,9 +290,15 @@ function formatDate(value: Date | null): string {
   )
 }
 
+/**
+ * A day field (redeem after/before, a redemption's start and end), read on the
+ * day it was saved for: the create form saves the last redeemable day as the
+ * end of that UTC day, which in local time is already the next day east of
+ * UTC (30 Nov read as 1 Dec in IST). Same rule as the coupon list's column.
+ */
 function formatDay(value: Date | null): string {
   if (!value) return 'Not set'
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
+  return formatStoredDay(value)
 }
 
 function toSubmitError(error: unknown): string | null {

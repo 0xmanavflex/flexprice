@@ -310,21 +310,33 @@ export async function fetchCustomerSubscriptions(
   client: Flexprice,
   customerId: string,
 ): Promise<Subscription[]> {
-  const response = await call(() =>
-    client.subscriptions.querySubscription({
-      // The internal id, not the external one: the API resolves an external id
-      // to published customers only, so an archived customer's would 404.
-      customerId,
-      // The search returns only active subscriptions unless told otherwise, so a
-      // trialing or draft contract would vanish. Same set V1's overview asks for,
-      // plus paused, which the Live contracts tile counts.
-      subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES,
-      expand: 'plan',
-      limit: 100,
-    } as never),
-  )
-  return (response.items ?? []).map((item) => toSubscription(item as SubscriptionWire))
+  // Every page: the tab searches, filters and sorts in the browser, which is
+  // only true over the whole set.
+  const wires: SubscriptionWire[] = []
+  for (let offset = 0; ; offset += CUSTOMER_SUBSCRIPTIONS_PAGE) {
+    const response = await call(() =>
+      client.subscriptions.querySubscription({
+        // The internal id, not the external one: the API resolves an external id
+        // to published customers only, so an archived customer's would 404.
+        customerId,
+        // The search returns only active subscriptions unless told otherwise, so a
+        // trialing or draft contract would vanish. Same set V1's overview asks for,
+        // plus paused, which the Live contracts tile counts.
+        subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES,
+        expand: 'plan',
+        limit: CUSTOMER_SUBSCRIPTIONS_PAGE,
+        offset,
+      } as never),
+    )
+    const items = (response.items ?? []) as SubscriptionWire[]
+    wires.push(...items)
+    const total = response.pagination?.total ?? 0
+    if (items.length < CUSTOMER_SUBSCRIPTIONS_PAGE || wires.length >= total) break
+  }
+  return wires.map(toSubscription)
 }
+
+const CUSTOMER_SUBSCRIPTIONS_PAGE = 100
 
 /**
  * A customer's subscriptions, scoped by their internal id.
@@ -464,6 +476,7 @@ const CUSTOMER_TEXT_FIELDS = [
   ['email', 'email'],
   ['phone', 'contact'],
   ['timezone', 'timezone'],
+  ['billingCurrency', 'billingCurrency'],
   ['addressLine1', 'addressLine1'],
   ['addressLine2', 'addressLine2'],
   ['addressCity', 'addressCity'],
@@ -486,12 +499,28 @@ export function toCreateCustomerRequest(draft: CreateCustomer): Record<string, u
 }
 
 /**
- * Domain edit out, `UpdateCustomerRequest` in. The update patches, so blanks are
- * omitted and leave the stored value alone; the SDK cannot send an empty string
- * to clear a field, so clearing a value is not offered.
+ * Domain edit out, `UpdateCustomerRequest` in.
+ *
+ * The update patches: a key left out keeps the stored value, a key sent as `''`
+ * stores `''`. A field the draft carries is sent as it stands, blanks included
+ * (the edit form carries every field; an inline edit only the one it changed); omitting a blank would make clearing a field
+ * (address line 2, the billing currency) report success and change nothing.
+ * The API takes `''` on each of these (its validators are all `omitempty`), and
+ * reads a blank billing currency as "bill in the contract's currency". The
+ * timezone is the one exception: the API has no "no timezone", so a blank one
+ * is left out rather than stored as `''`.
  */
 export function toUpdateCustomerRequest(draft: EditCustomer): Record<string, unknown> {
-  return toCreateCustomerRequest(draft)
+  const request: Record<string, unknown> = { externalId: draft.externalId, name: draft.name }
+  for (const [field, wireKey] of CUSTOMER_TEXT_FIELDS) {
+    const value = draft[field]
+    // Absent (an inline edit of one field) keeps the stored value.
+    if (value === undefined) continue
+    if (value || field !== 'timezone') request[wireKey] = value
+  }
+  if (draft.taxTreatment) request.taxTreatment = draft.taxTreatment
+  if (draft.metadata) request.metadata = draft.metadata
+  return request
 }
 
 export function useCreateCustomer() {

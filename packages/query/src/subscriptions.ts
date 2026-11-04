@@ -11,12 +11,14 @@ import {
   type AddContractAddon,
   type AddContractCharge,
   type AddContractCoupon,
+  allowancePeriod,
   BILLING_PERIOD_LABEL,
   BillingModel,
   BillingPeriod,
   BucketSize as BucketSizes,
   type BucketSize,
   CommitmentKind,
+  FilterOp,
   type Charge,
   type CancelSubscription,
   type PauseSubscription,
@@ -86,7 +88,7 @@ import { toEntitlementRequest } from './entitlements'
 import { type InvoiceDetailWire, type InvoiceWire, toInvoice, toInvoiceDetail } from './invoices'
 import { ALL_SUBSCRIPTION_STATUSES, LIVE_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
 import { queryKeys } from './keys'
-import { toFilterConditions } from './search'
+import { nameContainsFilter, toFilterConditions } from './search'
 import {
   type ChargeWire,
   type TierWire,
@@ -95,7 +97,11 @@ import {
   toChargeRequest,
   toTier,
 } from './prices'
-import { toCreateTaxAssociationRequest } from './taxAssociations'
+import {
+  toCreateTaxAssociationRequest,
+  useRemoveTaxAssociationRequest,
+  withTaxRates,
+} from './taxAssociations'
 import { toOverrideLineItem } from './priceOverrides'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 import { sortWithTieBreak } from './listSort'
@@ -130,6 +136,8 @@ export interface SubscriptionWire {
   currentPeriodStart?: Date | undefined
   currentPeriodEnd?: Date | undefined
   startDate?: Date | undefined
+  /** The sort key of the default contract list (`updated_at`). */
+  updatedAt?: Date | undefined
   createdAt?: Date | undefined
   billingPeriodCount?: number | undefined
   cancelAt?: Date | undefined
@@ -225,9 +233,9 @@ export async function withCustomerNames(
 }
 
 export function toSubscription(wire: SubscriptionWire): Subscription {
-  // Known statuses pass through; everything else: the API's `draft`, and any
-  // value this build has not learned: collapses to Incomplete, the state a
-  // subscription sits in before it is running.
+  // Known statuses pass through, `draft` included; any value this build has not
+  // learned collapses to Incomplete, the state a subscription sits in before
+  // it is running.
   const status = SUBSCRIPTION_STATUSES.has(wire.subscriptionStatus ?? '')
     ? (wire.subscriptionStatus as SubscriptionStatus)
     : SubscriptionStatus.Incomplete
@@ -536,14 +544,22 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
 }
 
 export interface SubscriptionFeatureWire {
-  feature?: { id?: string | undefined; name?: string | undefined } | undefined
+  feature?:
+    { id?: string | undefined; name?: string | undefined; type?: string | undefined } | undefined
   entitlement?:
     | {
         isEnabled?: boolean | undefined
         isSoftLimit?: boolean | undefined
         usageLimit?: number | undefined
         usageResetPeriod?: string | undefined
+        grantDurationUnit?: string | undefined
+        grantDurationValue?: number | undefined
+        staticValues?: string[] | undefined
+        configValues?: Array<Record<string, unknown>> | undefined
       }
+    | undefined
+  sources?:
+    | Array<{ staticValue?: string | undefined; configValue?: Record<string, unknown> | undefined }>
     | undefined
 }
 
@@ -555,6 +571,8 @@ export function toSubscriptionEntitlement(wire: SubscriptionFeatureWire): Subscr
     (NonNullable<SubscriptionFeatureWire['entitlement']> & Record<string, unknown>) | undefined
   const period = stringValue(entitlement?.usageResetPeriod ?? entitlement?.usage_reset_period)
   const limit = entitlement?.usageLimit ?? entitlement?.usage_limit
+  const duration = entitlement?.grantDurationValue ?? entitlement?.grant_duration_value
+  const featureType = stringValue(wire.feature?.type)
   return {
     featureId: wire.feature?.id ?? '',
     name: wire.feature?.name || wire.feature?.id || 'Feature',
@@ -563,7 +581,45 @@ export function toSubscriptionEntitlement(wire: SubscriptionFeatureWire): Subscr
     softLimit: booleanValue(entitlement?.isSoftLimit ?? entitlement?.is_soft_limit),
     resetPeriodLabel:
       period && period !== 'NEVER' ? (BILLING_PERIOD_LABEL[period as BillingPeriod] ?? period) : '',
+    // The feature's type and value come from the entitlement itself, so a
+    // contract with no usage reported (draft, paused) still reads a boolean
+    // as on, a static one as its value and a config one as its JSON.
+    featureType,
+    staticValue:
+      featureType === 'config' ? configText(wire, entitlement) : staticText(wire, entitlement),
+    period:
+      allowancePeriod({
+        usageResetPeriod: period,
+        grantDurationUnit: stringValue(
+          entitlement?.grantDurationUnit ?? entitlement?.grant_duration_unit,
+        ),
+        grantDurationValue: typeof duration === 'number' ? duration : null,
+      }) ?? '',
   }
+}
+
+type EntitlementWire = NonNullable<SubscriptionFeatureWire['entitlement']> & Record<string, unknown>
+
+function staticText(wire: SubscriptionFeatureWire, entitlement: EntitlementWire | undefined) {
+  const values = entitlement?.staticValues ?? entitlement?.static_values
+  const fromEntitlement = Array.isArray(values)
+    ? values.filter((value): value is string => typeof value === 'string' && value !== '')
+    : []
+  if (fromEntitlement.length > 0) return fromEntitlement.join(', ')
+  const source = wire.sources?.[0] as Record<string, unknown> | undefined
+  return stringValue(source?.['staticValue'] ?? source?.['static_value'])
+}
+
+function configText(wire: SubscriptionFeatureWire, entitlement: EntitlementWire | undefined) {
+  const source = wire.sources?.[0] as Record<string, unknown> | undefined
+  const values = entitlement?.configValues ?? entitlement?.config_values
+  const config =
+    source?.['configValue'] ??
+    source?.['config_value'] ??
+    (Array.isArray(values) ? (values[0] as unknown) : undefined)
+  return config && typeof config === 'object' && Object.keys(config).length > 0
+    ? JSON.stringify(config)
+    : ''
 }
 
 function stringValue(value: unknown): string {
@@ -627,13 +683,11 @@ const SORT_FIELD: Record<SubscriptionSortField, string> = {
  * nothing, which is the failure this comment exists to prevent. `plan` is named
  * explicitly rather than relied on as a default.
  */
-function toWireStatuses(statuses: readonly SubscriptionStatus[]): string[] {
-  return statuses.flatMap((status) =>
-    status === SubscriptionStatus.Incomplete ? [status, 'draft'] : [status],
-  )
-}
-
-export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, unknown> {
+export function toSubscriptionFilter(
+  query: SubscriptionQuery,
+  /** The customers the search matched; see {@link fetchSubscriptions}. */
+  customerIds?: readonly string[],
+): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
@@ -641,19 +695,46 @@ export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, u
     expand: 'customer,plan',
     // Status always goes to the server: it returns only active subscriptions
     // when none is named, so a trialing contract never reached the list.
-    // Incomplete also asks for the API's `draft`, which the domain shows as
-    // Incomplete. No status chosen means every contract.
-    subscriptionStatus:
-      query.statuses.length > 0 ? toWireStatuses(query.statuses) : ALL_SUBSCRIPTION_STATUSES,
+    // No status chosen means every contract.
+    subscriptionStatus: query.statuses.length > 0 ? [...query.statuses] : ALL_SUBSCRIPTION_STATUSES,
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }
       : {}),
+    ...(customerIds ? { customerIds: [...customerIds] } : {}),
   }
 }
+
+/** One page of a name search, while collecting every customer or plan it matches. */
+const SEARCH_PAGE = 200
+/** Contracts read per page when a search matches both customers and plans. */
+const SEARCH_CONTRACT_PAGE = 500
 
 export interface SubscriptionPage {
   subscriptions: Subscription[]
   total: number
+}
+
+/** Every id a paged name search returns, page by page until the total is reached. */
+async function allMatchingIds(
+  page: (offset: number) => Promise<{
+    items?: Array<{ id?: string | undefined }> | undefined
+    pagination?: { total?: number | undefined } | undefined
+  }>,
+): Promise<string[]> {
+  const ids: string[] = []
+  for (let offset = 0; ; offset += SEARCH_PAGE) {
+    const response = await page(offset)
+    const items = response.items ?? []
+    for (const item of items) if (item.id) ids.push(item.id)
+    const total = response.pagination?.total ?? 0
+    if (items.length < SEARCH_PAGE || offset + SEARCH_PAGE >= total) return ids
+  }
+}
+
+/** A wire's value for the chosen sort, for ordering a merged search. */
+function sortValue(wire: SubscriptionWire, field: SubscriptionQuery['sortBy']): number {
+  const raw = (wire as Record<string, unknown>)[field]
+  return raw instanceof Date ? raw.getTime() : raw ? new Date(String(raw)).getTime() || 0 : 0
 }
 
 export async function fetchSubscriptions(
@@ -661,9 +742,55 @@ export async function fetchSubscriptions(
   query: SubscriptionQuery,
   signal?: AbortSignal,
 ): Promise<SubscriptionPage> {
+  /*
+   * The search matches a customer's name or a plan's name, asked of the
+   * server. The contract search has no name field, but it narrows by
+   * `customer_ids` and by a `plan_id` filter: so every customer and plan whose
+   * name matches is collected first (all pages), and the contracts are
+   * narrowed to them, which keeps paging and the total true. A term nothing
+   * matches is an empty page. When both customers and plans match, the two
+   * narrowings cannot be OR-ed in one request, so both are read in full,
+   * merged without duplicates, ordered by the chosen sort and paged here.
+   */
+  const term = query.search.trim()
+  let request: Record<string, unknown> = toSubscriptionFilter(query)
+  if (term) {
+    // Both lookups must succeed. A failed one leaves its matches unknown, not
+    // empty: treating it as empty would show an incomplete list, or none at
+    // all, as if it were the whole answer. So any failure fails the search.
+    const [customerIds, planIds] = await Promise.all([
+      allMatchingIds((offset) =>
+        call(
+          (options) =>
+            client.customers.queryCustomer(
+              { filters: nameContainsFilter(term), limit: SEARCH_PAGE, offset } as never,
+              options,
+            ),
+          signal,
+        ),
+      ),
+      allMatchingIds((offset) =>
+        call(
+          (options) =>
+            client.plans.queryPlan(
+              { filters: nameContainsFilter(term), limit: SEARCH_PAGE, offset } as never,
+              options,
+            ),
+          signal,
+        ),
+      ),
+    ])
+    if (customerIds.length === 0 && planIds.length === 0) return { subscriptions: [], total: 0 }
+    const byPlan: SubscriptionQuery = {
+      ...query,
+      filters: [...(query.filters ?? []), { field: 'plan_id', op: FilterOp.In, value: planIds }],
+    }
+    if (planIds.length === 0) request = toSubscriptionFilter(query, customerIds)
+    else if (customerIds.length === 0) request = toSubscriptionFilter(byPlan)
+    else return mergedSearch(client, query, customerIds, byPlan, signal)
+  }
   const response = await call(
-    (options) =>
-      client.subscriptions.querySubscription(toSubscriptionFilter(query) as never, options),
+    (options) => client.subscriptions.querySubscription(request as never, options),
     signal,
   )
   const wires = await withCustomerNames(
@@ -673,24 +800,66 @@ export async function fetchSubscriptions(
   )
   const subscriptions = wires.map(toSubscription)
 
-  // Search is not a server-side filter, so it is applied on the page. Status is
-  // re-checked here too, which keeps the page's filter exact while the server
-  // narrows the fetch.
-  const term = query.search.trim().toLowerCase()
-  const filtered = subscriptions.filter((subscription) => {
-    const matchesStatus =
-      query.statuses.length === 0 || query.statuses.includes(subscription.status)
-    const matchesSearch =
-      term.length === 0 ||
-      subscription.customerName.toLowerCase().includes(term) ||
-      subscription.planName.toLowerCase().includes(term)
-    return matchesStatus && matchesSearch
-  })
+  // Status is re-checked here, which keeps the page's filter exact while the
+  // server narrows the fetch.
+  const filtered = subscriptions.filter(
+    (subscription) => query.statuses.length === 0 || query.statuses.includes(subscription.status),
+  )
 
   return {
     subscriptions: filtered,
     total: response.pagination?.total ?? 0,
   }
+}
+
+/** A search that matched customers and plans: both narrowings read in full, merged and paged. */
+async function mergedSearch(
+  client: Flexprice,
+  query: SubscriptionQuery,
+  customerIds: readonly string[],
+  byPlan: SubscriptionQuery,
+  signal?: AbortSignal,
+): Promise<SubscriptionPage> {
+  const scan = async (filter: (page: SubscriptionQuery) => Record<string, unknown>) => {
+    const wires: SubscriptionWire[] = []
+    for (let page = 1; ; page++) {
+      const response = await call(
+        (options) =>
+          client.subscriptions.querySubscription(
+            filter({ ...query, page, pageSize: SEARCH_CONTRACT_PAGE }) as never,
+            options,
+          ),
+        signal,
+      )
+      const items = (response.items ?? []) as SubscriptionWire[]
+      wires.push(...items)
+      const total = response.pagination?.total ?? 0
+      if (items.length < SEARCH_CONTRACT_PAGE || page * SEARCH_CONTRACT_PAGE >= total) return wires
+    }
+  }
+  const [byCustomer, byPlanName] = await Promise.all([
+    scan((page) => toSubscriptionFilter(page, customerIds)),
+    scan((page) => toSubscriptionFilter({ ...byPlan, page: page.page, pageSize: page.pageSize })),
+  ])
+  const seen = new Set<string>()
+  const direction = query.sortDirection === 'asc' ? 1 : -1
+  const merged = [...byCustomer, ...byPlanName]
+    .filter((wire) => {
+      const id = wire.id ?? ''
+      if (seen.has(id)) return false
+      seen.add(id)
+      return true
+    })
+    // The server's order: the chosen date, then the id in the same direction
+    // (`sortWithTieBreak`), so a merged page lands where a paged list would.
+    .sort(
+      (a, b) =>
+        direction * (sortValue(a, query.sortBy) - sortValue(b, query.sortBy)) ||
+        direction * (a.id ?? '').localeCompare(b.id ?? ''),
+    )
+  const start = (query.page - 1) * query.pageSize
+  const page = await withCustomerNames(client, merged.slice(start, start + query.pageSize), signal)
+  return { subscriptions: page.map(toSubscription), total: merged.length }
 }
 
 /**
@@ -2222,7 +2391,10 @@ export function useSubscriptionTaxes(id: string) {
           ),
         signal,
       )
-      return ((response.items ?? []) as SubscriptionTaxWire[]).map(toSubscriptionTax)
+      const wires = await withTaxRates((response.items ?? []) as SubscriptionTaxWire[], (rateId) =>
+        call((options) => client.taxRates.getTaxRate(rateId, options), signal),
+      )
+      return wires.map(toSubscriptionTax)
     },
     enabled: id.length > 0,
   })
@@ -2465,12 +2637,11 @@ export function useRemoveSubscriptionAddon() {
 
 /** Stop applying a tax rate to a contract: `DELETE /taxes/associations/{id}`. */
 export function useRemoveSubscriptionTax() {
-  const client = useFlexprice()
+  const remove = useRemoveTaxAssociationRequest()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (associationId: string) =>
-      call(() => client.taxAssociations.deleteTaxAssociation(associationId)),
+    mutationFn: remove,
     onSuccess: () => invalidateContract(queryClient),
   })
 }

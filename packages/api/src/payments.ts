@@ -14,6 +14,9 @@ export interface ListPaymentsParams {
   destinationType?: string
   /** Only payments of this billing entity; sent only while entities are enabled. */
   billingEntityId?: string
+  /** The column to order by (`created_at`) and its direction. */
+  sort?: string
+  order?: 'asc' | 'desc'
 }
 
 export async function listPayments(
@@ -30,6 +33,8 @@ export async function listPayments(
   if (params.destinationId) search.set('destination_id', params.destinationId)
   if (params.destinationType) search.set('destination_type', params.destinationType)
   if (params.billingEntityId) search.set('billing_entity_id', params.billingEntityId)
+  if (params.sort) search.set('sort', params.sort)
+  if (params.order) search.set('order', params.order)
   return request(serverURL, `/payments?${search.toString()}`, {
     method: 'GET',
     token,

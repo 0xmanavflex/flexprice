@@ -511,6 +511,7 @@ export function DataExportDetail({
     setDialog(null)
   }
   const managed = connection?.flexpriceManaged ?? false
+  const unset = managed ? 'Managed by Flexprice' : '—'
   const enabled = dataExport.enabled
 
   const overview = (
@@ -530,8 +531,10 @@ export function DataExportDetail({
         <DetailList
           columns={1}
           items={[
-            { label: 'Bucket', value: managed ? 'Managed by Flexprice' : dataExport.bucket || '—' },
-            { label: 'Region', value: managed ? 'Managed by Flexprice' : dataExport.region || '—' },
+            // A managed connection still writes to a named bucket and region:
+            // show them, as the export list does, and fall back only when unset.
+            { label: 'Bucket', value: dataExport.bucket || unset },
+            { label: 'Region', value: dataExport.region || unset },
             {
               label: 'Key prefix',
               value: <span className="break-all">{dataExport.keyPrefix || '—'}</span>,

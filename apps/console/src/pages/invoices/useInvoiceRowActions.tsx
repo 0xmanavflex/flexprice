@@ -2,6 +2,7 @@ import { useState, type ReactElement } from 'react'
 import { InvoiceStatus, type Invoice, compareMoney } from '@fp/domain'
 import {
   useFinalizeInvoice,
+  useInvoiceDetailLoader,
   useInvoicePdfLink,
   useRecalculateInvoice,
   useSendInvoice,
@@ -23,6 +24,30 @@ import {
 import { toast } from '@fp/ui/pages'
 import { ConfirmDialog } from '@fp/ui/compositions'
 import { useHostedInvoiceLink } from '@/app/hostedInvoice/useHostedInvoiceLink'
+import { downloadInvoiceCsv } from './invoiceCsv'
+
+/**
+ * Opens an invoice's PDF in a new tab. The tab opens on the click, so pop-up
+ * blockers allow it, and is then pointed at the link once it resolves.
+ */
+export function openInvoicePdf(link: Promise<string | null>): void {
+  const tab = window.open('about:blank', '_blank')
+  if (tab) tab.opener = null
+  link
+    .then((url) => {
+      if (!url) {
+        tab?.close()
+        toast.error('This invoice has no PDF yet.')
+        return
+      }
+      if (tab) tab.location.replace(url)
+      else window.open(url, '_blank', 'noopener')
+    })
+    .catch(() => {
+      tab?.close()
+      toast.error('Could not download the invoice. Try again.')
+    })
+}
 
 export interface InvoiceRowActionOptions {
   /** Record a payment against this invoice. */
@@ -53,6 +78,7 @@ export function useInvoiceRowActions({
   onOpenContract,
 }: InvoiceRowActionOptions) {
   const pdfLink = useInvoicePdfLink()
+  const loadInvoice = useInvoiceDetailLoader()
   const finalize = useFinalizeInvoice()
   const recalculate = useRecalculateInvoice()
   const send = useSendInvoice()
@@ -86,19 +112,19 @@ export function useInvoiceRowActions({
     }[] = []
     const open = invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue
     if (invoice.status === InvoiceStatus.Draft) {
-      items.push(
-        {
-          label: 'Finalize',
-          icon: <CheckCircle2Icon aria-hidden className="size-4" />,
-          onSelect: () => run(finalize, invoice, 'Invoice finalized', 'finalize the invoice'),
-        },
-        {
+      items.push({
+        label: 'Finalize',
+        icon: <CheckCircle2Icon aria-hidden className="size-4" />,
+        onSelect: () => run(finalize, invoice, 'Invoice finalized', 'finalize the invoice'),
+      })
+      // Only a contract's draft: the API refuses to recalculate a one-off one.
+      if (invoice.subscriptionId)
+        items.push({
           label: 'Recalculate',
           icon: <RefreshCwIcon aria-hidden className="size-4" />,
           onSelect: () =>
             run(recalculate, invoice, 'Invoice recalculated', 'recalculate the invoice'),
-        },
-      )
+        })
     }
     if (open && onRecordPayment) {
       items.push({
@@ -130,30 +156,22 @@ export function useInvoiceRowActions({
     }
     if (invoice.status !== InvoiceStatus.Draft) {
       items.push({
-        label: 'Download invoice',
+        label: 'Download PDF',
         icon: <DownloadIcon aria-hidden className="size-4" />,
         readOnly: true,
-        onSelect: () => {
-          // Opened on the click so pop-up blockers allow it, then pointed at the PDF.
-          const tab = window.open('about:blank', '_blank')
-          if (tab) tab.opener = null
-          pdfLink(invoice.id)
-            .then((url) => {
-              if (!url) {
-                tab?.close()
-                toast.error('This invoice has no PDF yet.')
-                return
-              }
-              if (tab) tab.location.replace(url)
-              else window.open(url, '_blank', 'noopener')
-            })
-            .catch(() => {
-              tab?.close()
-              toast.error('Could not download the invoice. Try again.')
-            })
-        },
+        onSelect: () => openInvoicePdf(pdfLink(invoice.id)),
       })
     }
+    // The list carries no lines, so the CSV reads the invoice first.
+    items.push({
+      label: 'Download CSV',
+      icon: <DownloadIcon aria-hidden className="size-4" />,
+      readOnly: true,
+      onSelect: () =>
+        void loadInvoice(invoice.id)
+          .then(downloadInvoiceCsv)
+          .catch(() => toast.error('Could not download the invoice. Try again.')),
+    })
     // The link the customer receives: issued once an invoice is finalized, and
     // pointless on a voided or skipped one, which nobody pays.
     if (

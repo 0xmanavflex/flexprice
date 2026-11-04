@@ -4,11 +4,13 @@ import {
   ApiError,
   useAttemptInvoicePayment,
   useBillingEntities,
+  useChargesByIds,
   useCustomer,
   useCustomerBillingEntity,
   useFinalizeInvoice,
   useInvoice,
   useInvoiceHostedUrl,
+  useInvoicePdfLink,
   useEntityIntegrationControls,
   useInvoiceCreditNotes,
   useInvoicePayments,
@@ -43,6 +45,8 @@ import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 import { toInvoiceDocument } from './invoiceDocumentAdapter'
 import { billFromFor } from './invoiceParties'
+import { downloadInvoiceCsv } from './invoiceCsv'
+import { openInvoicePdf } from './useInvoiceRowActions'
 
 export interface InvoiceDetailPageProps {
   invoiceId: string
@@ -67,6 +71,7 @@ export function InvoiceDetailPage({
   const navigate = useNavigate()
   const invoice = useInvoice(invoiceId)
   const hostedUrl = useInvoiceHostedUrl(invoiceId)
+  const pdfLink = useInvoicePdfLink()
   const activity = useActivityLog({ entityType: 'invoice', entityId: invoiceId })
   const mappings = useEntityIntegrationControls('invoice', invoiceId)
   // "Bill from" is the signed-in tenant: `GET /tenants/{id}` only answers for
@@ -79,6 +84,11 @@ export function InvoiceDetailPage({
   const isDraft = invoice.data?.status === InvoiceStatus.Draft
   const customer = useCustomer(isDraft && entities.data ? (invoice.data?.customerId ?? '') : '')
   const customerEntity = useCustomerBillingEntity(customer.data)
+  // "Bill to" is the invoice's own customer, which the invoice's expanded
+  // customer is not when another customer is invoiced for the contract.
+  const billTo = useCustomer(invoice.data?.customerId ?? '')
+  // A line carries its amount, not its rate: the rate is on its price.
+  const charges = useChargesByIds((invoice.data?.lines ?? []).map((line) => line.priceId ?? ''))
   const payments = useInvoicePayments(invoiceId)
   const creditNotes = useInvoiceCreditNotes(invoiceId)
   const finalize = useFinalizeInvoice()
@@ -207,6 +217,8 @@ export function InvoiceDetailPage({
           // Null leaves the tenant's own block: entities off, or issued before them.
           billFrom: billFromFor(data, customerEntity, null),
           hostedUrl: hostedUrl.data ?? null,
+          billTo: billTo.data,
+          charges: charges.data,
           payments: payments.data,
           creditNotes: creditNotes.data,
           activity: activity.data ?? [],
@@ -247,9 +259,9 @@ export function InvoiceDetailPage({
         onRetryPayment={() =>
           run('retry-payment', attempt, 'Payment attempt started', 'retry the payment')
         }
-        {...(data.invoicePdfUrl
-          ? { onDownload: () => window.open(data.invoicePdfUrl ?? '', '_blank', 'noopener') }
-          : {})}
+        // A draft has no PDF yet; anything issued gets one from the PDF route.
+        {...(isDraft ? {} : { onDownload: () => openInvoicePdf(pdfLink(data.id)) })}
+        onDownloadCsv={() => downloadInvoiceCsv(data)}
         onOpenCustomer={() => onOpenCustomer(data.customerId)}
         {...(entity
           ? {

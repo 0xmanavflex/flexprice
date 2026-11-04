@@ -177,6 +177,34 @@ export const Default: Story = {
 }
 
 /**
+ * Prices read in what they are priced in: a tiered rate names its currency
+ * (QA #37) and a custom-unit price shows its unit, not the currency it
+ * converts to (QA #40).
+ */
+export const PricedInCurrencyAndUnit: Story = {
+  args: {
+    charges: [
+      { ...chargeFixtures[1]! },
+      {
+        ...chargeFixtures[0]!,
+        id: 'price_qau',
+        displayName: 'QA units',
+        amount: '3',
+        displayAmount: '$3.00',
+        priceUnit: 'QAU',
+        priceUnitAmount: '2.4',
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('From $0.002')).toBeInTheDocument()
+    await expect(canvas.getByText('2.4 QAU')).toBeInTheDocument()
+    await expect(canvas.queryByText('$3.00')).not.toBeInTheDocument()
+  },
+}
+
+/**
  * The five flags, and what a click on one is for.
  *
  * The chips carry no values: never "20% off": because a value on a chip is a

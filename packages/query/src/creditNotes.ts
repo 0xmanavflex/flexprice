@@ -85,6 +85,8 @@ export async function fetchCreditNotes(
     offset: (query.page - 1) * query.pageSize,
     statuses: query.statuses.map((status) => status.toUpperCase()),
     ...(billingEntityId ? { billingEntityId } : {}),
+    // The Customer and Invoice columns read these; without them both are blank.
+    expand: 'invoice,customer',
   })
   const record = (body ?? {}) as {
     items?: CreditNoteWire[] | null

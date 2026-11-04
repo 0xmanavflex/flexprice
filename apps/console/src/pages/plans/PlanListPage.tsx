@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { type Plan, type PlanQuery } from '@fp/domain'
+import { type Plan, type PlanQuery, isPlanQueryFiltered } from '@fp/domain'
 import { useArchivePlan, usePlanLinkage, usePlans } from '@fp/query'
 import { DuplicatePlanDialog } from './DuplicatePlanDialog'
 import { PlanGrid } from '@fp/ui/pages'
@@ -40,7 +40,7 @@ export function PlanListPage({
   // What each plan contains: entitlements, credit grants, contracts: read
   // for the rows on screen. None of it is on the plan itself.
   const linked = usePlanLinkage(useMemo(() => rows.map((plan) => plan.id), [rows]))
-  const isFiltered = query.search.length > 0 || query.statuses.length > 0
+  const isFiltered = isPlanQueryFiltered(query)
 
   const clearFilters = () =>
     onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })

@@ -3986,7 +3986,7 @@ export const handlers = [
    *
    * Paging only. The request model has `limit`/`offset` and an `order`
    * *direction*, but no sort field and no name search, which is why
-   * `fetchTaxRates` filters by status and search on the page. Filtering here
+   * `fetchTaxRates` reads every rate and filters, sorts and pages them itself. Filtering here
    * would be the laxer-than-reality mock that makes that client-side filter
    * look unnecessary right up until somebody removes it.
    */

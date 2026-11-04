@@ -2,6 +2,26 @@ import { describe, expect, it } from 'vitest'
 import { toUsageAnalytics } from './events'
 
 describe('toUsageAnalytics', () => {
+  it('labels summed usage as units, not events, when the feature names no unit', () => {
+    const { features } = toUsageAnalytics({
+      items: [
+        { featureId: 'f_sum', aggregationType: 'SUM', totalUsage: '20', eventCount: 1 },
+        { featureId: 'f_count', aggregationType: 'COUNT', totalUsage: '3', eventCount: 3 },
+        {
+          featureId: 'f_named',
+          aggregationType: 'SUM',
+          totalUsage: '20',
+          feature: { id: 'f_named', name: 'Tokens', unitPlural: 'tokens' },
+        },
+      ],
+    })
+    const unit = (id: string) => features.find((row) => row.featureId === id)
+    const summed = unit('f_sum')
+    expect(summed).toMatchObject({ usage: 20, eventCount: 1, unitPlural: 'units' })
+    expect(unit('f_count')?.unitPlural).toBe('events')
+    expect(unit('f_named')?.unitPlural).toBe('tokens')
+  })
+
   it('reads revenue only when the server sent both a subtotal and a currency', () => {
     expect(toUsageAnalytics({ subtotal: '12.50', currency: 'usd', items: [] }).revenue).toEqual({
       amount: '12.50',

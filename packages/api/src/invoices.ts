@@ -37,3 +37,25 @@ export async function getInvoice(
     ...(signal ? { signal } : {}),
   })
 }
+
+/**
+ * A link to the invoice's PDF: `GET /invoices/{id}/pdf?url=true`, which
+ * renders the PDF if needed and answers `{ presigned_url }`. The invoice record
+ * itself carries `invoice_pdf_url` only when one was set on it, so reading that
+ * left most finalized invoices without a download. V1 asks this route.
+ */
+export async function getInvoicePdfUrl(
+  serverURL: string,
+  token: string,
+  environmentId: string,
+  id: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  const body = (await request(serverURL, `/invoices/${encodeURIComponent(id)}/pdf?url=true`, {
+    method: 'GET',
+    token,
+    environmentId,
+    ...(signal ? { signal } : {}),
+  })) as { presigned_url?: unknown } | null
+  return typeof body?.presigned_url === 'string' && body.presigned_url ? body.presigned_url : null
+}

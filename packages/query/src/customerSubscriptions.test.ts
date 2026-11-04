@@ -13,4 +13,18 @@ describe('fetchCustomerSubscriptions', () => {
       expect.not.objectContaining({ externalCustomerId: expect.anything() }),
     )
   })
+
+  it('reads every page, so the tab filters and sorts the whole set', async () => {
+    const contracts = Array.from({ length: 130 }, (_, index) => ({ id: `sub_${index}` }))
+    const querySubscription = vi.fn(
+      async ({ limit, offset }: { limit: number; offset: number }) => ({
+        items: contracts.slice(offset, offset + limit),
+        pagination: { total: contracts.length },
+      }),
+    )
+    const client = { subscriptions: { querySubscription } } as never
+    const all = await fetchCustomerSubscriptions(client, 'cust_1')
+    expect(all).toHaveLength(130)
+    expect(querySubscription).toHaveBeenCalledTimes(2)
+  })
 })

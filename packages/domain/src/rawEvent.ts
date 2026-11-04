@@ -19,6 +19,29 @@ export interface RawEvent {
   properties: Record<string, unknown>
 }
 
+/**
+ * How far back the debugger looks. The server reads only the last 7 days when
+ * a request names no window, so the list always sends one.
+ */
+export type RawEventPeriod = '24h' | '7d' | '30d' | '90d' | '12m'
+
+export const RAW_EVENT_PERIODS: { id: RawEventPeriod; label: string }[] = [
+  { id: '24h', label: 'Last 24 hours' },
+  { id: '7d', label: 'Last 7 days' },
+  { id: '30d', label: 'Last 30 days' },
+  { id: '90d', label: 'Last 90 days' },
+  { id: '12m', label: 'Last 12 months' },
+]
+
+/** When a period starts, counted back from `now`. */
+export function rawEventPeriodStart(period: RawEventPeriod, now: Date = new Date()): Date {
+  const start = new Date(now)
+  if (period === '24h') start.setUTCHours(start.getUTCHours() - 24)
+  else if (period === '12m') start.setUTCFullYear(start.getUTCFullYear() - 1)
+  else start.setUTCDate(start.getUTCDate() - Number.parseInt(period, 10))
+  return start
+}
+
 export interface RawEventQuery {
   page: number
   pageSize: number
@@ -29,6 +52,8 @@ export interface RawEventQuery {
   source: string
   /** Newest first by default: a debugger is asked "what just happened". */
   sortDirection: 'asc' | 'desc'
+  /** How far back to look. */
+  period: RawEventPeriod
 }
 
 export const DEFAULT_RAW_EVENT_QUERY: RawEventQuery = {
@@ -38,4 +63,5 @@ export const DEFAULT_RAW_EVENT_QUERY: RawEventQuery = {
   customer: '',
   source: '',
   sortDirection: 'desc',
+  period: '30d',
 }

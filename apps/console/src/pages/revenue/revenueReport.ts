@@ -66,12 +66,15 @@ function utcMidnight(date: Date): Date {
   return copy
 }
 
-/** The window a range covers, ending now, and what one bar of it is. */
+/**
+ * The window a range covers, ending now, and what one bar of it is. "Last N
+ * days" is N calendar days counting today: today and the N - 1 before it.
+ */
 export function rangeWindow(range: RangeId, now: Date = new Date()): Window & { grain: Grain } {
   const end = now
   switch (range) {
     case '30d':
-      return { start: utcMidnight(new Date(now.getTime() - 30 * DAY_MS)), end, grain: 'day' }
+      return { start: utcMidnight(new Date(now.getTime() - 29 * DAY_MS)), end, grain: 'day' }
     case 'month':
       return {
         start: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
@@ -90,7 +93,7 @@ export function rangeWindow(range: RangeId, now: Date = new Date()): Window & { 
       }
     case '90d':
     default:
-      return { start: utcMidnight(new Date(now.getTime() - 90 * DAY_MS)), end, grain: 'week' }
+      return { start: utcMidnight(new Date(now.getTime() - 89 * DAY_MS)), end, grain: 'week' }
   }
 }
 
@@ -171,18 +174,20 @@ const dayLabel = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
 })
 
-/** The key and label of the bucket a day falls in. */
-function bucketOf(day: Date, grain: Grain, start: Date): { key: string; label: string } {
+/**
+ * The key and label of the bucket a day falls in. Weeks start on Monday, as
+ * the reports' own weekly buckets do, so each is labelled with the date the
+ * API gives it rather than a date counted from the window start.
+ */
+function bucketOf(day: Date, grain: Grain): { key: string; label: string } {
   if (grain === 'month') {
     const first = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), 1))
     return { key: first.toISOString().slice(0, 7), label: monthLabel.format(first) }
   }
   if (grain === 'week') {
-    const index = Math.floor(
-      (utcMidnight(day).getTime() - utcMidnight(start).getTime()) / (7 * DAY_MS),
-    )
-    const first = new Date(utcMidnight(start).getTime() + index * 7 * DAY_MS)
-    return { key: `w${String(index).padStart(3, '0')}`, label: dayLabel.format(first) }
+    const midnight = utcMidnight(day)
+    const monday = new Date(midnight.getTime() - ((midnight.getUTCDay() + 6) % 7) * DAY_MS)
+    return { key: monday.toISOString().slice(0, 10), label: dayLabel.format(monday) }
   }
   return { key: day.toISOString().slice(0, 10), label: dayLabel.format(day) }
 }
@@ -191,7 +196,7 @@ function bucketOf(day: Date, grain: Grain, start: Date): { key: string; label: s
 function emptyBuckets(window: Window, grain: Grain): Map<string, { label: string; value: number }> {
   const buckets = new Map<string, { label: string; value: number }>()
   for (let t = utcMidnight(window.start).getTime(); t < window.end.getTime(); t += DAY_MS) {
-    const { key, label } = bucketOf(new Date(t), grain, window.start)
+    const { key, label } = bucketOf(new Date(t), grain)
     if (!buckets.has(key)) buckets.set(key, { label, value: 0 })
   }
   return buckets
@@ -209,7 +214,7 @@ function bucketed(days: RevenueDayRow[], currency: string, window: Window, grain
     if (row.currency !== currency) continue
     const day = new Date(`${row.day}T00:00:00Z`)
     if (day < utcMidnight(window.start) || day >= window.end) continue
-    const { key, label } = bucketOf(day, grain, window.start)
+    const { key, label } = bucketOf(day, grain)
     const bucket = buckets.get(key) ?? { label, value: 0 }
     bucket.value += row.amount
     buckets.set(key, bucket)
@@ -257,7 +262,7 @@ export function alignToWindow(
     const early = point.at < start && reachesInto(point.at, start, grain)
     const at = early ? start : point.at
     if (at < start || at >= window.end) continue
-    const { key } = bucketOf(at, grain, window.start)
+    const { key } = bucketOf(at, grain)
     const bucket = buckets.get(key)
     if (!bucket || (early && !additive && seen.has(key))) continue
     bucket.value = additive ? bucket.value + point.value : point.value
@@ -397,6 +402,29 @@ export function customerRows(
 }
 
 /* ---- Receivables ----------------------------------------------------------- */
+
+/** The `receivables_aging` buckets that are not past due. */
+export const AGING_NOT_DUE = 'Current'
+export const AGING_NO_DUE_DATE = 'No due date'
+
+/**
+ * The aging report's buckets split three ways. An invoice without a due date
+ * cannot be overdue: the report keeps it in its own bucket, and so does this.
+ */
+export function agingTotals(rows: { keys: Record<string, string>; value: number }[]): {
+  notYetDue: number
+  overdue: number
+  noDueDate: number
+} {
+  const totals = { notYetDue: 0, overdue: 0, noDueDate: 0 }
+  for (const row of rows) {
+    const bucket = row.keys['aging_bucket']
+    if (bucket === AGING_NOT_DUE) totals.notYetDue += row.value
+    else if (bucket === AGING_NO_DUE_DATE) totals.noDueDate += row.value
+    else totals.overdue += row.value
+  }
+  return totals
+}
 
 const AGING: { id: string; label: string; tone: AgingBucket['tone']; from: number; to: number }[] =
   [
@@ -556,7 +584,7 @@ export function daysToPay(
   for (const [key, value] of emptyBuckets(window, grain))
     buckets.set(key, { label: value.label, total: 0, count: 0 })
   for (const row of settled) {
-    const { key, label } = bucketOf(row.at, grain, window.start)
+    const { key, label } = bucketOf(row.at, grain)
     const bucket = buckets.get(key) ?? { label, total: 0, count: 0 }
     bucket.total += row.days
     bucket.count += 1
@@ -604,6 +632,29 @@ export function daysToPay(
 }
 
 /* ---- Events ------------------------------------------------------------------ */
+
+/** The widest window the `events_volume` report answers (its `max_range_days`). */
+export const EVENTS_MAX_DAYS = 7
+
+/**
+ * The part of a window the events report can count: its last seven days at
+ * most, through the end of today. `limited` says the range asked for is wider.
+ */
+export function eventsWindow(window: Window): Window & { range: string; limited: boolean } {
+  const start = new Date(
+    Math.max(
+      utcMidnight(window.start).getTime(),
+      utcMidnight(window.end).getTime() - (EVENTS_MAX_DAYS - 1) * DAY_MS,
+    ),
+  )
+  const through = new Date(utcMidnight(window.end).getTime() + DAY_MS)
+  return {
+    start,
+    end: window.end,
+    range: `${start.toISOString().slice(0, 10)}..${through.toISOString().slice(0, 10)}`,
+    limited: start.getTime() > utcMidnight(window.start).getTime(),
+  }
+}
 
 const compactCount = new Intl.NumberFormat('en-US', {
   notation: 'compact',

@@ -39,6 +39,15 @@ const CONDITIONS = [AlertCondition.Below, AlertCondition.Above].map((value) => (
   label: ALERT_CONDITION_LABEL[value],
 }))
 
+/** The config less any level whose threshold was left empty. */
+function withoutBlankLevels(config: AlertSettingConfig): AlertSettingConfig {
+  const next = { ...config }
+  for (const severity of ALERT_SEVERITY_ORDER) {
+    if (next[severity] && next[severity].threshold.trim() === '') delete next[severity]
+  }
+  return next
+}
+
 /**
  * The thresholds of one alert setting.
  *
@@ -101,12 +110,15 @@ export function ChargeAlertForm({
       onCancel={onCancel}
       submitting={pending}
       onSubmit={() => {
-        // Turning alerts off saves the thresholds as they were loaded, not the
-        // disabled draft: a half-typed value no one can now edit must not block it.
-        const draft = config.alertEnabled ? config : { ...initial, alertEnabled: false }
+        // Turning alerts off keeps the thresholds on screen: they are what the
+        // API stores (it asks for them even on a disabled alert) and what
+        // turning it back on restores. Only a level left blank is dropped.
+        const draft = config.alertEnabled ? config : withoutBlankLevels(config)
         const parsed = alertSettingConfigSchema.safeParse(draft)
         if (!parsed.success) {
-          setProblem(parsed.error.issues[0]?.message ?? 'Check the thresholds')
+          const message = parsed.error.issues[0]?.message ?? 'Check the thresholds'
+          // The inputs are locked while alerts are off; say how to reach them.
+          setProblem(config.alertEnabled ? message : `${message}. Turn alerts on to change it.`)
           return
         }
         setProblem(null)

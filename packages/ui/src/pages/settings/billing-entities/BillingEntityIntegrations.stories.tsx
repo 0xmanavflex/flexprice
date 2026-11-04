@@ -56,6 +56,10 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  // The row menu leaves Base UI's focus guards (aria-hidden, tabindex 0) in the
+  // DOM while it closes; axe can run in that window. Same exemption as the
+  // other menu stories (ConfirmDialog, FormCard).
+  parameters: { a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     const payments = canvas.getByRole('region', { name: 'Payments' })

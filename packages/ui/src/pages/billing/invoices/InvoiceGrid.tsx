@@ -310,7 +310,7 @@ export function InvoiceGrid({
         onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        searchPlaceholder="Search invoices…"
+        searchPlaceholder="Search invoice numbers…"
         /*
          * No counts. The four stored statuses could each be counted with a
          * `limit: 1` search read for its `pagination.total`: but `paid` and

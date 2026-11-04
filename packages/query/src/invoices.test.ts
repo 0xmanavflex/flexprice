@@ -35,9 +35,25 @@ describe('toInvoiceFilter: domain vocabulary out, transport in', () => {
     expect(toInvoiceFilter(DEFAULT_INVOICE_QUERY)).toMatchObject({ skipLineItems: true })
   })
 
-  it('omits the status filter entirely when nothing is selected', () => {
-    // An empty array must mean "no filter", not "match nothing".
-    expect(toInvoiceFilter(DEFAULT_INVOICE_QUERY)).not.toHaveProperty('invoiceStatus')
+  it('asks for every status when nothing is selected, skipped included', () => {
+    // Leaving the field out is not "any": the search then drops SKIPPED, and
+    // the Invoice status filter condition could never find a skipped invoice.
+    expect(toInvoiceFilter(DEFAULT_INVOICE_QUERY)).toMatchObject({
+      invoiceStatus: ['DRAFT', 'FINALIZED', 'VOIDED', 'SKIPPED'],
+    })
+  })
+
+  it('searches invoice numbers, not external customer ids', () => {
+    const filter = toInvoiceFilter({ ...DEFAULT_INVOICE_QUERY, search: ' INV-202610-00030 ' })
+    expect(filter).not.toHaveProperty('externalCustomerId')
+    expect(filter['filters']).toEqual([
+      {
+        field: 'invoice_number',
+        operator: 'contains',
+        dataType: 'string',
+        value: { string: 'INV-202610-00030' },
+      },
+    ])
   })
 
   it('sends the API values for statuses the server understands', () => {
@@ -376,7 +392,27 @@ describe('toInvoice subscription', () => {
 describe('a customer-scoped invoice search', () => {
   it('scopes by internal customer id, which still resolves once the customer is archived', () => {
     const filter = toInvoiceFilter(DEFAULT_INVOICE_QUERY, { customerId: 'cust_archived' })
-    expect(filter).toMatchObject({ customerId: 'cust_archived' })
+    expect(filter).toMatchObject({
+      customerId: 'cust_archived',
+      // The customer tab lists skipped invoices too, as V1 does.
+      invoiceStatus: ['DRAFT', 'FINALIZED', 'VOIDED', 'SKIPPED'],
+    })
     expect(filter).not.toHaveProperty('externalCustomerId')
+  })
+})
+
+describe('the customer an invoice bills', () => {
+  it("names the invoice's own customer, not a different expanded one", () => {
+    // A contract invoiced to another customer expands the contract's customer.
+    const invoice = toInvoice({
+      id: 'inv_1',
+      customerId: 'cust_billing',
+      customer: { id: 'cust_child', name: 'Active Child' },
+    })
+    expect(invoice.customerName).toBe('cust_billing')
+    expect(
+      toInvoice({ id: 'inv_2', customerId: 'cust_1', customer: { id: 'cust_1', name: 'Acme' } })
+        .customerName,
+    ).toBe('Acme')
   })
 })

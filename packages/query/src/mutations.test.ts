@@ -212,6 +212,56 @@ describe('customer requests', () => {
       }),
     )
   })
+
+  it('sends the billing currency on create when one is chosen', () => {
+    const request = toCreateCustomerRequest({
+      ...emptyCustomer(),
+      externalId: 'c1',
+      name: 'Acme',
+      billingCurrency: 'usd',
+    })
+    expect(request).toMatchObject({ billingCurrency: 'usd' })
+    survives(CreateCustomerRequest$outboundSchema as never, request)
+  })
+
+  it('sends cleared fields on update as empty strings so they clear', () => {
+    const request = toUpdateCustomerRequest({
+      ...emptyCustomer(),
+      externalId: 'c1',
+      name: 'Acme',
+      addressLine1: '1 Main',
+      addressLine2: '',
+      billingCurrency: '',
+    })
+    expect(request).toMatchObject({
+      addressLine1: '1 Main',
+      addressLine2: '',
+      billingCurrency: '',
+      email: '',
+    })
+    // The API has no "no timezone": a blank one keeps the stored zone.
+    expect(request).not.toHaveProperty('timezone')
+    survives(UpdateCustomerRequest$outboundSchema as never, request)
+  })
+
+  it('leaves out fields an inline edit does not carry, so they keep their value', () => {
+    expect(toUpdateCustomerRequest({ externalId: 'c1', name: 'Acme', phone: '' })).toEqual({
+      externalId: 'c1',
+      name: 'Acme',
+      contact: '',
+    })
+  })
+
+  it('sends a changed billing currency on update', () => {
+    const request = toUpdateCustomerRequest({
+      ...emptyCustomer(),
+      externalId: 'c1',
+      name: 'Acme',
+      timezone: 'Asia/Kolkata',
+      billingCurrency: 'eur',
+    })
+    expect(request).toMatchObject({ billingCurrency: 'eur', timezone: 'Asia/Kolkata' })
+  })
 })
 
 describe('tax rate requests', () => {

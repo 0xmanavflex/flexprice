@@ -16,6 +16,7 @@ describe('parseEventSearch', () => {
         customer: 'acme',
         source: 'sdk',
         dir: 'asc',
+        period: '90d',
       }),
     ).toEqual({
       page: 2,
@@ -24,7 +25,13 @@ describe('parseEventSearch', () => {
       customer: 'acme',
       source: 'sdk',
       sortDirection: 'asc',
+      period: '90d',
     })
+  })
+
+  it('looks back 30 days unless a known window is asked for', () => {
+    expect(parseEventSearch({}).period).toBe('30d')
+    expect(parseEventSearch({ period: 'forever' }).period).toBe('30d')
   })
 
   it('defaults to newest first and only honours asc', () => {

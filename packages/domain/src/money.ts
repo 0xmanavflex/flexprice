@@ -109,6 +109,32 @@ export function formatMoney(value: Money, locale?: string): string {
   }).format(value.amount as unknown as number)
 }
 
+/**
+ * A unit price for display: "$0.0005", in the price's currency.
+ *
+ * `formatMoney` rounds to the currency's minor unit, which turns a sub-cent
+ * tier rate into "$0.00"; a rate keeps every digit it was priced with (up to
+ * eight places, as the API stores them). A blank or non-decimal amount, or a
+ * code that is not a currency, comes back as the raw text rather than throwing,
+ * since this is only ever a label.
+ */
+export function formatUnitAmount(amount: string, currency: string): string {
+  const raw = amount.trim()
+  const code = currency.trim().toUpperCase()
+  if (!DECIMAL.test(raw) || !/^[A-Z]{3}$/.test(code)) return `${raw} ${code}`.trim()
+  try {
+    return new Intl.NumberFormat(moneyFormatLocale(code), {
+      style: 'currency',
+      currencyDisplay: 'narrowSymbol',
+      currency: code,
+      maximumFractionDigits: 8,
+      // See `formatMoney`: the string formats as the exact decimal.
+    }).format(raw as unknown as number)
+  } catch {
+    return `${raw} ${code}`
+  }
+}
+
 /** Splits a decimal string into sign and digits, without parsing it. */
 function parts(amount: string): { negative: boolean; whole: string; fraction: string } {
   const negative = amount.startsWith('-')

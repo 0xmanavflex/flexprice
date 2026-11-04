@@ -32,7 +32,8 @@ import {
  * Read-only here: a credit memo is issued against an invoice, so creating one
  * belongs to the invoice, not to this list. Status is a server-side filter on
  * `GET /creditnotes`; the search box narrows the page by number, invoice or
- * customer.
+ * customer. The endpoint has no field for any of the three, so the search is
+ * labelled as a search of this page and an empty result says so.
  */
 export const CreditNoteGridProvenance = provenance({
   source: 'composition',
@@ -164,7 +165,7 @@ export function CreditNoteGrid({
       onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search by number, invoice or customer…"
+      searchPlaceholder="Search this page by number, invoice or customer…"
       filter={
         entitySpecs.length > 0
           ? statusWithFieldsFilter({
@@ -192,7 +193,14 @@ export function CreditNoteGrid({
         query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
       }
       {...(onClearFilters ? { onClearFilters } : {})}
-      filteredEmptyTitle="No credit memos match these filters"
+      isPageLocalFilter={query.search.trim().length > 0}
+      {...(query.search.trim()
+        ? {
+            filteredEmptyTitle: 'No matching credit memos on this page',
+            filteredEmptyDescription:
+              'Search narrows only the credit memos loaded on this page. Other pages may have matches; go to another page, or clear the search.',
+          }
+        : { filteredEmptyTitle: 'No credit memos match these filters' })}
       empty={{
         scene: 'billing',
         title: 'No credit memos yet',

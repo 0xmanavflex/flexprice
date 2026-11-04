@@ -126,14 +126,53 @@ export function useMembers(query: MemberQuery) {
   })
 }
 
-/** The Team screen: the people in the tenant. */
-export function useTeamMembers(query: MemberQuery) {
-  return useMembers({ ...query, type: MemberType.User })
+/** Members read per request, and the most requests one scan makes. */
+const SCAN_PAGE_SIZE = 100
+
+/**
+ * Every member of the query's type, read page by page.
+ *
+ * The Team and Service accounts tables search, sort and page in the browser,
+ * because the endpoint ignores `filters` (see the module note). That is only
+ * honest over the whole set, so the whole set is read: a tenant's people and
+ * machine identities run to dozens, not thousands. `total` is what matched.
+ */
+export async function fetchAllMembers(client: Flexprice, query: MemberQuery): Promise<MemberPage> {
+  const members: Member[] = []
+  // Until the server's total is reached, however many pages that takes: a
+  // cut-off would hide members with no sign the list is incomplete.
+  for (let page = 1; ; page += 1) {
+    const response = await call(() =>
+      client.users.queryUser(toMemberFilter({ ...query, page, pageSize: SCAN_PAGE_SIZE }) as never),
+    )
+    const items = response.items ?? []
+    members.push(...items.map((item) => toMember(item as UserWire)))
+    const total = response.pagination?.total ?? 0
+    if (items.length < SCAN_PAGE_SIZE || members.length >= total) break
+  }
+  const matching = members.filter((member) => matchesMemberQuery(member, query))
+  return { members: matching, total: matching.length }
 }
 
-/** The Service Accounts screen: the machine identities in the tenant. */
+function useAllMembers(query: MemberQuery) {
+  const client = useFlexprice()
+  const { page: _page, pageSize: _pageSize, ...unpaged } = query
+
+  return useQuery({
+    queryKey: queryKeys.members.list({ ...unpaged, roles: [...query.roles].sort(), all: true }),
+    queryFn: () => fetchAllMembers(client, query),
+    placeholderData: (previous) => previous,
+  })
+}
+
+/** The Team screen: every person in the tenant. */
+export function useTeamMembers(query: MemberQuery) {
+  return useAllMembers({ ...query, type: MemberType.User })
+}
+
+/** The Service Accounts screen: every machine identity in the tenant. */
 export function useServiceAccounts(query: MemberQuery) {
-  return useMembers({ ...query, type: MemberType.ServiceAccount })
+  return useAllMembers({ ...query, type: MemberType.ServiceAccount })
 }
 
 /**
