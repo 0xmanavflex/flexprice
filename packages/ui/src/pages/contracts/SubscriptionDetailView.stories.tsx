@@ -1767,7 +1767,9 @@ export const AddCharge: Story = {
         billingPeriod: 'MONTHLY',
       }),
       quantity: '3',
-      startDate: '',
+      // "Now" goes out as the instant now, not empty: the API reads no start
+      // as the period start and backdated the charge (QA #66).
+      startDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       proration: 'create_prorations',
       terms: NO_USAGE_TERMS,
     })
@@ -1816,7 +1818,7 @@ export const AddUsageCharge: Story = {
         amount: '0.002',
       }),
       quantity: '1',
-      startDate: '',
+      startDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       proration: 'create_prorations',
       terms: {
         bucketSize: '',

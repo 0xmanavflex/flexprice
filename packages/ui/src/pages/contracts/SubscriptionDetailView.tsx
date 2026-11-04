@@ -78,6 +78,7 @@ import {
   type SubscriptionLine,
   isInheritedContract,
   isUnstartedSubscription,
+  startingNow,
   lineLineages,
   type SubscriptionSchedule,
   type SubscriptionTax,
@@ -1857,7 +1858,8 @@ export function SubscriptionDetailView({
         {...(s.startDate && s.startDate.getTime() > Date.now()
           ? { earliestStart: s.startDate.toISOString() }
           : {})}
-        onAdd={(draft) => void run(onAddCharge?.(draft))}
+        // "Now" is sent as now: the API reads no start as the period start.
+        onAdd={(draft) => void run(onAddCharge?.(startingNow(draft)))}
         onEdit={(line, draft) => void run(onEditCharge?.(line, draft))}
         onEnd={(line, draft) => void run(onEndCharge?.(line, draft))}
       />
