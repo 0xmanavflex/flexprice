@@ -47,11 +47,6 @@ export function toTraceError(error: unknown): string {
   return 'Could not trace this event. Try again.'
 }
 
-/** Anything in the query that narrows the list. The one place that decides it. */
-function isEventQueryFiltered(query: RawEventQuery): boolean {
-  return query.search.length > 0 || query.customer.length > 0 || query.source.length > 0
-}
-
 /**
  * The wiring layer for the Events Debugger: fetch, turn an error into a
  * sentence, hand the grid plain props. The query lives in the URL; the opened
@@ -84,7 +79,10 @@ export function EventListPage({
 
   const rows = events.data?.events ?? []
   const hasData = events.data !== undefined
-  const isFiltered = isEventQueryFiltered(query)
+  // The list is always narrowed: every read covers a window of time (the
+  // server reads the last 7 days when none is sent), so an empty page means
+  // "nothing in this window", never "no event was ever received".
+  const isFiltered = true
   const clearFilters = () =>
     onQueryChange({ ...query, search: '', customer: '', source: '', page: 1 })
 

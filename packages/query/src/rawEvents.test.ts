@@ -28,11 +28,28 @@ describe('toRawEvent', () => {
 })
 
 describe('toRawEventFilter', () => {
+  const now = new Date('2026-11-04T12:00:00Z')
+
   it('pages by offset and sends newest-first by default', () => {
-    expect(toRawEventFilter({ ...DEFAULT_RAW_EVENT_QUERY, page: 3 })).toEqual({
+    expect(toRawEventFilter({ ...DEFAULT_RAW_EVENT_QUERY, page: 3 }, now)).toEqual({
       pageSize: 25,
       offset: 50,
       order: 'desc',
+      startTime: new Date('2026-10-05T12:00:00Z'),
+      endTime: now,
+    })
+  })
+
+  it('always sends a window: without one the server reads only the last 7 days', () => {
+    expect(toRawEventFilter({ ...DEFAULT_RAW_EVENT_QUERY, period: '90d' }, now)).toMatchObject({
+      startTime: new Date('2026-08-06T12:00:00Z'),
+      endTime: now,
+    })
+    expect(toRawEventFilter({ ...DEFAULT_RAW_EVENT_QUERY, period: '24h' }, now)).toMatchObject({
+      startTime: new Date('2026-11-03T12:00:00Z'),
+    })
+    expect(toRawEventFilter({ ...DEFAULT_RAW_EVENT_QUERY, period: '12m' }, now)).toMatchObject({
+      startTime: new Date('2025-11-04T12:00:00Z'),
     })
   })
 

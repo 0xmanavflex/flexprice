@@ -489,8 +489,8 @@ export {
 } from './taxRate'
 export type { TaxRate, TaxRateQuery, CreateTaxRate, EditTaxRate } from './taxRate'
 
-export { DEFAULT_RAW_EVENT_QUERY } from './rawEvent'
-export type { RawEvent, RawEventQuery } from './rawEvent'
+export { DEFAULT_RAW_EVENT_QUERY, RAW_EVENT_PERIODS, rawEventPeriodStart } from './rawEvent'
+export type { RawEvent, RawEventPeriod, RawEventQuery } from './rawEvent'
 
 /**
  * Settings: who is in the organisation, what they may do, and what it pays.
