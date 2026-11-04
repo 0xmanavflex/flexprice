@@ -1,4 +1,6 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from './fixtures'
+import { ShellPage } from './pages/shell'
 
 /**
  * A shared link to a record in another environment.
@@ -55,4 +57,61 @@ test('opens a shared invoice from another environment, and switches there', asyn
 test('a record no environment has is still "not found"', async ({ page }) => {
   await page.goto('/invoices/inv_01DOESNOTEXISTANYWHERE00000')
   await expect(page.getByText('Invoice not found')).toBeVisible()
+})
+
+/** The environment a page's address names (`?env=`), once it has one. */
+async function environmentInUrl(page: Page): Promise<string> {
+  await expect.poll(() => new URL(page.url()).searchParams.get('env') ?? '').not.toBe('')
+  return new URL(page.url()).searchParams.get('env') ?? ''
+}
+
+test('every page names its environment in the address', async ({ page }) => {
+  await page.goto('/customers')
+  const shell = new ShellPage(page)
+  await expect(shell.environment).toBeVisible({ timeout: 20_000 })
+  const current = await environmentInUrl(page)
+
+  // In-app navigation keeps it.
+  await page.getByRole('button', { name: 'Contracts' }).first().click()
+  await expect(page).toHaveURL(/\/contracts/)
+  expect(await environmentInUrl(page)).toBe(current)
+})
+
+test('a shared link opens in the environment it names', async ({ page }) => {
+  await page.goto('/customers')
+  const shell = new ShellPage(page)
+  await expect(shell.environment).toBeVisible({ timeout: 20_000 })
+  const home = await environmentInUrl(page)
+  const homeName = await shell.currentEnvironment()
+
+  // Learn another environment's id and name from the switcher, not a fixture.
+  await shell.environment.click()
+  const other = page
+    .getByRole('menuitem')
+    .filter({ hasNot: page.locator('[aria-current]') })
+    .first()
+  const otherName = ((await other.textContent()) ?? '').trim()
+  await other.click()
+  await expect.poll(() => environmentInUrl(page)).not.toBe(home)
+  const shared = await environmentInUrl(page)
+  await shell.switchEnvironment(homeName)
+  await expect.poll(() => environmentInUrl(page)).toBe(home)
+
+  // A link copied in that other environment opens there.
+  await page.goto(`/contracts?env=${shared}`)
+  await expect(page.getByText(`Switched to ${otherName}`)).toBeVisible({ timeout: 20_000 })
+  await expect(page).toHaveURL(/\/contracts/)
+  expect(await environmentInUrl(page)).toBe(shared)
+})
+
+test('a link to an environment you cannot reach opens in your own', async ({ page }) => {
+  await page.goto('/customers')
+  const shell = new ShellPage(page)
+  await expect(shell.environment).toBeVisible({ timeout: 20_000 })
+  const own = await environmentInUrl(page)
+
+  await page.goto('/customers?env=env_NOTONEOFYOURS')
+  await expect(shell.environment).toBeVisible({ timeout: 20_000 })
+  await expect.poll(() => environmentInUrl(page)).toBe(own)
+  await expect(page.getByText(/^Switched to/)).toHaveCount(0)
 })
