@@ -755,10 +755,10 @@ export async function fetchSubscriptions(
   const term = query.search.trim()
   let request: Record<string, unknown> = toSubscriptionFilter(query)
   if (term) {
-    // Either lookup can fail without taking the other down: a plan search
-    // that errors still lets matching customers find their contracts. Only
-    // when both fail is the search an error.
-    const [customerMatch, planMatch] = await Promise.allSettled([
+    // Both lookups must succeed. A failed one leaves its matches unknown, not
+    // empty: treating it as empty would show an incomplete list, or none at
+    // all, as if it were the whole answer. So any failure fails the search.
+    const [customerIds, planIds] = await Promise.all([
       allMatchingIds((offset) =>
         call(
           (options) =>
@@ -780,10 +780,6 @@ export async function fetchSubscriptions(
         ),
       ),
     ])
-    if (customerMatch.status === 'rejected' && planMatch.status === 'rejected')
-      throw customerMatch.reason
-    const customerIds = customerMatch.status === 'fulfilled' ? customerMatch.value : []
-    const planIds = planMatch.status === 'fulfilled' ? planMatch.value : []
     if (customerIds.length === 0 && planIds.length === 0) return { subscriptions: [], total: 0 }
     const byPlan: SubscriptionQuery = {
       ...query,

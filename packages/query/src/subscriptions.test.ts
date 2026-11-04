@@ -225,14 +225,15 @@ describe('the contract search', () => {
     ])
   })
 
-  it('still finds customer matches when the plan lookup fails', async () => {
+  it('fails the search when a name lookup fails, rather than showing a partial list', async () => {
     const { client, querySubscription } = fakeClient([{ id: 'cus_1' }])
     ;(client.plans as unknown as { queryPlan: unknown }).queryPlan = vi.fn(async () => {
       throw new Error('plans down')
     })
-    const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'QA' })
-    expect(querySubscription.mock.calls[0]?.[0]).toMatchObject({ customerIds: ['cus_1'] })
-    expect(page.subscriptions.map((row) => row.id)).toEqual(['sub_1'])
+    await expect(
+      fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'QA' }),
+    ).rejects.toThrow('plans down')
+    expect(querySubscription).not.toHaveBeenCalled()
   })
 
   it('returns an empty page when nothing matches, without listing contracts', async () => {
