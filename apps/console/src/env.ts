@@ -555,6 +555,14 @@ export const env = {
   googleSheetsWebAppUrl: useMocks
     ? null
     : (clean(import.meta.env.VITE_GOOGLE_SHEETS_WEB_APP_URL) ?? null),
+  /**
+   * `VITE_SLACK_DEMO_VIDEO_URL`: the demo video for Flexprice for Slack (a
+   * Loom link), shown as a "What's new" card. `null` when unset or not an
+   * http(s) address, and then the card is left out.
+   */
+  slackDemoVideoUrl: ((value) => (value && httpUrl(value) ? value : null))(
+    clean(import.meta.env.VITE_SLACK_DEMO_VIDEO_URL),
+  ),
   /** A production build: config warnings stay quiet there, as in V1. */
   isProd: import.meta.env.PROD,
   /**
