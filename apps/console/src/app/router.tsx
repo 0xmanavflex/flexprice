@@ -221,7 +221,16 @@ const DataExportDetailPage = lazy(() =>
   })),
 )
 import { parseDataExportSearch } from './dataExportSearch'
-import { DEFAULT_DATA_EXPORT_QUERY, type DataExportQuery } from '@fp/domain'
+import { parseEventImportSearch } from './eventImportSearch'
+const EventImportsPage = lazy(() =>
+  import('@/pages/imports/EventImportsPage').then((m) => ({ default: m.EventImportsPage })),
+)
+import {
+  DEFAULT_DATA_EXPORT_QUERY,
+  DEFAULT_EVENT_IMPORT_QUERY,
+  type DataExportQuery,
+  type EventImportQuery,
+} from '@fp/domain'
 const UsageSyncListPage = lazy(() =>
   import('@/pages/usage-syncs/UsageSyncListPage').then((m) => ({ default: m.UsageSyncListPage })),
 )
@@ -2176,6 +2185,28 @@ function ExportsRouteComponent() {
   )
 }
 
+/**
+ * Imports: usage events from a CSV file (V1's Bulk imports, `/customer-management/import-export`).
+ * The open import is a search param, so it is a link.
+ */
+const importsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/imports',
+  validateSearch: (search: Record<string, unknown>): EventImportQuery =>
+    parseEventImportSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_EVENT_IMPORT_QUERY)] },
+  component: function ImportsRouteComponent() {
+    const query = useSearch({ from: importsRoute.id })
+    const navigate = useNavigate()
+    return (
+      <EventImportsPage
+        query={query}
+        onQueryChange={(next) => void navigate({ to: '/imports', search: next, replace: true })}
+      />
+    )
+  },
+})
+
 /** V1's S3 connections page (`/tools/exports/s3`). */
 const s3ExportsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -2568,6 +2599,7 @@ function EventsRouteComponent() {
       onOpenFeature={(featureId) =>
         void navigate({ to: '/features/$featureId', params: { featureId } })
       }
+      onOpenImports={() => void navigate({ to: '/imports', search: {} as never })}
     />
   )
 }
@@ -2960,6 +2992,7 @@ export const routeTree = rootRoute.addChildren([
     creditNoteDetailRoute,
     workflowsRoute,
     exportsRoute,
+    importsRoute,
     s3ExportsRoute,
     connectionExportsRoute,
     dataExportRoute,

@@ -18,6 +18,7 @@ import {
   resolveDataState,
 } from '@fp/ui/compositions'
 import { toListFailure } from '../shared/listFailure'
+import { CsvBoxImportButton } from '../imports/CsvBoxImportButton'
 
 export interface EventListPageProps {
   query: RawEventQuery
@@ -25,6 +26,8 @@ export interface EventListPageProps {
   /** Opens a contract the opened event was matched to. */
   onOpenSubscription?: ((subscriptionId: string) => void) | undefined
   onOpenFeature?: ((featureId: string) => void) | undefined
+  /** After Import CSV starts an import: where its progress is shown. */
+  onOpenImports?: (() => void) | undefined
 }
 
 /**
@@ -62,6 +65,7 @@ export function EventListPage({
   onQueryChange,
   onOpenSubscription,
   onOpenFeature,
+  onOpenImports,
 }: EventListPageProps) {
   const events = useRawEvents(query)
   const [selected, setSelected] = useState<RawEvent | null>(null)
@@ -136,6 +140,12 @@ export function EventListPage({
           onClearFilters={clearFilters}
           onReload={() => void events.refetch()}
           isReloading={events.isFetching}
+          importAction={
+            <CsvBoxImportButton
+              variant="outline"
+              {...(onOpenImports ? { onStarted: onOpenImports } : {})}
+            />
+          }
         />
       </ListState>
       <EventDetailSheet

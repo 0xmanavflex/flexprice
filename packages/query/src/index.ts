@@ -632,6 +632,15 @@ export {
 } from './dataExports'
 export type { DataExportPage, DataExportWire, ExportRunWire, S3ConnectionWire } from './dataExports'
 export {
+  toCreateEventImportRequest,
+  toEventImport,
+  toEventImportFilter,
+  useCreateEventImport,
+  useEventImport,
+  useEventImports,
+} from './eventImports'
+export type { EventImportPage, EventImportUpload, EventImportWire } from './eventImports'
+export {
   useConnections,
   fetchIntegrations,
   toIntegrationConnection,

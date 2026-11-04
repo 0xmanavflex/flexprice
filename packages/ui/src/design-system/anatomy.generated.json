@@ -945,6 +945,7 @@
         "CustomerGrid",
         "DataExportGrid",
         "EventGrid",
+        "EventImportGrid",
         "FeatureGrid",
         "GroupGrid",
         "PlanGrid",
@@ -1943,6 +1944,7 @@
         "Dot",
         "EnvironmentSwitcher",
         "EventGrid",
+        "EventImportGrid",
         "FeatureDetailView",
         "FeatureGrid",
         "GroupGrid",
@@ -2806,6 +2808,7 @@
         "ConnectionExports",
         "DataExportDetail",
         "EventDetailSheet",
+        "EventImportSheet",
         "ExportRunList",
         "ExportsOverview",
         "S3ConnectionList",
@@ -3338,6 +3341,7 @@
         "DataExportGrid",
         "DetailTable",
         "EventGrid",
+        "EventImportGrid",
         "ExportRunList",
         "ExportsOverview",
         "FeatureGrid",
@@ -3475,6 +3479,42 @@
       "usedBy": [],
       "story": "./src/pages/developers/events/EventGrid.stories.tsx"
     },
+    "EventImportGrid": {
+      "file": "src/pages/developers/imports/EventImportGrid.tsx",
+      "layer": "surface",
+      "composes": [
+        "BookOpenIcon",
+        "CopyIcon",
+        "EntityList",
+        "EyeIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/imports/EventImportGrid.stories.tsx"
+    },
+    "EventImportSheet": {
+      "file": "src/pages/developers/imports/EventImportSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailList",
+        "Pill",
+        "Properties",
+        "Sheet"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/imports/EventImportSheet.stories.tsx"
+    },
+    "EventImportsOverview": {
+      "file": "src/pages/developers/imports/EventImportsOverview.tsx",
+      "layer": "surface",
+      "composes": [
+        "PageBody",
+        "Pill",
+        "Section",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/imports/EventImportsOverview.stories.tsx"
+    },
     "EventTrace": {
       "file": "src/pages/developers/events/EventTrace.tsx",
       "layer": "surface",
@@ -3603,6 +3643,7 @@
         "CustomerDetail",
         "DataExportDetail",
         "DataExportGrid",
+        "EventImportGrid",
         "ExportRunList",
         "ExportsOverview",
         "PortalInvoices",
@@ -5800,6 +5841,7 @@
       "usedBy": [
         "ConnectionExports",
         "DataExportDetail",
+        "EventImportsOverview",
         "ExportRunList",
         "ExportsOverview",
         "FormPage",
@@ -6111,6 +6153,8 @@
         "CustomerDetail",
         "CustomerWalletView",
         "DataExportDetail",
+        "EventImportSheet",
+        "EventImportsOverview",
         "EventTypeName",
         "ExportRunList",
         "ExportsOverview",
@@ -6714,6 +6758,7 @@
         "ActivityEventSheet",
         "CustomerActivityView",
         "CustomerWalletView",
+        "EventImportSheet",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -7217,6 +7262,7 @@
         "CustomerUsageSummary",
         "DataExportDetail",
         "EntitlementTable",
+        "EventImportsOverview",
         "ExportRunList",
         "ExportsOverview",
         "FeatureDetailView",
@@ -7414,6 +7460,7 @@
         "CustomerActivityView",
         "CustomerEventsGrid",
         "EventDetailSheet",
+        "EventImportSheet",
         "HostedInvoiceDetailsSheet",
         "ManageConnectionSheet",
         "PortalInvoiceSheet",
@@ -7634,6 +7681,7 @@
         "ContractQuantityDialog",
         "CustomerDetail",
         "DataExportDetail",
+        "EventImportsOverview",
         "ExportRunList",
         "ExportsOverview",
         "PlanAiSetupView",
@@ -10029,6 +10077,28 @@
         "DataExportDialog"
       ]
     },
+    "./src/pages/developers/imports/EventImportGrid.stories.tsx": {
+      "title": "App/Developers/Imports/Import table",
+      "component": "EventImportGrid",
+      "uses": [
+        "EventImportGrid"
+      ]
+    },
+    "./src/pages/developers/imports/EventImportSheet.stories.tsx": {
+      "title": "App/Developers/Imports/Import detail sheet",
+      "component": "EventImportSheet",
+      "uses": [
+        "EventImportSheet"
+      ]
+    },
+    "./src/pages/developers/imports/EventImportsOverview.stories.tsx": {
+      "title": "App/Developers/Imports/Imports",
+      "component": "EventImportsOverview",
+      "uses": [
+        "EventImportGrid",
+        "EventImportsOverview"
+      ]
+    },
     "./src/pages/developers/usage-syncs/UsageSyncDetailSheet.stories.tsx": {
       "title": "App/Developers/Usage sync/Usage sync detail sheet",
       "component": "UsageSyncDetailSheet",
@@ -11283,6 +11353,17 @@
       "route": "/",
       "uses": [
         "DashboardHome"
+      ]
+    },
+    "EventImportsPage": {
+      "file": "apps/console/src/pages/imports/EventImportsPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "EventImportGrid",
+        "EventImportSheet",
+        "EventImportsOverview",
+        "ListState"
       ]
     },
     "IntegrationListPage": {

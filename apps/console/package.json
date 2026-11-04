@@ -18,6 +18,7 @@
     "test:visual:update": "playwright test -c playwright.visual.config.ts --update-snapshots"
   },
   "dependencies": {
+    "@csvbox/react": "1.1.14",
     "@fp/domain": "workspace:*",
     "@fp/query": "workspace:*",
     "@fp/ui": "workspace:*",

@@ -762,6 +762,21 @@ export type {
   S3Connection,
   S3ConnectionErrors,
 } from './dataExport'
+export {
+  DEFAULT_EVENT_IMPORT_QUERY,
+  EVENT_IMPORT_COLUMNS,
+  EVENT_IMPORT_STATUS,
+  EVENT_IMPORT_STATUS_LABEL,
+  eventImportErrors,
+  eventImportTemplateCsv,
+  isEventImportActive,
+} from './eventImport'
+export type {
+  EventImport,
+  EventImportColumn,
+  EventImportQuery,
+  EventImportStatus,
+} from './eventImport'
 export { CARD_SETUP_PROVIDERS, INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
 export * from './connectionId'

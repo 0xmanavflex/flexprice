@@ -211,6 +211,7 @@ describe('every destination resolves', () => {
     '/events',
     '/workflows',
     '/exports',
+    '/imports',
     '/pricing-widget',
     '/integrations',
     '/usage-syncs',

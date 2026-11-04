@@ -86,6 +86,7 @@ export const NAV: NavEntry[] = [
       { id: 'webhooks', label: 'Webhooks', path: '/webhooks' },
       { id: 'usage-syncs', label: 'Usage sync', path: '/usage-syncs' },
       { id: 'exports', label: 'Exports', path: '/exports' },
+      { id: 'imports', label: 'Imports', path: '/imports' },
       { id: 'workflows', label: 'Workflows', path: '/workflows' },
     ],
   },

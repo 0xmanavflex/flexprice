@@ -242,6 +242,8 @@ const preview: Preview = {
               ['Usage sync table', 'Usage sync detail sheet'],
               'Exports',
               ['Export table'],
+              'Imports',
+              ['Imports', 'Import table', 'Import detail sheet'],
               'Workflows',
               ['Workflow table'],
             ],
