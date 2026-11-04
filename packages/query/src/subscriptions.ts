@@ -96,7 +96,11 @@ import {
   toChargeRequest,
   toTier,
 } from './prices'
-import { toCreateTaxAssociationRequest } from './taxAssociations'
+import {
+  toCreateTaxAssociationRequest,
+  useRemoveTaxAssociationRequest,
+  withTaxRates,
+} from './taxAssociations'
 import { toOverrideLineItem } from './priceOverrides'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 import { sortWithTieBreak } from './listSort'
@@ -2287,7 +2291,10 @@ export function useSubscriptionTaxes(id: string) {
           ),
         signal,
       )
-      return ((response.items ?? []) as SubscriptionTaxWire[]).map(toSubscriptionTax)
+      const wires = await withTaxRates((response.items ?? []) as SubscriptionTaxWire[], (rateId) =>
+        call((options) => client.taxRates.getTaxRate(rateId, options), signal),
+      )
+      return wires.map(toSubscriptionTax)
     },
     enabled: id.length > 0,
   })
@@ -2530,12 +2537,11 @@ export function useRemoveSubscriptionAddon() {
 
 /** Stop applying a tax rate to a contract: `DELETE /taxes/associations/{id}`. */
 export function useRemoveSubscriptionTax() {
-  const client = useFlexprice()
+  const remove = useRemoveTaxAssociationRequest()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (associationId: string) =>
-      call(() => client.taxAssociations.deleteTaxAssociation(associationId)),
+    mutationFn: remove,
     onSuccess: () => invalidateContract(queryClient),
   })
 }
