@@ -10,6 +10,7 @@ import {
   BillingPeriod,
   type CreateCharge,
   INVOICE_CADENCE_LABEL,
+  OPEN_START_DATE,
   InvoiceCadence,
   PRICE_TYPE_LABEL,
   PRICE_WINDOW_SIZE_LABEL,
@@ -29,6 +30,7 @@ import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
 import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import { Field } from '@ui/compositions/forms/Field'
+import { FormDisclosure } from '@ui/compositions/forms/FormDisclosure'
 import { FormActions } from '@ui/compositions/forms/FormActions'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
@@ -187,6 +189,14 @@ const USAGE_PERIODS = FIXED_PERIODS.filter((p) => p !== BillingPeriod.OneTime)
 const periodOptions = (periods: readonly BillingPeriod[]) =>
   periods.map((period) => ({ value: period, label: BILLING_PERIOD_LABEL[period] }))
 
+/**
+ * A catalogue price with no start date starts on {@link OPEN_START_DATE}, not
+ * "now": set as the default and again on submit if the field was cleared.
+ */
+function withOpenStart(charge: CreateCharge, applies: boolean): CreateCharge {
+  return applies && !charge.startDate ? { ...charge, startDate: OPEN_START_DATE } : charge
+}
+
 const messageOf = (errors: unknown, key: string): string | undefined =>
   (errors as Record<string, { message?: string } | undefined>)[key]?.message
 
@@ -213,7 +223,10 @@ export function ChargeForm({
   const isEdit = mode === 'edit'
   const form = useCalmForm<CreateCharge>({
     resolver: standardSchemaResolver(createChargeSchema) as Resolver<CreateCharge>,
-    defaultValues: defaultValue ?? emptyCharge(PriceType.Fixed, BillingModel.FlatFee),
+    defaultValues: withOpenStart(
+      defaultValue ?? emptyCharge(PriceType.Fixed, BillingModel.FlatFee),
+      !isEdit && Boolean(priceOptions),
+    ),
   })
 
   const type = form.watch('type')
@@ -321,7 +334,9 @@ export function ChargeForm({
 
   return (
     <form
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
+      onSubmit={form.handleSubmit((values) =>
+        onSubmit(withOpenStart(values, !isEdit && Boolean(priceOptions))),
+      )}
       noValidate
       className="flex flex-col gap-5"
     >
@@ -356,60 +371,253 @@ export function ChargeForm({
         />
       )}
 
-      {/* Feature first (usage), then the billing model, then the price's terms; amount and start date last. */}
-      {isUsage ? (
-        <div className="max-w-md">
-          <Field
-            label="Metered feature"
-            required
-            error={messageOf(errors, 'meterId')}
-            hint={isEdit ? 'Fixed once created.' : 'The feature whose usage this charge bills.'}
-          >
-            {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) =>
-              isEdit ? (
-                lockedInput(
-                  id,
-                  meters.find(
-                    (meter) => meter.id === (form.getValues() as { meterId?: string }).meterId,
-                  )?.name ?? '',
-                )
-              ) : (
-                <Controller
-                  control={form.control}
-                  name={'meterId' as never}
-                  render={({ field }) => (
-                    <OptionCombobox
-                      id={id}
-                      value={(field.value as string) || ''}
-                      onValueChange={field.onChange}
-                      options={meters.map((meter) => ({
-                        value: meter.id,
-                        label: meter.name,
-                        trailing: <FeatureTypeGlyph type="metered" />,
-                      }))}
-                      searchable
-                      {...(onCreateFeature
-                        ? {
-                            createAction: {
-                              label: 'Create feature',
-                              icon: <PlusIcon aria-hidden />,
-                              onSelect: onCreateFeature,
-                            },
+      {/*
+       * The few fields every charge needs, in the order they are decided: what
+       * it bills and is called, how often and in what, then the model and the
+       * amount. Everything optional waits under Advanced.
+       */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {isUsage ? (
+          <>
+            <Field
+              label="Metered feature"
+              required
+              error={messageOf(errors, 'meterId')}
+              hint={isEdit ? 'Fixed once created.' : 'The feature whose usage this charge bills.'}
+            >
+              {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) =>
+                isEdit ? (
+                  lockedInput(
+                    id,
+                    meters.find(
+                      (meter) => meter.id === (form.getValues() as { meterId?: string }).meterId,
+                    )?.name ?? '',
+                  )
+                ) : (
+                  <Controller
+                    control={form.control}
+                    name={'meterId' as never}
+                    render={({ field }) => (
+                      <OptionCombobox
+                        id={id}
+                        value={(field.value as string) || ''}
+                        onValueChange={(next) => {
+                          // The feature names the charge, unless the name is one of its own:
+                          // empty, or still the previous feature's name, it follows the pick.
+                          const previous = meters.find((option) => option.id === field.value)
+                          const meter = meters.find((option) => option.id === next)
+                          const name = (form.getValues('displayName') ?? '').trim()
+                          field.onChange(next)
+                          if (meter && (!name || name === previous?.name)) {
+                            form.setValue('displayName', meter.name, { shouldDirty: true })
                           }
-                        : {})}
-                      placeholder="Search metered features…"
-                      emptyText="No metered features match."
-                      disabled={isSubmitting || isEdit}
-                      aria-describedby={describedBy}
-                      aria-invalid={invalid}
-                    />
-                  )}
-                />
-              )
-            }
-          </Field>
-        </div>
-      ) : null}
+                        }}
+                        options={meters.map((meter) => ({
+                          value: meter.id,
+                          label: meter.name,
+                          trailing: <FeatureTypeGlyph type="metered" />,
+                        }))}
+                        searchable
+                        {...(onCreateFeature
+                          ? {
+                              createAction: {
+                                label: 'Create feature',
+                                icon: <PlusIcon aria-hidden />,
+                                onSelect: onCreateFeature,
+                              },
+                            }
+                          : {})}
+                        placeholder="Search metered features…"
+                        emptyText="No metered features match."
+                        disabled={isSubmitting || isEdit}
+                        aria-describedby={describedBy}
+                        aria-invalid={invalid}
+                      />
+                    )}
+                  />
+                )
+              }
+            </Field>
+            <Field label="Display name" hint="Optional. What this charge is called on an invoice.">
+              {({ id, ...field }) =>
+                lockDisplayName ? (
+                  lockedInput(id, form.getValues('displayName') ?? '')
+                ) : (
+                  <Input
+                    {...NOT_A_LOGIN}
+                    id={id}
+                    disabled={isSubmitting}
+                    placeholder={isUsage ? 'e.g. API calls' : 'e.g. Platform base'}
+                    {...field}
+                    {...form.register('displayName' as never)}
+                  />
+                )
+              }
+            </Field>
+
+            <Field label="Billing period" hint="How often the charge is billed." required>
+              {({ id }) =>
+                isEdit ? (
+                  lockedInput(id, BILLING_PERIOD_LABEL[billingPeriod])
+                ) : (
+                  <Controller
+                    control={form.control}
+                    name="billingPeriod"
+                    render={({ field }) => (
+                      <OptionSelect
+                        id={id}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={periodOptions(periods)}
+                        disabled={isSubmitting}
+                      />
+                    )}
+                  />
+                )
+              }
+            </Field>
+
+            <Field
+              label="Currency"
+              hint={
+                priceUnit
+                  ? 'Follows the price unit.'
+                  : lockCurrency
+                    ? 'Set by the contract.'
+                    : 'The currency the charge is billed in.'
+              }
+              required
+            >
+              {({ id, 'aria-describedby': describedBy }) =>
+                isEdit || priceUnit || lockCurrency ? (
+                  lockedInput(id, currency.toUpperCase())
+                ) : (
+                  <Controller
+                    control={form.control}
+                    name="currency"
+                    render={({ field }) => (
+                      <OptionSelect
+                        id={id}
+                        value={field.value.toUpperCase()}
+                        onValueChange={field.onChange}
+                        options={currencies.map((code) => ({ value: code, label: code }))}
+                        disabled={isSubmitting}
+                        aria-describedby={describedBy}
+                      />
+                    )}
+                  />
+                )
+              }
+            </Field>
+          </>
+        ) : (
+          <>
+            <Field label="Display name" hint="Optional. What this charge is called on an invoice.">
+              {({ id, ...field }) =>
+                lockDisplayName ? (
+                  lockedInput(id, form.getValues('displayName') ?? '')
+                ) : (
+                  <Input
+                    {...NOT_A_LOGIN}
+                    id={id}
+                    disabled={isSubmitting}
+                    placeholder={isUsage ? 'e.g. API calls' : 'e.g. Platform base'}
+                    {...field}
+                    {...form.register('displayName' as never)}
+                  />
+                )
+              }
+            </Field>
+
+            <Field
+              label="Currency"
+              hint={
+                priceUnit
+                  ? 'Follows the price unit.'
+                  : lockCurrency
+                    ? 'Set by the contract.'
+                    : 'The currency the charge is billed in.'
+              }
+              required
+            >
+              {({ id, 'aria-describedby': describedBy }) =>
+                isEdit || priceUnit || lockCurrency ? (
+                  lockedInput(id, currency.toUpperCase())
+                ) : (
+                  <Controller
+                    control={form.control}
+                    name="currency"
+                    render={({ field }) => (
+                      <OptionSelect
+                        id={id}
+                        value={field.value.toUpperCase()}
+                        onValueChange={field.onChange}
+                        options={currencies.map((code) => ({ value: code, label: code }))}
+                        disabled={isSubmitting}
+                        aria-describedby={describedBy}
+                      />
+                    )}
+                  />
+                )
+              }
+            </Field>
+
+            <Field label="Billing period" hint="How often the charge is billed." required>
+              {({ id }) =>
+                isEdit ? (
+                  lockedInput(id, BILLING_PERIOD_LABEL[billingPeriod])
+                ) : (
+                  <Controller
+                    control={form.control}
+                    name="billingPeriod"
+                    render={({ field }) => (
+                      <OptionSelect
+                        id={id}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={periodOptions(periods)}
+                        disabled={isSubmitting}
+                      />
+                    )}
+                  />
+                )
+              }
+            </Field>
+
+            <Field
+              label="Invoice timing"
+              hint="Whether the charge is invoiced at the start or the end of each period."
+              required
+            >
+              {({ id }) =>
+                isEdit ? (
+                  lockedInput(
+                    id,
+                    INVOICE_CADENCE_LABEL[form.getValues('invoiceCadence') as InvoiceCadence],
+                  )
+                ) : (
+                  <Controller
+                    control={form.control}
+                    name="invoiceCadence"
+                    render={({ field }) => (
+                      <OptionSelect
+                        id={id}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        options={[InvoiceCadence.Advance, InvoiceCadence.Arrear].map((cadence) => ({
+                          value: cadence,
+                          label: INVOICE_CADENCE_LABEL[cadence],
+                        }))}
+                        disabled={isSubmitting}
+                      />
+                    )}
+                  />
+                )
+              }
+            </Field>
+          </>
+        )}
+      </div>
 
       <fieldset disabled={isSubmitting} className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium">Billing model</legend>
@@ -426,283 +634,6 @@ export function ChargeForm({
           }))}
         />
       </fieldset>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Display name" hint="Optional. What this charge is called on an invoice.">
-          {({ id, ...field }) =>
-            lockDisplayName ? (
-              lockedInput(id, form.getValues('displayName') ?? '')
-            ) : (
-              <Input
-                {...NOT_A_LOGIN}
-                id={id}
-                disabled={isSubmitting}
-                placeholder={isUsage ? 'e.g. API calls' : 'e.g. Platform base'}
-                {...field}
-                {...form.register('displayName' as never)}
-              />
-            )
-          }
-        </Field>
-
-        <Field
-          label="Currency"
-          hint={
-            priceUnit
-              ? 'Follows the price unit.'
-              : lockCurrency
-                ? 'Set by the contract.'
-                : 'The currency the charge is billed in.'
-          }
-          required
-        >
-          {({ id, 'aria-describedby': describedBy }) =>
-            isEdit || priceUnit || lockCurrency ? (
-              lockedInput(id, currency.toUpperCase())
-            ) : (
-              <Controller
-                control={form.control}
-                name="currency"
-                render={({ field }) => (
-                  <OptionSelect
-                    id={id}
-                    value={field.value.toUpperCase()}
-                    onValueChange={field.onChange}
-                    options={currencies.map((code) => ({ value: code, label: code }))}
-                    disabled={isSubmitting}
-                    aria-describedby={describedBy}
-                  />
-                )}
-              />
-            )
-          }
-        </Field>
-
-        <Field label="Billing period" hint="How often the charge is billed." required>
-          {({ id }) =>
-            isEdit ? (
-              lockedInput(id, BILLING_PERIOD_LABEL[billingPeriod])
-            ) : (
-              <Controller
-                control={form.control}
-                name="billingPeriod"
-                render={({ field }) => (
-                  <OptionSelect
-                    id={id}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    options={periodOptions(periods)}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            )
-          }
-        </Field>
-
-        {/* Beside Billing period in every case: a usage charge is always billed in arrears. */}
-        <Field
-          label="Invoice timing"
-          hint={
-            isUsage
-              ? 'Usage is billed at the end of each period, for what was used.'
-              : 'Whether the charge is invoiced at the start or the end of each period.'
-          }
-          required
-        >
-          {({ id }) =>
-            isUsage ? (
-              lockedInput(id, INVOICE_CADENCE_LABEL[InvoiceCadence.Arrear])
-            ) : isEdit ? (
-              lockedInput(
-                id,
-                INVOICE_CADENCE_LABEL[form.getValues('invoiceCadence') as InvoiceCadence],
-              )
-            ) : (
-              <Controller
-                control={form.control}
-                name="invoiceCadence"
-                render={({ field }) => (
-                  <OptionSelect
-                    id={id}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    options={[InvoiceCadence.Advance, InvoiceCadence.Arrear].map((cadence) => ({
-                      value: cadence,
-                      label: INVOICE_CADENCE_LABEL[cadence],
-                    }))}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            )
-          }
-        </Field>
-
-        {priceUnits.length > 0 || priceUnit ? (
-          <Field
-            label="Price unit"
-            hint={
-              isEdit
-                ? 'Fixed once created.'
-                : 'Optional. Price in credits, tokens or another custom unit instead of a currency.'
-            }
-          >
-            {({ id }) =>
-              isEdit ? (
-                lockedInput(id, priceUnit || 'None (currency)')
-              ) : (
-                <OptionSelect
-                  id={id}
-                  value={priceUnit || FIAT}
-                  onValueChange={(code) => {
-                    const unit = priceUnits.find((option) => option.code === code)
-                    const current = form.getValues()
-                    form.reset({
-                      ...current,
-                      // The unit's base currency exactly as stored ("usd"): the API
-                      // compares the two case-sensitively and refuses "USD" with a
-                      // 400. The locked Currency field upper-cases it for display.
-                      ...(unit
-                        ? { priceUnit: unit.code, currency: unit.baseCurrency }
-                        : { priceUnit: undefined }),
-                    } as CreateCharge)
-                  }}
-                  options={[
-                    { value: FIAT, label: 'None (currency)' },
-                    ...priceUnits.map((unit) => ({
-                      value: unit.code,
-                      label: `${unit.name} (${unit.code})`,
-                    })),
-                  ]}
-                  disabled={isSubmitting}
-                />
-              )
-            }
-          </Field>
-        ) : null}
-
-        {!isUsage && !isEdit && billingPeriod !== BillingPeriod.OneTime ? (
-          <Field
-            label="Free trial (days)"
-            hint="Optional. Subscribers are not billed for this charge during the trial."
-            error={messageOf(errors, 'trialPeriodDays')}
-          >
-            {({ id, ...field }) => (
-              <Input
-                {...NOT_A_LOGIN}
-                id={id}
-                type="number"
-                min={1}
-                inputMode="numeric"
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('trialPeriodDays' as never, {
-                  setValueAs: (value: unknown) =>
-                    value === '' || value == null || Number.isNaN(Number(value))
-                      ? undefined
-                      : Number(value),
-                })}
-              />
-            )}
-          </Field>
-        ) : null}
-      </div>
-
-      {showWindow ? (
-        <div className="max-w-xs">
-          <Field
-            label="Usage window"
-            hint={
-              meterBuckets
-                ? `Set on the ${selectedMeter?.name ?? 'meter'} feature itself, so it cannot be changed here.`
-                : 'Optional. Aggregate the meter inside each window and price the windows, instead of once across the period.'
-            }
-            error={messageOf(errors, 'bucketSize')}
-          >
-            {({ id }) =>
-              meterBuckets ? (
-                lockedInput(
-                  id,
-                  PRICE_WINDOW_SIZE_LABEL[selectedMeter?.bucketSize as PriceWindowSize] ??
-                    String(selectedMeter?.bucketSize ?? ''),
-                )
-              ) : (
-                <Controller
-                  control={form.control}
-                  name={'bucketSize' as never}
-                  render={({ field }) => (
-                    <OptionCombobox
-                      id={id}
-                      value={(field.value as string) || ''}
-                      onValueChange={(next) => field.onChange(next === '' ? undefined : next)}
-                      options={[
-                        { value: '', label: 'No window: the whole period' },
-                        ...Object.entries(PRICE_WINDOW_SIZE_LABEL).map(([value, label]) => ({
-                          value,
-                          label,
-                        })),
-                      ]}
-                      placeholder="No window: the whole period"
-                      disabled={isSubmitting}
-                    />
-                  )}
-                />
-              )
-            }
-          </Field>
-        </div>
-      ) : null}
-
-      {priceOptions && !isEdit && (priceOptions.groups.length > 0 || !isUsage) ? (
-        <div className="grid gap-5 sm:grid-cols-2">
-          {priceOptions.groups.length > 0 ? (
-            <Field label="Tag" hint="Optional. Tags related prices for reporting and bulk changes.">
-              {({ id }) => (
-                <Controller
-                  control={form.control}
-                  name={'groupId' as never}
-                  render={({ field }) => (
-                    <OptionCombobox
-                      id={id}
-                      value={(field.value as string | undefined) ?? ''}
-                      onValueChange={(value) => field.onChange(value || undefined)}
-                      options={[...priceOptions.groups]}
-                      placeholder="No tag"
-                      disabled={isSubmitting}
-                    />
-                  )}
-                />
-              )}
-            </Field>
-          ) : null}
-          {!isUsage ? (
-            <Field
-              label="Minimum quantity"
-              hint="Optional. The fewest units a subscriber can hold of this charge."
-              error={messageOf(errors, 'minQuantity')}
-            >
-              {({ id, ...field }) => (
-                <Input
-                  {...NOT_A_LOGIN}
-                  id={id}
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  disabled={isSubmitting}
-                  {...field}
-                  {...form.register('minQuantity' as never, {
-                    setValueAs: (value: unknown) =>
-                      value === '' || value == null || Number.isNaN(Number(value))
-                        ? undefined
-                        : Number(value),
-                  })}
-                />
-              )}
-            </Field>
-          ) : null}
-        </div>
-      ) : null}
 
       {billingModel === BillingModel.FlatFee && isUsage
         ? // A usage flat fee is a rate per unit: a contract value per period does not apply.
@@ -799,7 +730,7 @@ export function ChargeForm({
         </div>
       ) : null}
 
-      {/* The date a price starts comes last, after what is billed and how much: it never leads. */}
+      {/* Editing a price is a new version from a date, so that date stays in sight. */}
       {isEdit ? (
         <div>
           <Field
@@ -824,32 +755,216 @@ export function ChargeForm({
             )}
           </Field>
         </div>
-      ) : priceOptions ? (
-        // A new price's start date: it belongs to the price, not to its model.
-        <div>
-          <Field
-            label="Start date"
-            hint="Optional. The price applies from this day; empty means now."
-          >
-            {({ id, 'aria-describedby': describedBy }) => (
-              <Controller
-                control={form.control}
-                name={'startDate' as never}
-                render={({ field }) => (
-                  <DateInput
+      ) : null}
+
+      <FormDisclosure
+        title="Advanced"
+        summary={
+          isUsage
+            ? 'Price unit, usage window, tag, start date'
+            : 'Price unit, free trial, minimum quantity, tag, start date'
+        }
+        forceOpen={Boolean(
+          messageOf(errors, 'trialPeriodDays') ||
+          messageOf(errors, 'minQuantity') ||
+          messageOf(errors, 'bucketSize') ||
+          messageOf(errors, 'startDate'),
+        )}
+      >
+        <div className="flex flex-col gap-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {priceUnits.length > 0 || priceUnit ? (
+              <Field
+                label="Price unit"
+                hint={
+                  isEdit
+                    ? 'Fixed once created.'
+                    : 'Optional. Price in credits, tokens or another custom unit instead of a currency.'
+                }
+              >
+                {({ id }) =>
+                  isEdit ? (
+                    lockedInput(id, priceUnit || 'None (currency)')
+                  ) : (
+                    <OptionSelect
+                      id={id}
+                      value={priceUnit || FIAT}
+                      onValueChange={(code) => {
+                        const unit = priceUnits.find((option) => option.code === code)
+                        const current = form.getValues()
+                        form.reset({
+                          ...current,
+                          // The unit's base currency exactly as stored ("usd"): the API
+                          // compares the two case-sensitively and refuses "USD" with a
+                          // 400. The locked Currency field upper-cases it for display.
+                          ...(unit
+                            ? { priceUnit: unit.code, currency: unit.baseCurrency }
+                            : { priceUnit: undefined }),
+                        } as CreateCharge)
+                      }}
+                      options={[
+                        { value: FIAT, label: 'None (currency)' },
+                        ...priceUnits.map((unit) => ({
+                          value: unit.code,
+                          label: `${unit.name} (${unit.code})`,
+                        })),
+                      ]}
+                      disabled={isSubmitting}
+                    />
+                  )
+                }
+              </Field>
+            ) : null}
+            {!isUsage && !isEdit && billingPeriod !== BillingPeriod.OneTime ? (
+              <Field
+                label="Free trial (days)"
+                hint="Optional. Subscribers are not billed for this charge during the trial."
+                error={messageOf(errors, 'trialPeriodDays')}
+              >
+                {({ id, ...field }) => (
+                  <Input
+                    {...NOT_A_LOGIN}
                     id={id}
-                    value={(field.value as string | undefined) ?? ''}
-                    onValueChange={(value) => field.onChange(value || undefined)}
-                    placeholder="Now"
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
                     disabled={isSubmitting}
-                    aria-describedby={describedBy}
+                    {...field}
+                    {...form.register('trialPeriodDays' as never, {
+                      setValueAs: (value: unknown) =>
+                        value === '' || value == null || Number.isNaN(Number(value))
+                          ? undefined
+                          : Number(value),
+                    })}
                   />
                 )}
-              />
-            )}
-          </Field>
+              </Field>
+            ) : null}
+          </div>
+          {showWindow ? (
+            <div className="max-w-xs">
+              <Field
+                label="Usage window"
+                hint={
+                  meterBuckets
+                    ? `Set on the ${selectedMeter?.name ?? 'meter'} feature itself, so it cannot be changed here.`
+                    : 'Optional. Aggregate the meter inside each window and price the windows, instead of once across the period.'
+                }
+                error={messageOf(errors, 'bucketSize')}
+              >
+                {({ id }) =>
+                  meterBuckets ? (
+                    lockedInput(
+                      id,
+                      PRICE_WINDOW_SIZE_LABEL[selectedMeter?.bucketSize as PriceWindowSize] ??
+                        String(selectedMeter?.bucketSize ?? ''),
+                    )
+                  ) : (
+                    <Controller
+                      control={form.control}
+                      name={'bucketSize' as never}
+                      render={({ field }) => (
+                        <OptionCombobox
+                          id={id}
+                          value={(field.value as string) || ''}
+                          onValueChange={(next) => field.onChange(next === '' ? undefined : next)}
+                          options={[
+                            { value: '', label: 'No window: the whole period' },
+                            ...Object.entries(PRICE_WINDOW_SIZE_LABEL).map(([value, label]) => ({
+                              value,
+                              label,
+                            })),
+                          ]}
+                          placeholder="No window: the whole period"
+                          disabled={isSubmitting}
+                        />
+                      )}
+                    />
+                  )
+                }
+              </Field>
+            </div>
+          ) : null}
+          {priceOptions && !isEdit && (priceOptions.groups.length > 0 || !isUsage) ? (
+            <div className="grid gap-5 sm:grid-cols-2">
+              {priceOptions.groups.length > 0 ? (
+                <Field
+                  label="Tag"
+                  hint="Optional. Tags related prices for reporting and bulk changes."
+                >
+                  {({ id }) => (
+                    <Controller
+                      control={form.control}
+                      name={'groupId' as never}
+                      render={({ field }) => (
+                        <OptionCombobox
+                          id={id}
+                          value={(field.value as string | undefined) ?? ''}
+                          onValueChange={(value) => field.onChange(value || undefined)}
+                          options={[...priceOptions.groups]}
+                          placeholder="No tag"
+                          disabled={isSubmitting}
+                        />
+                      )}
+                    />
+                  )}
+                </Field>
+              ) : null}
+              {!isUsage ? (
+                <Field
+                  label="Minimum quantity"
+                  hint="Optional. The fewest units a subscriber can hold of this charge."
+                  error={messageOf(errors, 'minQuantity')}
+                >
+                  {({ id, ...field }) => (
+                    <Input
+                      {...NOT_A_LOGIN}
+                      id={id}
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      disabled={isSubmitting}
+                      {...field}
+                      {...form.register('minQuantity' as never, {
+                        setValueAs: (value: unknown) =>
+                          value === '' || value == null || Number.isNaN(Number(value))
+                            ? undefined
+                            : Number(value),
+                      })}
+                    />
+                  )}
+                </Field>
+              ) : null}
+            </div>
+          ) : null}
+          {!isEdit && priceOptions ? (
+            // A new price's start date: it belongs to the price, not to its model.
+            <div>
+              <Field
+                label="Start date"
+                hint="Optional. The price applies from this day; empty means now."
+              >
+                {({ id, 'aria-describedby': describedBy }) => (
+                  <Controller
+                    control={form.control}
+                    name={'startDate' as never}
+                    render={({ field }) => (
+                      <DateInput
+                        id={id}
+                        value={(field.value as string | undefined) ?? ''}
+                        onValueChange={(value) => field.onChange(value || undefined)}
+                        placeholder="Now"
+                        disabled={isSubmitting}
+                        aria-describedby={describedBy}
+                      />
+                    )}
+                  />
+                )}
+              </Field>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </FormDisclosure>
 
       {extras}
 

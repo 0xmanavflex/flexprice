@@ -168,6 +168,7 @@ export const CustomUnitKeepsItsCurrency: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /^Advanced/ }))
     await userEvent.click(canvas.getByRole('combobox', { name: /^price unit/i }))
     await userEvent.click(await screen.findByRole('option', { name: 'QA units (QAU)' }))
     await expect(canvas.getByLabelText(/^currency/i)).toHaveValue('USD')
@@ -206,11 +207,15 @@ export const SetsPriceOptions: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /^Advanced/ }))
     await expect(canvas.getByLabelText(/^tag/i)).toBeInTheDocument()
     await expect(canvas.getByLabelText(/^start date/i)).toBeInTheDocument()
     await userEvent.type(canvas.getByLabelText(/^minimum quantity/i), '3')
     await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
-    await expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ minQuantity: 3 }))
+    // No start date chosen: the price starts on 1 Jan 2000, not now.
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ minQuantity: 3, startDate: '2000-01-01' }),
+    )
   },
 }
 
@@ -221,6 +226,23 @@ export const HidesPriceOptionsOutsideTheCatalogue: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.queryByLabelText(/^minimum quantity/i)).toBeNull()
     await expect(canvas.queryByLabelText(/^start date/i)).toBeNull()
+  },
+}
+
+/** Picking the metered feature names the charge, until a name of its own is typed. */
+export const FeatureNamesTheCharge: Story = {
+  args: { defaultValue: usageTiered, meters },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const name = canvas.getByLabelText(/^display name/i)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^metered feature/i }))
+    await userEvent.click(await screen.findByRole('option', { name: /Peak seats/ }))
+    await expect(name).toHaveValue('Peak seats')
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Seats used')
+    await userEvent.click(canvas.getByRole('combobox', { name: /^metered feature/i }))
+    await userEvent.click(await screen.findByRole('option', { name: /^API calls/ }))
+    await expect(name).toHaveValue('Seats used')
   },
 }
 
@@ -241,6 +263,7 @@ export const UsageWindowOffered: Story = {
   args: { defaultValue: usageTiered, meters },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /^Advanced/ }))
     await expect(await canvas.findByText('Usage window')).toBeVisible()
   },
 }
@@ -256,6 +279,7 @@ export const UsageWindowOwnedByTheMeter: Story = {
   args: { defaultValue: { ...usageTiered, meterId: 'meter_seats' }, meters },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /^Advanced/ }))
     await expect(await canvas.findByText('Usage window')).toBeVisible()
     await expect(canvas.getByText(/Set on the Peak seats feature itself/)).toBeVisible()
   },

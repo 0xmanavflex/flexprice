@@ -1,6 +1,7 @@
 import { WriteGate } from '@ui/compositions/access/Access'
 import { useMemo, useState } from 'react'
 import {
+  isOpenStart,
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
   BillingModel,
@@ -223,12 +224,23 @@ function nameOf(charge: Charge): string {
 const DATE_OPTIONS = { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' } as const
 const DATE = new Intl.DateTimeFormat(undefined, DATE_OPTIONS)
 
-/** "Jan 1, 2026 → Ongoing". One line everywhere this table is shown. */
+/**
+ * "Jan 1, 2026 → Ongoing". One line everywhere this table is shown. A price
+ * that starts at the open start (1 Jan 2000) has no start worth naming: it
+ * reads "Ongoing", or "Until <end>".
+ */
 function inEffect(charge: Charge, locale?: string): string {
   const format = locale ? new Intl.DateTimeFormat(locale, DATE_OPTIONS) : DATE
-  const start = charge.startDate ? format.format(charge.startDate) : 'Start date not set'
   const end = charge.endDate ? format.format(charge.endDate) : 'Ongoing'
+  if (isOpenStart(charge.startDate)) return charge.endDate ? `Until ${end}` : 'Ongoing'
+  const start = charge.startDate ? format.format(charge.startDate) : 'Start date not set'
   return `${start} → ${end}`
+}
+
+/** The tooltip's start: a date, "From the start" for the open start, or "Not set". */
+function startLabel(charge: Charge, locale?: string): string {
+  if (isOpenStart(charge.startDate)) return 'From the start'
+  return charge.startDate ? stamp(charge.startDate, locale) : 'Not set'
 }
 
 const STAMP_OPTIONS = {
@@ -445,16 +457,14 @@ export function ChargeTable({
         <Tooltip>
           <TooltipTrigger
             render={<span className="text-sm tabular-nums" />}
-            aria-label={`In effect: start ${charge.startDate ? stamp(charge.startDate, locale) : 'not set'}, end ${charge.endDate ? stamp(charge.endDate, locale) : 'ongoing'}`}
+            aria-label={`In effect: start ${startLabel(charge, locale).toLowerCase()}, end ${charge.endDate ? stamp(charge.endDate, locale) : 'ongoing'}`}
           >
             {inEffect(charge, locale)}
           </TooltipTrigger>
           <TooltipContent side="top" className="flex-col items-stretch gap-1 px-3 py-2">
             <span className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5">
               <span className="opacity-70">Start</span>
-              <span className="tabular-nums">
-                {charge.startDate ? stamp(charge.startDate, locale) : 'Not set'}
-              </span>
+              <span className="tabular-nums">{startLabel(charge, locale)}</span>
               <span className="opacity-70">End</span>
               <span className="tabular-nums">
                 {charge.endDate ? stamp(charge.endDate, locale) : 'Ongoing'}

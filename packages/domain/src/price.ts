@@ -710,3 +710,15 @@ export function chargeLineages(
     return { current: currentVersion(versions, now), versions }
   })
 }
+
+/**
+ * The start date a new catalogue price gets when none is chosen: the first of
+ * January 2000, so a price is in effect for any subscription however far back
+ * it starts. Starting prices "now" broke subscriptions that began earlier.
+ */
+export const OPEN_START_DATE = '2000-01-01'
+
+/** A start on or before {@link OPEN_START_DATE}: shown as no start at all ("Ongoing"). */
+export function isOpenStart(date: Date | null | undefined): boolean {
+  return date != null && date.getTime() < Date.UTC(2000, 0, 2)
+}
