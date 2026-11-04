@@ -500,6 +500,45 @@ export function ChargeForm({
           }
         </Field>
 
+        {/* Beside Billing period in every case: a usage charge is always billed in arrears. */}
+        <Field
+          label="Invoice timing"
+          hint={
+            isUsage
+              ? 'Usage is billed at the end of each period, for what was used.'
+              : 'Whether the charge is invoiced at the start or the end of each period.'
+          }
+          required
+        >
+          {({ id }) =>
+            isUsage ? (
+              lockedInput(id, INVOICE_CADENCE_LABEL[InvoiceCadence.Arrear])
+            ) : isEdit ? (
+              lockedInput(
+                id,
+                INVOICE_CADENCE_LABEL[form.getValues('invoiceCadence') as InvoiceCadence],
+              )
+            ) : (
+              <Controller
+                control={form.control}
+                name="invoiceCadence"
+                render={({ field }) => (
+                  <OptionSelect
+                    id={id}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={[InvoiceCadence.Advance, InvoiceCadence.Arrear].map((cadence) => ({
+                      value: cadence,
+                      label: INVOICE_CADENCE_LABEL[cadence],
+                    }))}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )
+          }
+        </Field>
+
         {priceUnits.length > 0 || priceUnit ? (
           <Field
             label="Price unit"
@@ -537,40 +576,6 @@ export function ChargeForm({
                     })),
                   ]}
                   disabled={isSubmitting}
-                />
-              )
-            }
-          </Field>
-        ) : null}
-
-        {!isUsage ? (
-          <Field
-            label="Invoice timing"
-            hint="Whether the charge is invoiced at the start or the end of each period."
-            required
-          >
-            {({ id }) =>
-              isEdit ? (
-                lockedInput(
-                  id,
-                  INVOICE_CADENCE_LABEL[form.getValues('invoiceCadence') as InvoiceCadence],
-                )
-              ) : (
-                <Controller
-                  control={form.control}
-                  name="invoiceCadence"
-                  render={({ field }) => (
-                    <OptionSelect
-                      id={id}
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      options={[InvoiceCadence.Advance, InvoiceCadence.Arrear].map((cadence) => ({
-                        value: cadence,
-                        label: INVOICE_CADENCE_LABEL[cadence],
-                      }))}
-                      disabled={isSubmitting}
-                    />
-                  )}
                 />
               )
             }
@@ -699,14 +704,14 @@ export function ChargeForm({
         </div>
       ) : null}
 
-      {billingModel === BillingModel.FlatFee && isUsage ? (
-        // A usage flat fee is a rate per unit: a contract value per period does not apply.
-        <div className="max-w-xs">{amountField(`Amount (${unitLabel})`)}</div>
-      ) : null}
+      {billingModel === BillingModel.FlatFee && isUsage
+        ? // A usage flat fee is a rate per unit: a contract value per period does not apply.
+          amountField(`Amount (${unitLabel})`)
+        : null}
 
       {billingModel === BillingModel.FlatFee && !isUsage ? (
         // The calculator sits at the field's bottom edge, beside its input.
-        <div className="flex max-w-sm items-end gap-2">
+        <div className="flex items-end gap-2">
           <div className="min-w-0 flex-1">{amountField(`Amount (${unitLabel})`)}</div>
           <ContractAmountCalculator
             billingPeriod={billingPeriod}
@@ -796,7 +801,7 @@ export function ChargeForm({
 
       {/* The date a price starts comes last, after what is billed and how much: it never leads. */}
       {isEdit ? (
-        <div className="max-w-xs">
+        <div>
           <Field
             label="Effective from"
             hint="Leave empty to start the new price now. Earlier invoices keep the old price."
@@ -821,7 +826,7 @@ export function ChargeForm({
         </div>
       ) : priceOptions ? (
         // A new price's start date: it belongs to the price, not to its model.
-        <div className="max-w-xs">
+        <div>
           <Field
             label="Start date"
             hint="Optional. The price applies from this day; empty means now."
