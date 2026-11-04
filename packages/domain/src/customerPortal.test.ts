@@ -314,6 +314,30 @@ describe('wallets', () => {
     expect(wallets[0]!.autoTopup?.enabled).toBe(true)
   })
 
+  it('keeps a field the save did not send, as the server does', () => {
+    const before = {
+      ...wallets[0]!,
+      autoTopup: {
+        enabled: true,
+        threshold: '500',
+        credits: '2000',
+        cooldown: { value: 2, unit: 'hour' as const },
+      },
+    }
+    const next = withPortalAutoTopup([before], 'w1', {
+      enabled: false,
+      threshold: null,
+      credits: '900',
+      cooldown: null,
+    })
+    expect(next[0]!.autoTopup).toEqual({
+      enabled: false,
+      threshold: '500',
+      credits: '900',
+      cooldown: { value: 2, unit: 'hour' },
+    })
+  })
+
   it('reads the API’s lowercase transaction types', () => {
     const { items } = toPortalWalletTransactions(
       {

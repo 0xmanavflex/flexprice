@@ -104,3 +104,19 @@ function readDays(from: string | null, to: string | null): { start: Date; end: D
   if (!start || !last || last < start) return null
   return { start, end: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1) }
 }
+
+/** Marks the address a gateway sends the customer back to. */
+export const RETURNED_PARAM = 'returned'
+
+/**
+ * Where a gateway sends the customer back: this page, without the token. The
+ * token is the portal's only credential, and a gateway keeps its return
+ * address; the payment opens in a tab of its own, so the portal itself stays
+ * open where the customer left it, and the returned tab says so.
+ */
+export function returnUrl(href: string): string {
+  const url = new URL(href)
+  url.searchParams.delete('token')
+  url.searchParams.set(RETURNED_PARAM, '1')
+  return url.toString()
+}

@@ -36,7 +36,13 @@ import {
 } from '@fp/ui/pages'
 import { isSafeNavigationUrl } from '../safeUrl'
 import type { ApiUrls } from '../publicApi'
-import { type PortalLocation, parsePortalLocation, portalHref } from './link'
+import {
+  RETURNED_PARAM,
+  type PortalLocation,
+  parsePortalLocation,
+  portalHref,
+  returnUrl as gatewayReturnUrl,
+} from './link'
 
 const GENERIC_ERROR = 'Something went wrong. Please try again.'
 /** Transactions per page: "Load more" asks the API for the next ten. */
@@ -98,7 +104,18 @@ export function PortalSurface({
       />
     )
   }
-  if (!token) return <Expired />
+  if (!token) {
+    // Back from a payment page in its own tab: the portal is still open in the
+    // tab the customer came from, and refreshes there.
+    return new URLSearchParams(window.location.search).has(RETURNED_PARAM) ? (
+      <PortalNotice
+        title="You can close this tab"
+        body="Go back to the billing tab you came from. It updates on its own."
+      />
+    ) : (
+      <Expired />
+    )
+  }
   return (
     <Portal
       auth={{ apiOrigin: location.apiOrigin, token }}
@@ -238,7 +255,13 @@ function Portal({
       }),
     onOpenInvoice: (invoiceId) => navigate({ ...location, invoiceId }),
     payInvoice: (invoice, provider) =>
-      inNewTab(() => pay.run({ invoiceId: invoice.id, provider, returnUrl: returnUrl() })),
+      inNewTab(() =>
+        pay.run({
+          invoiceId: invoice.id,
+          provider,
+          returnUrl: gatewayReturnUrl(window.location.href),
+        }),
+      ),
     addCredits: (target, credits, via, note) =>
       via.kind === 'saved'
         ? settle(() =>
@@ -247,7 +270,7 @@ function Portal({
               credits,
               provider: null,
               note,
-              returnUrl: returnUrl(),
+              returnUrl: gatewayReturnUrl(window.location.href),
             }),
           )
         : inNewTab(() =>
@@ -256,11 +279,13 @@ function Portal({
               credits,
               provider: via.provider,
               note,
-              returnUrl: returnUrl(),
+              returnUrl: gatewayReturnUrl(window.location.href),
             }),
           ),
     addCard: (provider) =>
-      inNewTab(() => addCard.run({ provider, returnUrl: returnUrl() }), { required: true }),
+      inNewTab(() => addCard.run({ provider, returnUrl: gatewayReturnUrl(window.location.href) }), {
+        required: true,
+      }),
     removeCard: async (card) => {
       await settle(() => removeCard.run({ provider: card.provider, id: card.id }))
     },
@@ -332,11 +357,6 @@ function load<T>(query: PortalQuery<T>): Load<T> {
 
 function isAuthError(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 401 || error.status === 403)
-}
-
-/** Where a gateway sends the customer back: this page as it is now, token and all. */
-function returnUrl(): string {
-  return window.location.href
 }
 
 /** Runs a write and turns any failure into a message the dialog can show. */

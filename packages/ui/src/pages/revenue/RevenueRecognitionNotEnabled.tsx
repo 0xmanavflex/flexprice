@@ -24,20 +24,27 @@ export interface RevenueRecognitionNotEnabledProps {
 
 /** Revenue recognition is off for this environment: say what it is and how to get it. */
 export function RevenueRecognitionNotEnabled({ onContact }: RevenueRecognitionNotEnabledProps) {
+  // The way to ask for it is the section's action, top right, as every section's is.
   return (
-    <Section table title="Revenue recognition" showTitle={false}>
+    <Section
+      table
+      title="Revenue recognition"
+      showTitle={false}
+      {...(onContact
+        ? {
+            action: (
+              <Button variant="outline" size="sm" className="h-8 px-3" onClick={onContact}>
+                <MessageSquareTextIcon aria-hidden />
+                Contact us to enable it
+              </Button>
+            ),
+          }
+        : {})}
+    >
       <SectionEmpty
         scene="revenue"
         title="Revenue recognition isn't enabled yet"
         description="It spreads invoiced amounts over the months they are earned, and reports deferred and unbilled balances each month. Contact Flexprice to turn it on for this environment."
-        action={
-          onContact ? (
-            <Button variant="outline" size="sm" className="h-8 px-3" onClick={onContact}>
-              <MessageSquareTextIcon aria-hidden />
-              Contact us to enable it
-            </Button>
-          ) : undefined
-        }
       />
     </Section>
   )

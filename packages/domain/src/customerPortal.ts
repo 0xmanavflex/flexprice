@@ -499,7 +499,20 @@ export function withPortalAutoTopup(
   walletId: string,
   saved: NonNullable<PortalWallet['autoTopup']>,
 ): PortalWallet[] {
-  return wallets.map((w) => (w.id === walletId ? { ...w, autoTopup: { ...saved } } : w))
+  // A null field was not sent, and the server keeps what it had: so does the cache.
+  return wallets.map((w) =>
+    w.id === walletId
+      ? {
+          ...w,
+          autoTopup: {
+            enabled: saved.enabled,
+            threshold: saved.threshold ?? w.autoTopup?.threshold ?? null,
+            credits: saved.credits ?? w.autoTopup?.credits ?? null,
+            cooldown: saved.cooldown ?? w.autoTopup?.cooldown ?? null,
+          },
+        }
+      : w,
+  )
 }
 
 export type PortalTransactionDirection = 'in' | 'out'

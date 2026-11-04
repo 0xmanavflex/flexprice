@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parsePortalLocation, portalHref } from './link'
+import { parsePortalLocation, portalHref, returnUrl } from './link'
 
 const urls = { us: 'https://us.api.flexprice.io', in: 'https://api.cloud.flexprice.io' }
 
@@ -136,5 +136,13 @@ describe('a region-less link (this deployment’s own portal)', () => {
         '/p',
       ),
     ).toBe('/p/usage?range=7d')
+  })
+})
+
+describe('returnUrl', () => {
+  it('sends a gateway back without the token, marked as a return', () => {
+    expect(returnUrl('https://portal.flexprice.io/us/invoices?token=secret&invoice=inv_1')).toBe(
+      'https://portal.flexprice.io/us/invoices?invoice=inv_1&returned=1',
+    )
   })
 })
