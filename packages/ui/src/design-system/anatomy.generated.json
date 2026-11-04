@@ -431,6 +431,7 @@
       "usedBy": [
         "AddonGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CustomerDetail",
         "FeatureDetailView",
         "PlanGrid",
@@ -940,6 +941,7 @@
         "AddonGrid",
         "CostSheetGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CustomerGrid",
         "DataExportGrid",
         "EventGrid",
@@ -1928,6 +1930,7 @@
         "CopyValue",
         "CostSheetGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CreditNoteGrid",
         "CustomerGrid",
         "CustomerWalletView",
@@ -2127,6 +2130,24 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "CreateWithAiButton": {
+      "file": "src/pages/product-catalog/plans/PlanGrid.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArchiveIcon",
+        "BookOpenIcon",
+        "CopyIcon",
+        "EmDash",
+        "EntityCell",
+        "EntityList",
+        "PencilIcon",
+        "Status",
+        "Tag",
+        "WandSparklesIcon"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/product-catalog/plans/PlanGrid.stories.tsx"
     },
     "CreatingPausedScreen": {
       "file": "src/pages/selfBilling/AccountStatus.tsx",
@@ -3075,6 +3096,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonGrid",
+        "CreateWithAiButton",
         "CustomerActivityView",
         "CustomerDetail",
         "CustomerGrid",
@@ -3236,6 +3258,7 @@
       ],
       "usedBy": [
         "BillingEntityGrid",
+        "CreateWithAiButton",
         "FeatureGrid",
         "PlanGrid",
         "WebhookEndpointGrid"
@@ -3305,6 +3328,7 @@
         "ConnectionExports",
         "CostSheetGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CreditNoteGrid",
         "CustomerActivityView",
         "CustomerGrid",
@@ -5998,6 +6022,7 @@
         "AddonGrid",
         "CostSheetGrid",
         "CouponGrid",
+        "CreateWithAiButton",
         "CustomerDetail",
         "CustomerGrid",
         "EditableCard",
@@ -7821,6 +7846,7 @@
       ],
       "usedBy": [
         "AddonSubscriptionsView",
+        "CreateWithAiButton",
         "CustomerDetail",
         "FeatureDetailView",
         "FeatureGrid",
@@ -8123,6 +8149,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonGrid",
+        "CreateWithAiButton",
         "CustomerActivityView",
         "EventGrid",
         "FeatureGrid",
@@ -8691,6 +8718,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "CreateWithAiButton",
         "PlanGrid"
       ],
       "story": null
@@ -11411,6 +11439,7 @@
       "route": "/plans",
       "uses": [
         "ConfirmDialog",
+        "CreateWithAiButton",
         "ListState",
         "PageBody",
         "PlanGrid"

@@ -163,7 +163,7 @@ export type {
 } from './product-catalog/products/FeatureDetailView'
 export { FeatureGrid, FeatureGridProvenance } from './product-catalog/products/FeatureGrid'
 export type { FeatureGridProps, FeatureLinkage } from './product-catalog/products/FeatureGrid'
-export { PlanGrid, PlanGridProvenance } from './product-catalog/plans/PlanGrid'
+export { CreateWithAiButton, PlanGrid, PlanGridProvenance } from './product-catalog/plans/PlanGrid'
 export type { PlanGridProps } from './product-catalog/plans/PlanGrid'
 export { PlanForm, PlanFormProvenance } from './product-catalog/plans/PlanForm'
 export type { PlanFormProps, PlanFormValue } from './product-catalog/plans/PlanForm'

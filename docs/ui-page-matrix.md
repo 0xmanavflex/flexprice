@@ -60,7 +60,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | plans | `PlanAiSetupPage` | Other | Section, SimpleTable | PlanAiSetupView |
 | plans | `PlanDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, Field, FormCard, FormDialog, MetricRail, Section | ArchiveIcon, Button, ContractIntegrations, ContractIntegrationsProps, CopyIcon, DetailBreadcrumb, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EditableCard, LayersIcon, MetadataCard, MoreHorizontalIcon, PencilIcon, Pill, PlanCustomerPreview, PlugIcon, RefreshCwIcon, RelatedCard, Status |
 | plans | `PlanFormPage` | Form | ChoiceCards, Field, FormActions, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, PlanForm, PlanFormValue |
-| plans | `PlanListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PlanGrid |
+| plans | `PlanListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CreateWithAiButton, ListState, PageBody, PlanGrid |
 | price-units | `PriceUnitDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, Field, FormCard, MetricRail, Section | ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CoinsIcon, EditableCard, MetadataCard, PencilIcon, Pill |
 | price-units | `PriceUnitFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | PriceUnitForm |
 | price-units | `PriceUnitListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PriceUnitGrid |

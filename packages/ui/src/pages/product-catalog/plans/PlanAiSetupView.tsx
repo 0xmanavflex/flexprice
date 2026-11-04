@@ -83,8 +83,12 @@ export type PlanAiCreateStep =
 export interface PlanAiSetupViewProps {
   description: string
   onDescriptionChange: (value: string) => void
-  /** Reads the description it is given, so an empty send can use the example. */
-  onParse: (description: string) => void
+  /**
+   * Reads the description it is given, so an empty send can use the example.
+   * `templateId` is set when a template was picked and sent unchanged: as in
+   * V1, that template's own schema is used and the model is not asked.
+   */
+  onParse: (description: string, templateId?: string) => void
   isParsing: boolean
   parseError?: string | null
 
@@ -673,7 +677,8 @@ export function PlanAiSetupView({
   const send = () => {
     const text = description.trim() || DEFAULT_PROMPT
     if (!description.trim()) onDescriptionChange(DEFAULT_PROMPT)
-    onParse(text)
+    if (template && text === template.prompt.trim()) onParse(text, template.id)
+    else onParse(text)
   }
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     // Enter sends, Shift+Enter breaks the line; an IME's Enter commits a word.

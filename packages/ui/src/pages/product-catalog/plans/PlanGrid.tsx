@@ -397,14 +397,7 @@ export function PlanGrid({
       primaryAction={
         onCreate || onCreateWithAi ? (
           <>
-            {onCreateWithAi ? (
-              <Button variant="outline" onClick={onCreateWithAi}>
-                {/* The AI entry point's mark: a violet wand, and a violet sheen
-                    across the label (still under reduced motion). */}
-                <WandSparklesIcon aria-hidden className="ai-accent" />
-                <span className="ai-shimmer">Create with AI</span>
-              </Button>
-            ) : null}
+            {onCreateWithAi ? <CreateWithAiButton onClick={onCreateWithAi} /> : null}
             {onCreate ? <Button onClick={onCreate}>New plan</Button> : null}
           </>
         ) : undefined
@@ -426,5 +419,19 @@ export function PlanGrid({
         guides: GUIDES,
       }}
     />
+  )
+}
+
+/**
+ * The entry to Create with AI: an outline button with a violet wand and a
+ * violet sheen across its label (still under reduced motion). On the Plans
+ * toolbar, and in the empty Plans page where the toolbar is not shown.
+ */
+export function CreateWithAiButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="outline" onClick={onClick}>
+      <WandSparklesIcon aria-hidden className="ai-accent" />
+      <span className="ai-shimmer">Create with AI</span>
+    </Button>
   )
 }
