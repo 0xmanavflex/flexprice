@@ -198,6 +198,15 @@ function instant(value: Date | string | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+/**
+ * What the usage figure counts when the feature names no unit. Only a COUNT
+ * meter's usage is a number of events; a SUM (or max, latest, unique count)
+ * adds up a property, so one event carrying 20 is 20 units, not "20 events".
+ */
+function fallbackUnit(aggregationType: string | undefined): string {
+  return (aggregationType ?? '').toUpperCase() === 'COUNT' ? 'events' : 'units'
+}
+
 function toFeatureRow(wire: AnalyticsItemWire, currency?: string): FeatureUsageRow {
   const points = (wire.points ?? [])
     .map(toPoint)
@@ -211,7 +220,7 @@ function toFeatureRow(wire: AnalyticsItemWire, currency?: string): FeatureUsageR
     // to the lookup key: a row with no name at all is still a real row.
     name: feature?.name ?? wire.eventName ?? lookupKey,
     lookupKey,
-    unitPlural: feature?.unitPlural ?? feature?.unit_plural ?? 'events',
+    unitPlural: feature?.unitPlural || feature?.unit_plural || fallbackUnit(wire.aggregationType),
     eventCount: wire.eventCount ?? 0,
     usage: quantity(wire.totalUsage),
     points,
