@@ -267,7 +267,7 @@ test.describe('live flows', () => {
     await openRowMenu(name, 'Delete feature')
     await confirm(/Delete/)
     // Deleted features linger as "Archived" rather than leaving the list.
-    await expect(row(name).filter({ hasText: 'Published' })).toHaveCount(0, {
+    await expect(row(name).filter({ hasText: 'Active' })).toHaveCount(0, {
       timeout: 30_000,
     })
   })
@@ -300,7 +300,7 @@ test.describe('live flows', () => {
     await search(name)
     await openRowMenu(name, 'Delete feature')
     await confirm(/Delete/)
-    await expect(row(name).filter({ hasText: 'Published' })).toHaveCount(0, {
+    await expect(row(name).filter({ hasText: 'Active' })).toHaveCount(0, {
       timeout: 30_000,
     })
   })

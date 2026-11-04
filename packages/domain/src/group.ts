@@ -22,7 +22,7 @@ export const GroupStatus = {
 export type GroupStatus = (typeof GroupStatus)[keyof typeof GroupStatus]
 
 export const GROUP_STATUS_LABEL: Record<GroupStatus, string> = {
-  [GroupStatus.Published]: 'Published',
+  [GroupStatus.Published]: 'Active',
   [GroupStatus.Archived]: 'Archived',
 }
 

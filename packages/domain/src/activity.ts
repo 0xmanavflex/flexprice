@@ -277,6 +277,8 @@ function customerFacts(entry: ActivityEntry): ActivityFacts {
 
 function human(value: string | undefined): string | undefined {
   if (!value) return undefined
+  // The API's `published` is what the console calls Active everywhere.
+  if (value.toLowerCase() === 'published') return 'Active'
   const spaced = value.toLowerCase().replace(/[_-]+/g, ' ')
   return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }

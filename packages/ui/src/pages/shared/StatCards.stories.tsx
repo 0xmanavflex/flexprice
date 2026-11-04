@@ -4,7 +4,7 @@ import { StatCards } from './StatCards'
 
 const STAT_LABELS = [
   'Coupons',
-  'Published',
+  'Active',
   'Archived',
   'Redeemed',
   'Expired',
@@ -24,7 +24,7 @@ const meta = {
   args: {
     stats: [
       { label: 'Coupons', value: 12 },
-      { label: 'Published', value: 10 },
+      { label: 'Active', value: 10 },
       { label: 'Archived', value: 2 },
     ],
     locale: 'en-US',
@@ -86,7 +86,7 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('12')).toBeInTheDocument()
-    await expect(canvas.getByText('Published')).toBeInTheDocument()
+    await expect(canvas.getByText('Active')).toBeInTheDocument()
   },
 }
 
@@ -96,7 +96,7 @@ export const Loading: Story = {
     isLoading: true,
     stats: [
       { label: 'Coupons', value: undefined },
-      { label: 'Published', value: undefined },
+      { label: 'Active', value: undefined },
       { label: 'Archived', value: undefined },
     ],
   },
@@ -106,7 +106,7 @@ export const NotCounted: Story = {
   args: {
     stats: [
       { label: 'Coupons', value: undefined },
-      { label: 'Published', value: undefined },
+      { label: 'Active', value: undefined },
       { label: 'Archived', value: undefined },
     ],
   },

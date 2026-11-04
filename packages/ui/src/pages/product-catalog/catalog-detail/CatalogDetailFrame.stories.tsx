@@ -121,7 +121,7 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: 'Coupon actions' })).toBeInTheDocument()
-    await expect(canvas.getByText('Published')).toBeVisible()
+    await expect(canvas.getByText('Active')).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'Overview' })).toBeInTheDocument()
   },
 }

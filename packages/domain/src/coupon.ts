@@ -22,7 +22,7 @@ export const CouponStatus = {
 export type CouponStatus = (typeof CouponStatus)[keyof typeof CouponStatus]
 
 export const COUPON_STATUS_LABEL: Record<CouponStatus, string> = {
-  [CouponStatus.Published]: 'Published',
+  [CouponStatus.Published]: 'Active',
   [CouponStatus.Archived]: 'Archived',
 }
 
@@ -142,7 +142,7 @@ export const COUPON_FILTERS: readonly ListFilterSpec[] = [
     label: 'Status',
     kind: 'options',
     options: [
-      { value: 'published', label: 'Published' },
+      { value: 'published', label: 'Active' },
       { value: 'archived', label: 'Archived' },
     ],
   },

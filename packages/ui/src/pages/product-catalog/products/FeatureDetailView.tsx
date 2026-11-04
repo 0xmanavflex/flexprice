@@ -128,7 +128,7 @@ const mono = (value: string | null | undefined) =>
 const muted = (value: string) => <span className="text-muted-foreground">{value}</span>
 
 function statusLabel(status: string): string {
-  if (status === 'published') return 'Published'
+  if (status === 'published') return 'Active'
   if (status === 'archived') return 'Archived'
   return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown'
 }

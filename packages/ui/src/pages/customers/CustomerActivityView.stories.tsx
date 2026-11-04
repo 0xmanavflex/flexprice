@@ -21,11 +21,11 @@ const customerCreated: ActivityRowView = {
   source: 'Dashboard',
   at: 'Oct 25, 2026, 11:03 PM GMT+5:30',
   atUtc: '25 Oct 2026, 17:33:42 UTC',
-  statuses: [{ label: 'Published', tone: 'success' }],
+  statuses: [{ label: 'Active', tone: 'success' }],
   state: [
     { label: 'Tax treatment', value: 'Taxable' },
     { label: 'Timezone', value: 'UTC' },
-    { label: 'Status', value: 'Published' },
+    { label: 'Status', value: 'Active' },
   ],
   metadata: [
     { label: 'Source', value: 'Dashboard' },

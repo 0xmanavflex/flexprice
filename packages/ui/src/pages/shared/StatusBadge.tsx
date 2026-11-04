@@ -98,13 +98,13 @@ export function FeatureTypeBadge({ type }: FeatureTypeBadgeProps) {
 
 /**
  * The shared catalogue status: published or archived, drawn like every status
- * here: a dot pill. Features, plans and add-ons all use it, so a Published
+ * here: a dot pill. Features, plans and add-ons all use it, so an Active
  * chip is the same object in every catalogue table.
  */
 export type CatalogStatus = 'published' | 'archived'
 
 const CATALOG_STATUS: Record<CatalogStatus, { tone: PillTone; label: string }> = {
-  published: { tone: statusTone('published'), label: 'Published' },
+  published: { tone: statusTone('published'), label: 'Active' },
   archived: { tone: statusTone('archived'), label: 'Archived' },
 }
 

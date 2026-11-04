@@ -23,7 +23,7 @@ export const PriceUnitStatus = {
 export type PriceUnitStatus = (typeof PriceUnitStatus)[keyof typeof PriceUnitStatus]
 
 export const PRICE_UNIT_STATUS_LABEL: Record<PriceUnitStatus, string> = {
-  [PriceUnitStatus.Published]: 'Published',
+  [PriceUnitStatus.Published]: 'Active',
   [PriceUnitStatus.Archived]: 'Archived',
 }
 
@@ -103,7 +103,7 @@ export const PRICE_UNIT_FILTERS: readonly ListFilterSpec[] = [
     label: 'Status',
     kind: 'options',
     options: [
-      { value: 'published', label: 'Published' },
+      { value: 'published', label: 'Active' },
       { value: 'archived', label: 'Archived' },
     ],
   },

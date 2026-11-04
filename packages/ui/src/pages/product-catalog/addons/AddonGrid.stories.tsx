@@ -78,7 +78,7 @@ export const Default: Story = {}
 export const Populated: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findAllByText('Published')).not.toHaveLength(0)
+    await expect(await canvas.findAllByText('Active')).not.toHaveLength(0)
     // An add-on with no description says so rather than rendering blank.
     await expect(canvas.getAllByText('—').length).toBeGreaterThan(0)
   },

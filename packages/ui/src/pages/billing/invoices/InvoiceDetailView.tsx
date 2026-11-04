@@ -870,7 +870,7 @@ function InvoiceDocumentArticle({
           {invoice.number ? (
             <>
               <dt className="text-muted-foreground">Invoice number</dt>
-              <dd className="font-mono">{invoice.number}</dd>
+              <dd className="tabular-nums">{invoice.number}</dd>
             </>
           ) : null}
           <dt className="text-muted-foreground">Date of issue</dt>

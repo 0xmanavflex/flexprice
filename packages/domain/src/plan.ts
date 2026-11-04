@@ -18,7 +18,7 @@ export const PlanStatus = {
 export type PlanStatus = (typeof PlanStatus)[keyof typeof PlanStatus]
 
 export const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
-  [PlanStatus.Published]: 'Published',
+  [PlanStatus.Published]: 'Active',
   [PlanStatus.Archived]: 'Archived',
 }
 
@@ -187,7 +187,7 @@ export const PLAN_FILTERS: readonly ListFilterSpec[] = [
     label: 'Status',
     kind: 'options',
     options: [
-      { value: 'published', label: 'Published' },
+      { value: 'published', label: 'Active' },
       { value: 'archived', label: 'Archived' },
     ],
   },
