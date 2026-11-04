@@ -231,6 +231,32 @@ export function contractDay(value: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+/**
+ * The start an Activate sends for a draft, from the day picked in its dialog.
+ *
+ * The dialog opens on the draft's saved start (`activationStartDay`). Keeping
+ * that day keeps the saved instant exactly: sending the day as midnight UTC
+ * instead moved a draft saved for 4 Nov 00:00 IST to 3 Nov 05:30 IST, and its
+ * renewal a day earlier with it. Today is now, as a new contract starts; any
+ * other day is that day's local midnight, as the date picker means it.
+ */
+export function activationStartDate(
+  pickedDay: string,
+  savedStart: Date | null,
+  now: Date = new Date(),
+): Date {
+  if (savedStart && (pickedDay === '' || pickedDay === contractDay(savedStart.toISOString()))) {
+    return savedStart
+  }
+  if (pickedDay === '' || pickedDay === contractDay(now.toISOString())) return now
+  return new Date(contractMoment(pickedDay))
+}
+
+/** The day an Activate dialog opens on: the draft's saved start, else today (both local). */
+export function activationStartDay(savedStart: Date | null, now: Date = new Date()): string {
+  return contractDay((savedStart ?? now).toISOString())
+}
+
 /** A decimal amount, or blank for none. */
 const optionalAmount = (message: string) =>
   z
