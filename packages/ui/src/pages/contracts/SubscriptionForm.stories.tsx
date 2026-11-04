@@ -117,6 +117,8 @@ interface PlaygroundProps {
   planLoading: boolean
   /** Adds a quarterly and a weekly charge, which a monthly contract does not bill by default. */
   otherCadences?: boolean
+  /** Adds this many more quarterly charges, so the other-cadence list runs long. */
+  extraCadences?: number
   /** Gives the plan a credit grant of its own. */
   planGrant?: boolean
   /** Opens with this contract end date (`YYYY-MM-DD`). */
@@ -169,6 +171,7 @@ function SubscriptionFormPlayground({
   entitlementCount,
   planLoading,
   otherCadences = false,
+  extraCadences = 0,
   planGrant = false,
   endDate,
   planTrial,
@@ -251,6 +254,14 @@ function SubscriptionFormPlayground({
                   },
                 ]
               : []),
+            ...Array.from({ length: extraCadences }, (_, index) => ({
+              ...makeCharge(100 + index, {
+                type: PriceType.Fixed,
+                billingPeriod: BillingPeriod.Quarterly,
+              }),
+              id: `price_extra_${index + 1}`,
+              displayName: `Quarterly add-on ${index + 1}`,
+            })),
           ],
       entitlements: planLoading
         ? []
@@ -273,6 +284,7 @@ function SubscriptionFormPlayground({
     chargeCount,
     entitlementCount,
     otherCadences,
+    extraCadences,
     planGrant,
     planTrial,
     datedCharge,
@@ -744,6 +756,52 @@ export const ChargesAtOtherCadences: Story = {
       expect(args.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
           includePriceIds: expect.arrayContaining(['price_quarterly']),
+        }),
+      ),
+    )
+  },
+}
+
+/**
+ * A long other-cadence list shows five prices, below the charges, with the rest
+ * behind "Show all"; the header's "Add all" opts every one in, "Clear all" none.
+ */
+export const ManyChargesAtOtherCadences: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2, otherCadences: true, extraCadences: 6 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const heading = canvas.getByRole('heading', { name: 'Charges at other cadences' })
+    const card = within(heading.closest('section') as HTMLElement)
+    // Below the charges, not above them.
+    const charges = canvas.getByRole('heading', { name: 'Charges' })
+    await expect(
+      charges.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+
+    await expect(card.getAllByRole('switch')).toHaveLength(5)
+    await userEvent.click(card.getByRole('button', { name: 'Show all (7)' }))
+    await expect(card.getAllByRole('switch')).toHaveLength(7)
+    await userEvent.click(card.getByRole('button', { name: 'Show less' }))
+    await expect(card.getAllByRole('switch')).toHaveLength(5)
+
+    await userEvent.click(card.getByRole('button', { name: 'Add all' }))
+    for (const toggle of card.getAllByRole('switch')) await expect(toggle).toBeChecked()
+    await expect(
+      await canvas.findByRole('button', { name: 'More for Quarterly add-on 6' }),
+    ).toBeVisible()
+    await userEvent.click(card.getByRole('button', { name: 'Clear all' }))
+    for (const toggle of card.getAllByRole('switch')) await expect(toggle).not.toBeChecked()
+    await userEvent.click(card.getByRole('button', { name: 'Add all' }))
+
+    for (const step of ['commitments', 'billing', 'review']) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+      await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
+    }
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          includePriceIds: expect.arrayContaining(['price_quarterly', 'price_extra_6']),
         }),
       ),
     )
