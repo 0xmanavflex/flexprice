@@ -128,6 +128,12 @@ export function createQueryClient(options: QueryClientOptions = {}): QueryClient
         staleTime: 30_000,
         refetchOnWindowFocus: false,
         throwOnError: shouldThrowOnError,
+        // Run the request even when the browser says it is offline. TanStack's
+        // default pauses it instead, and a paused search leaves the previous
+        // rows on screen under the new term with no loading or error; failing
+        // shows "Could not reach Flexprice" and a retry. Reconnecting still
+        // refetches.
+        networkMode: 'always',
       },
       mutations: {
         // A write is not idempotent unless the API says so. Retrying a failed

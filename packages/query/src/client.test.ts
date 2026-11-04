@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { onlineManager } from '@tanstack/react-query'
 import { ApiError, ErrorKind } from '@fp/api'
 import {
   MAX_RETRY_AFTER_MS,
@@ -154,6 +155,25 @@ describe('throwing to the error boundary', () => {
     const queries = createQueryClient().getDefaultOptions().queries
 
     expect(queries?.throwOnError).toBe(shouldThrowOnError)
+  })
+})
+
+describe('offline', () => {
+  // A paused query keeps the previous rows under a new search with no notice;
+  // a failed one tells the page there is nothing current to show.
+  it('runs a query while offline, so it fails instead of pausing', async () => {
+    onlineManager.setOnline(false)
+    try {
+      const queryFn = vi.fn(async () => {
+        throw new ApiError(ErrorKind.Network, 'Could not reach Flexprice.')
+      })
+      await expect(
+        createQueryClient().fetchQuery({ queryKey: ['customers'], queryFn, retry: false }),
+      ).rejects.toThrow('Could not reach Flexprice.')
+      expect(queryFn).toHaveBeenCalledTimes(1)
+    } finally {
+      onlineManager.setOnline(true)
+    }
   })
 })
 
