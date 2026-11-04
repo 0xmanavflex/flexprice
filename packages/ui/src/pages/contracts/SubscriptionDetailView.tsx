@@ -110,6 +110,7 @@ import { RelatedCard, type RelatedItem } from '../../compositions/detail/Related
 import { Section } from '../../compositions/layout/Section'
 import { ConfirmDialog } from '../../compositions/feedback/ConfirmDialog'
 import { FormDialog } from '../../compositions/forms/FormDialog'
+import { formatStoredDay } from '../../compositions/forms/DateInput'
 import type { EmptyScene } from '../../compositions/feedback/SceneIllustration'
 import { SubTabState } from '@ui/compositions/detail/SubTabState'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
@@ -346,7 +347,18 @@ export function parseSubscriptionTab(value: unknown): SubscriptionTab {
     : 'overview'
 }
 
+/**
+ * A contract date (start, period, trial end, cancellation, schedule) as one
+ * rule on every screen: a UTC day boundary (a day sent as midnight UTC) is
+ * that UTC day, any other instant the reader's local day. Formatting every
+ * instant in UTC showed a draft starting 4 Nov 00:00 IST (3 Nov 18:30 UTC) as
+ * 3 Nov here while the customer page and V1 said 4 Nov (QA #34).
+ */
 const day = (date: Date | null | undefined) =>
+  date ? formatStoredDay(date, { locale: 'en-US' }) : '—'
+
+/** An invoice's issue and due dates, read in UTC as the invoice pages read them. */
+const invoiceDay = (date: Date | null | undefined) =>
   date
     ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date)
     : '—'
@@ -1794,13 +1806,13 @@ export function SubscriptionDetailView({
                     key: 'issued',
                     header: 'Issue date',
                     sortBy: (row) => row.issuedAt?.getTime() ?? 0,
-                    cell: (row) => <Muted>{day(row.issuedAt)}</Muted>,
+                    cell: (row) => <Muted>{invoiceDay(row.issuedAt)}</Muted>,
                   },
                   {
                     key: 'due',
                     header: 'Due date',
                     sortBy: (row) => row.dueDate?.getTime() ?? 0,
-                    cell: (row) => <Muted>{day(row.dueDate)}</Muted>,
+                    cell: (row) => <Muted>{invoiceDay(row.dueDate)}</Muted>,
                   },
                   {
                     key: 'status',

@@ -727,6 +727,27 @@ export const Cancelled: Story = {
   },
 }
 
+/**
+ * Contract dates saved at local midnight read on that local day (QA #34): a
+ * draft starting 4 Nov 00:00 IST (3 Nov 18:30 UTC) read 3 Nov here and 4 Nov on
+ * the customer page, and a trial ending at midnight on 11 Nov read 10 Nov.
+ */
+export const LocalMidnightDatesReadOnTheirDay: Story = {
+  args: withSubscription({
+    status: SubscriptionStatus.Trialing,
+    startDate: new Date(2026, 10, 4),
+    currentPeriodStart: new Date(2026, 10, 4),
+    currentPeriodEnd: new Date(2026, 11, 4),
+    trialEnd: new Date(2026, 10, 11),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/The trial ends on Nov 11, 2026/)).toBeVisible()
+    await openInformation(canvasElement)
+    await expect(await canvas.findByText('Nov 4, 2026 – Dec 4, 2026')).toBeVisible()
+  },
+}
+
 /** A cancelled contract's metadata is read-only: no edit pencil on the card. */
 export const CancelledMetadataReadOnly: Story = {
   args: {

@@ -55,6 +55,7 @@ import {
 import { SortMenu } from '@ui/compositions/tables/SortMenu'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import { EditableCard } from '@ui/compositions/forms/EditableCard'
+import { formatStoredDay } from '@ui/compositions/forms/DateInput'
 import { RelatedCard } from '@ui/compositions/detail/RelatedCard'
 import { MetadataCard } from '@ui/compositions/detail/MetadataCard'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
@@ -236,13 +237,13 @@ export interface CustomerDetailProps {
   locale?: string
 }
 
+/**
+ * Dates on this page read by the same rule as the contract page
+ * (`formatStoredDay`): a UTC day boundary is that UTC day, anything else the
+ * reader's local day. So a contract's period reads the same day here and there.
+ */
 function useDateFormat(locale?: string) {
-  const formatter = new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-  return (date: Date | null) => (date ? formatter.format(date) : '—')
+  return (date: Date | null) => (date ? formatStoredDay(date, { locale }) : '—')
 }
 
 type FormatDate = (date: Date | null) => string
