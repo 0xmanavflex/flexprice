@@ -310,21 +310,33 @@ export async function fetchCustomerSubscriptions(
   client: Flexprice,
   customerId: string,
 ): Promise<Subscription[]> {
-  const response = await call(() =>
-    client.subscriptions.querySubscription({
-      // The internal id, not the external one: the API resolves an external id
-      // to published customers only, so an archived customer's would 404.
-      customerId,
-      // The search returns only active subscriptions unless told otherwise, so a
-      // trialing or draft contract would vanish. Same set V1's overview asks for,
-      // plus paused, which the Live contracts tile counts.
-      subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES,
-      expand: 'plan',
-      limit: 100,
-    } as never),
-  )
-  return (response.items ?? []).map((item) => toSubscription(item as SubscriptionWire))
+  // Every page: the tab searches, filters and sorts in the browser, which is
+  // only true over the whole set.
+  const wires: SubscriptionWire[] = []
+  for (let offset = 0; ; offset += CUSTOMER_SUBSCRIPTIONS_PAGE) {
+    const response = await call(() =>
+      client.subscriptions.querySubscription({
+        // The internal id, not the external one: the API resolves an external id
+        // to published customers only, so an archived customer's would 404.
+        customerId,
+        // The search returns only active subscriptions unless told otherwise, so a
+        // trialing or draft contract would vanish. Same set V1's overview asks for,
+        // plus paused, which the Live contracts tile counts.
+        subscriptionStatus: LIVE_SUBSCRIPTION_STATUSES,
+        expand: 'plan',
+        limit: CUSTOMER_SUBSCRIPTIONS_PAGE,
+        offset,
+      } as never),
+    )
+    const items = (response.items ?? []) as SubscriptionWire[]
+    wires.push(...items)
+    const total = response.pagination?.total ?? 0
+    if (items.length < CUSTOMER_SUBSCRIPTIONS_PAGE || wires.length >= total) break
+  }
+  return wires.map(toSubscription)
 }
+
+const CUSTOMER_SUBSCRIPTIONS_PAGE = 100
 
 /**
  * A customer's subscriptions, scoped by their internal id.
