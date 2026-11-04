@@ -429,6 +429,7 @@ export type { CreditGrantWire } from './creditGrants'
  * `session.ts` reaches the other undocumented routes.
  */
 export {
+  fetchAllMembers,
   fetchMembers,
   toCreateServiceAccountRequest,
   toInviteMemberRequest,

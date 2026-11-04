@@ -50,14 +50,16 @@ const SERVICE_ACCOUNT_DOCS_URL = 'https://docs.flexprice.io/docs/rbac/service-ac
  * which is a confusing way to fail.
  *
  * Search is the table's own, client-side, for the same reason as Team:
- * `POST /users/search` accepts a filter and ignores it.
+ * `POST /users/search` accepts a filter and ignores it. Every account is read
+ * (`useServiceAccounts` pages through them all), so search, sort and paging
+ * cover the whole set.
  */
 export function ServiceAccountsPanel() {
   const [isCreating, setIsCreating] = useState(false)
   const [renaming, setRenaming] = useState<Member | null>(null)
   const [deleting, setDeleting] = useState<Member | null>(null)
 
-  const accounts = useServiceAccounts({ ...DEFAULT_SERVICE_ACCOUNT_QUERY, pageSize: 100 })
+  const accounts = useServiceAccounts(DEFAULT_SERVICE_ACCOUNT_QUERY)
   const roles = useRoles('service_account')
   const remove = useDeleteServiceAccount()
 

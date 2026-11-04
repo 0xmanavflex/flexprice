@@ -63,8 +63,9 @@ import { useDraft } from './useDraft'
  * `POST /users/search` accepts `filters` and `roles` and **silently ignores
  * both**. Verified live: a `contains` filter came back with a row whose name
  * cannot match it. An accepted-and-ignored filter is worse than a rejected one
- *: the list looks filtered and is not: so neither is sent. The table's own
- * search narrows the page that arrived (up to a hundred people).
+ *: the list looks filtered and is not: so neither is sent. Every member is
+ * read instead (`useTeamMembers` pages through them all), so the table's own
+ * search, sort and paging cover the whole team.
  *
  * ## Two columns that do not exist
  *
@@ -80,7 +81,7 @@ export function MembersPanel() {
   const [editing, setEditing] = useState<Member | null>(null)
   const [removing, setRemoving] = useState<Member | null>(null)
 
-  const members = useTeamMembers({ ...DEFAULT_MEMBER_QUERY, pageSize: 100 })
+  const members = useTeamMembers(DEFAULT_MEMBER_QUERY)
   const roles = useRoles('user')
   const me = useUserInfo()
   const remove = useRemoveMember()
