@@ -2,6 +2,11 @@ import type { Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { ShellPage } from './pages/shell'
 
+// These journeys walk several pages each (customers, invoices, payments,
+// credit memos). They take ~13s locally but run past the default 30s on a
+// loaded CI runner, so the file gets more room rather than flaking.
+test.describe.configure({ timeout: 60_000 })
+
 const WRITER = 'user_01M38QUSER0000000000002' // all_writer, not a super admin
 
 test.beforeEach(async ({ context }) => {
