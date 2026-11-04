@@ -12,6 +12,7 @@ import { useCreateBulkEntitlements, usePlans } from '@fp/query'
 import { EntitlementCreateForm } from '@fp/ui/pages'
 import { Field, FormDialog, OptionCombobox } from '@fp/ui/compositions'
 import { PlusIcon } from '@fp/ui/icons'
+import { entitlementSubmitError } from '../shared/entitlementSubmitError'
 
 export interface FeatureEntitlementDialogProps {
   /** The feature the entitlement grants; null keeps the dialog closed. */
@@ -118,7 +119,7 @@ export function FeatureEntitlementDialog({ feature, onClose }: FeatureEntitlemen
             onSubmit={submit}
             onCancel={close}
             isSubmitting={create.isPending}
-            submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
+            submitError={entitlementSubmitError(create, 'add')}
           />
         </div>
       ) : null}
