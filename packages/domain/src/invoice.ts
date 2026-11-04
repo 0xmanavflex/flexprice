@@ -379,9 +379,11 @@ export type InvoiceRecalculation =
 export function invoiceRecalculation(
   invoice: Pick<InvoiceDetail, 'status' | 'subscriptionId' | 'amountPaid'>,
 ): InvoiceRecalculation {
-  if (invoice.status === InvoiceStatus.Draft) return { kind: 'in-place' }
+  // Before the draft check: the API refuses a one-off draft too ("Only
+  // subscription invoices can be recalculated"), as V1 knows.
   if (!invoice.subscriptionId)
     return { kind: 'unavailable', reason: 'Only contract invoices can be recalculated' }
+  if (invoice.status === InvoiceStatus.Draft) return { kind: 'in-place' }
   if (invoice.status === InvoiceStatus.Void) return { kind: 'replace' }
   if (invoice.status === InvoiceStatus.Skipped)
     return { kind: 'unavailable', reason: 'A skipped invoice has nothing to recalculate' }

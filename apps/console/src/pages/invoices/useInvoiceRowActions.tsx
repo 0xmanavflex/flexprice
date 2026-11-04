@@ -86,19 +86,19 @@ export function useInvoiceRowActions({
     }[] = []
     const open = invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue
     if (invoice.status === InvoiceStatus.Draft) {
-      items.push(
-        {
-          label: 'Finalize',
-          icon: <CheckCircle2Icon aria-hidden className="size-4" />,
-          onSelect: () => run(finalize, invoice, 'Invoice finalized', 'finalize the invoice'),
-        },
-        {
+      items.push({
+        label: 'Finalize',
+        icon: <CheckCircle2Icon aria-hidden className="size-4" />,
+        onSelect: () => run(finalize, invoice, 'Invoice finalized', 'finalize the invoice'),
+      })
+      // Only a contract's draft: the API refuses to recalculate a one-off one.
+      if (invoice.subscriptionId)
+        items.push({
           label: 'Recalculate',
           icon: <RefreshCwIcon aria-hidden className="size-4" />,
           onSelect: () =>
             run(recalculate, invoice, 'Invoice recalculated', 'recalculate the invoice'),
-        },
-      )
+        })
     }
     if (open && onRecordPayment) {
       items.push({
