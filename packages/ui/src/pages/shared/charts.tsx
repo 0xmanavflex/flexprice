@@ -390,14 +390,17 @@ export function MetricChart({
           </button>
         ))}
       </div>
-      <div
-        id={`${uid}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${uid}-tab-${active.id}`}
-        className="bg-background rounded-lg border p-4"
-      >
-        <MetricSeries tab={active} height={height} {...(caption ? { caption } : {})} />
-      </div>
+      {/* No frame around a chart that is not drawn (`hideChart` with no points). */}
+      {active.hideChart && active.points.length === 0 ? null : (
+        <div
+          id={`${uid}-panel`}
+          role="tabpanel"
+          aria-labelledby={`${uid}-tab-${active.id}`}
+          className="bg-background rounded-lg border p-4"
+        >
+          <MetricSeries tab={active} height={height} {...(caption ? { caption } : {})} />
+        </div>
+      )}
     </div>
   )
 }
