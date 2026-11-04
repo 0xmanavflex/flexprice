@@ -136,6 +136,8 @@ export interface SubscriptionWire {
   currentPeriodStart?: Date | undefined
   currentPeriodEnd?: Date | undefined
   startDate?: Date | undefined
+  /** The sort key of the default contract list (`updated_at`). */
+  updatedAt?: Date | undefined
   createdAt?: Date | undefined
   billingPeriodCount?: number | undefined
   cancelAt?: Date | undefined
@@ -753,7 +755,10 @@ export async function fetchSubscriptions(
   const term = query.search.trim()
   let request: Record<string, unknown> = toSubscriptionFilter(query)
   if (term) {
-    const [customerIds, planIds] = await Promise.all([
+    // Either lookup can fail without taking the other down: a plan search
+    // that errors still lets matching customers find their contracts. Only
+    // when both fail is the search an error.
+    const [customerMatch, planMatch] = await Promise.allSettled([
       allMatchingIds((offset) =>
         call(
           (options) =>
@@ -775,6 +780,10 @@ export async function fetchSubscriptions(
         ),
       ),
     ])
+    if (customerMatch.status === 'rejected' && planMatch.status === 'rejected')
+      throw customerMatch.reason
+    const customerIds = customerMatch.status === 'fulfilled' ? customerMatch.value : []
+    const planIds = planMatch.status === 'fulfilled' ? planMatch.value : []
     if (customerIds.length === 0 && planIds.length === 0) return { subscriptions: [], total: 0 }
     const byPlan: SubscriptionQuery = {
       ...query,
@@ -845,7 +854,13 @@ async function mergedSearch(
       seen.add(id)
       return true
     })
-    .sort((a, b) => direction * (sortValue(a, query.sortBy) - sortValue(b, query.sortBy)))
+    // The server's order: the chosen date, then the id in the same direction
+    // (`sortWithTieBreak`), so a merged page lands where a paged list would.
+    .sort(
+      (a, b) =>
+        direction * (sortValue(a, query.sortBy) - sortValue(b, query.sortBy)) ||
+        direction * (a.id ?? '').localeCompare(b.id ?? ''),
+    )
   const start = (query.page - 1) * query.pageSize
   const page = await withCustomerNames(client, merged.slice(start, start + query.pageSize), signal)
   return { subscriptions: page.map(toSubscription), total: merged.length }

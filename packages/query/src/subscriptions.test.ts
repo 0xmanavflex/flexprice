@@ -192,6 +192,49 @@ describe('the contract search', () => {
     expect(page.total).toBe(1)
   })
 
+  it('orders a merged search newest first, breaking ties by id as the server does', async () => {
+    const at = (iso: string) => new Date(iso)
+    const byCustomer = [
+      { id: 'sub_b', customerId: 'cus_1', updatedAt: at('2026-10-01T00:00:00Z') },
+      { id: 'sub_old', customerId: 'cus_1', updatedAt: at('2026-01-01T00:00:00Z') },
+    ]
+    const byPlan = [
+      { id: 'sub_new', customerId: 'cus_2', updatedAt: at('2026-11-01T00:00:00Z') },
+      { id: 'sub_c', customerId: 'cus_2', updatedAt: at('2026-10-01T00:00:00Z') },
+    ]
+    const querySubscription = vi.fn(async (filter: unknown) => {
+      const items = (filter as { customerIds?: string[] }).customerIds ? byCustomer : byPlan
+      return { items, pagination: { total: items.length } }
+    })
+    const paged = (rows: { id: string }[]) => async () => ({
+      items: rows,
+      pagination: { total: rows.length },
+    })
+    const client = {
+      customers: { queryCustomer: vi.fn(paged([{ id: 'cus_1' }])) },
+      plans: { queryPlan: vi.fn(paged([{ id: 'plan_ent' }])) },
+      subscriptions: { querySubscription },
+    } as unknown as Flexprice
+    const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'e' })
+    // updatedAt desc; the two Oct 1 contracts tie and fall to id desc (sub_c, sub_b).
+    expect(page.subscriptions.map((row) => row.id)).toEqual([
+      'sub_new',
+      'sub_c',
+      'sub_b',
+      'sub_old',
+    ])
+  })
+
+  it('still finds customer matches when the plan lookup fails', async () => {
+    const { client, querySubscription } = fakeClient([{ id: 'cus_1' }])
+    ;(client.plans as unknown as { queryPlan: unknown }).queryPlan = vi.fn(async () => {
+      throw new Error('plans down')
+    })
+    const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'QA' })
+    expect(querySubscription.mock.calls[0]?.[0]).toMatchObject({ customerIds: ['cus_1'] })
+    expect(page.subscriptions.map((row) => row.id)).toEqual(['sub_1'])
+  })
+
   it('returns an empty page when nothing matches, without listing contracts', async () => {
     const { client, querySubscription } = fakeClient([])
     const page = await fetchSubscriptions(client, { ...DEFAULT_SUBSCRIPTION_QUERY, search: 'zz' })
