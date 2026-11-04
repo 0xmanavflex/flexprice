@@ -1,5 +1,6 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
+import { ShellPage } from './pages/shell'
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(
@@ -84,4 +85,29 @@ test('a link that names a filter wins over the remembered one', async ({ page })
   await expect(search(page)).toHaveValue('token')
   await expect(page).toHaveURL(/[?&]q=token/)
   await expect(page).not.toHaveURL(/api/)
+})
+
+test("a shared link to another environment's list does not get this one's filters", async ({
+  page,
+}) => {
+  await filterFeatures(page, 'api')
+  const shell = new ShellPage(page)
+  const homeName = await shell.currentEnvironment()
+
+  // Another environment's id, learnt from the switcher rather than a fixture.
+  await shell.environment.click()
+  const other = page
+    .getByRole('menuitem')
+    .filter({ hasNot: page.locator('[aria-current]') })
+    .first()
+  await other.click()
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/features')
+  const linked = new URL(page.url()).searchParams.get('env') ?? ''
+  await shell.switchEnvironment(homeName)
+
+  // Back home the remembered filter is restored; the shared link must not take it.
+  await page.goto(`/features?env=${linked}`)
+  await expect(page.getByText(/^Switched to/)).toBeVisible({ timeout: 20_000 })
+  await expect(search(page)).toHaveValue('')
+  await expect(page).not.toHaveURL(/[?&]search=api/)
 })

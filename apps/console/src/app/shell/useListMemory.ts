@@ -105,6 +105,12 @@ export function useListMemory(): void {
      * Waiting costs nothing, because the effect re-runs when the id arrives.
      */
     if (environmentId === null) return
+    // A shared link naming another environment switches the console on
+    // arrival. Until it has, this list's memory belongs to the environment
+    // being left: restoring it would put one environment's filters on
+    // another's list, and saving now would file this URL under the wrong one.
+    const linked = location[ENVIRONMENT_PARAM]
+    if (typeof linked === 'string' && linked !== environmentId) return
 
     if (restoredFor.current !== pathname) {
       restoredFor.current = pathname
@@ -122,5 +128,5 @@ export function useListMemory(): void {
     }
 
     rememberQuery(globalThis.sessionStorage, environmentId, pathname, search)
-  }, [pathname, search, environmentId, navigate])
+  }, [pathname, search, location, environmentId, navigate])
 }
