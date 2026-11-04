@@ -9,7 +9,7 @@ import {
   Trash2Icon,
   WebhookIcon,
 } from '@ui/icons'
-import { type WebhookEndpoint, type WebhookEndpointStats, webhookErrorRate } from '@fp/domain'
+import { DOCS, type WebhookEndpoint, type WebhookEndpointStats, webhookErrorRate } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import type { ErrorKind } from '@ui/compositions/feedback/States'
@@ -37,19 +37,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Receiving webhooks',
     description: 'How Flexprice delivers events, and what a delivery looks like.',
-    href: 'https://docs.flexprice.io/docs/webhooks/overview',
+    href: DOCS.webhooks,
     icon: <WebhookIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Verifying signatures',
     description: 'Checking the signing secret on every request you receive.',
-    href: 'https://docs.svix.com/receiving/verifying-payloads/how',
+    href: DOCS.webhookSignatures,
     icon: <ShieldCheckIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Event catalog',
     description: 'Every event type Flexprice sends, with an example payload.',
-    href: 'https://docs.flexprice.io/docs/webhooks/overview',
+    href: DOCS.webhookEventCatalog,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
 ]

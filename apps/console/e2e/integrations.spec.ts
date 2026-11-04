@@ -109,7 +109,7 @@ test.describe('integrations', () => {
     await page.goto('/integrations')
 
     const guide = page.getByRole('link', { name: /Setup guide for Stripe/ })
-    await expect(guide).toHaveAttribute('href', 'https://docs.flexprice.io/integrations/stripe/')
+    await expect(guide).toHaveAttribute('href', 'https://docs.flexprice.io/integrations/stripe/connection-setup')
     await expect(guide).toHaveAttribute('target', '_blank')
   })
 

@@ -10,6 +10,7 @@ import {
   XCircleIcon,
 } from '@ui/icons'
 import {
+  DOCS,
   DEFAULT_SUBSCRIPTION_QUERY,
   isSubscriptionQueryFiltered,
   SUBSCRIPTION_SORT_LABEL,
@@ -82,19 +83,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Subscribing a customer',
     description: 'Putting someone on a plan, and what the first billing period does.',
-    href: 'https://docs.flexprice.io/docs/subscriptions/customers-create-subscription',
+    href: DOCS.subscriptionCreate,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'How plans price a contract',
     description: 'Charges, entitlements, and what the customer is actually billed for.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/overview',
+    href: DOCS.plans,
     icon: <LayersIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Billing period settings',
     description: 'Anchors, proration and when a cycle closes.',
-    href: 'https://docs.flexprice.io/docs/settings/settings#subscription-configuration',
+    href: DOCS.subscriptionSettings,
     icon: <CalendarClockIcon aria-hidden className="size-4" />,
   },
 ]

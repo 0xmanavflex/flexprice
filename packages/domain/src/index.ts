@@ -1135,3 +1135,4 @@ export {
   type SellerDetails,
   type TaxIdentifier,
 } from './billingEntity'
+export { DOCS } from './docsLinks'

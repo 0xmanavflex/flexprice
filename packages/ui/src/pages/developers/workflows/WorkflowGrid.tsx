@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { BookOpenIcon, CopyIcon, DownloadIcon, RefreshCwIcon } from '@ui/icons'
 import {
+  DOCS,
   DEFAULT_WORKFLOW_QUERY,
   WORKFLOW_STATUS_LABEL,
   type WorkflowQuery,
@@ -11,12 +12,7 @@ import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
-import {
-  type EntityColumn,
-  idColumn,
-  pillColumn,
-  textColumn,
-} from '../../shared/cells'
+import { type EntityColumn, idColumn, pillColumn, textColumn } from '../../shared/cells'
 import { WORKFLOW_STATUS_TONE } from '../../shared/statusTones'
 
 /**
@@ -42,13 +38,13 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'What runs as a workflow',
     description: 'Syncs, exports and billing runs are background workflows you can follow here.',
-    href: 'https://docs.flexprice.io/docs/overview',
+    href: DOCS.apiQueryWorkflows,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Exporting data',
     description: 'A data export shows up here as a run while it works.',
-    href: 'https://docs.flexprice.io/docs/overview',
+    href: DOCS.s3Export,
     icon: <DownloadIcon aria-hidden className="size-4" />,
   },
 ]

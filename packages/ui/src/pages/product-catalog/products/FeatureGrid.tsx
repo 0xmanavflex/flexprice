@@ -11,6 +11,7 @@ import {
   Trash2Icon,
 } from '@ui/icons'
 import {
+  DOCS,
   aggregationFormula,
   DEFAULT_FEATURE_QUERY,
   isFeatureQueryFiltered,
@@ -78,33 +79,28 @@ const SORT_OPTIONS = Object.values(FeatureSortField).map((value) => ({
 }))
 
 /**
- * The three cards under the first-run empty state.
- *
- * Every URL here was requested and returned 200. That check is worth keeping
- * when these change: the first draft guessed `docs.flexprice.io/features`,
- * which 404s: the real site namespaces everything under `/docs/` (or
- * `/api-reference/`), and V1 has been linking the correct paths all along in
- * `flexprice-front/src/constants/guides.tsx`. A dead link in an empty state is
- * worse than no link, because the empty state is where someone has already
+ * The three cards under the first-run empty state. Their addresses live in
+ * `DOCS` (`@fp/domain`), checked against the docs sitemap: a dead link in an
+ * empty state is worse than none, because that is where someone has already
  * admitted they do not know what to do next.
  */
 const GUIDES: EntityGuide[] = [
   {
     title: 'What a feature is',
     description: 'Metered, boolean and static features, and when to reach for each.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/features/use-cases',
+    href: DOCS.featureUseCases,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Sending usage events',
     description: 'How a metered feature turns raw events into something billable.',
-    href: 'https://docs.flexprice.io/api-reference/events/ingest-event',
+    href: DOCS.apiIngestEvent,
     icon: <ScrollTextIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Pricing a feature',
     description: 'Attach a feature to a plan with a charge and an entitlement.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/features/linking-to-plans',
+    href: DOCS.featureLinkToPlans,
     icon: <SquareStackIcon aria-hidden className="size-4" />,
   },
 ]

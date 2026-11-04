@@ -5,6 +5,7 @@ import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { EmptyState, ListOfferProvider } from './EmptyState'
 import { PageBody } from '../layout/Page'
+import { DOCS } from '@fp/domain'
 
 const meta = {
   title: 'Building blocks/Feedback & states/EmptyState',
@@ -285,9 +286,7 @@ export const ApiKeysFirstRun: Story = {
     description:
       'An API key lets your servers send usage events and call the Flexprice API without a person signing in.',
     action: <Button>Create API key</Button>,
-    secondaryAction: (
-      <DocsLink href="https://docs.flexprice.io/api-reference/introduction">API docs</DocsLink>
-    ),
+    secondaryAction: <DocsLink href={DOCS.apiReference}>API docs</DocsLink>,
   },
   decorators: [(Story) => <DeveloperFirstRunFrame>{<Story />}</DeveloperFirstRunFrame>],
   play: async ({ canvasElement }) => {
@@ -304,11 +303,7 @@ export const ServiceAccountsFirstRun: Story = {
     description:
       'A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key.',
     action: <Button>New service account</Button>,
-    secondaryAction: (
-      <DocsLink href="https://docs.flexprice.io/docs/rbac/service-accounts/create">
-        Read the docs
-      </DocsLink>
-    ),
+    secondaryAction: <DocsLink href={DOCS.serviceAccounts}>Read the docs</DocsLink>,
   },
   decorators: [(Story) => <DeveloperFirstRunFrame>{<Story />}</DeveloperFirstRunFrame>],
   play: async ({ canvasElement }) => {

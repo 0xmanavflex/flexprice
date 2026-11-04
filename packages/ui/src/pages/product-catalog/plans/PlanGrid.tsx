@@ -11,6 +11,7 @@ import {
   SquareStackIcon,
 } from '@ui/icons'
 import {
+  DOCS,
   BILLING_PERIOD_SHORT,
   DEFAULT_PLAN_QUERY,
   planKindLabel,
@@ -93,32 +94,28 @@ function headlinePrice(plan: Plan): string | null {
 }
 
 /**
- * The three cards under the first-run empty state.
- *
- * Every URL was requested and returned 200, and every one appears in
- * `docs.flexprice.io/sitemap.xml`. Worth re-checking when these change: the
- * real site namespaces everything under `/docs/` or `/api-reference/`, and a
- * guessed path like `docs.flexprice.io/plans` 404s. A dead link in an empty
- * state is worse than no link, because the empty state is where someone has
- * already admitted they do not know what to do next.
+ * The three cards under the first-run empty state. Their addresses live in
+ * `DOCS` (`@fp/domain`), checked against the docs sitemap: a dead link in an
+ * empty state is worse than none, because that is where someone has already
+ * admitted they do not know what to do next.
  */
 const GUIDES: EntityGuide[] = [
   {
     title: 'What a plan is',
     description: 'How a plan groups charges into something a customer can subscribe to.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/overview',
+    href: DOCS.plans,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Creating your first plan',
     description: 'Name it, price it, and publish it so someone can subscribe.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/create',
+    href: DOCS.planCreate,
     icon: <SquareStackIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Pricing models',
     description: 'Flat fee, package and volume tiers, and when each one fits.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/pricing',
+    href: DOCS.planPricing,
     icon: <ReceiptTextIcon aria-hidden className="size-4" />,
   },
 ]

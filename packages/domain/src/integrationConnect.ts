@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { effectiveEntityId, type BillingEntity } from './billingEntity'
 import type { IntegrationConnection } from './integration'
+import { DOCS } from './docsLinks'
 
 /**
  * How each provider is connected: the fields it needs, which of them are
@@ -159,7 +160,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
         'setup_intent.succeeded',
       ],
     },
-    credentialHelp: 'https://docs.flexprice.io/integrations/stripe/',
+    credentialHelp: DOCS.integrations.stripe,
   },
   razorpay: {
     providerType: 'razorpay',
@@ -179,7 +180,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
         'payment_link.cancelled',
       ],
     },
-    credentialHelp: 'https://docs.flexprice.io/integrations/razorpay/',
+    credentialHelp: DOCS.integrations.razorpay,
   },
   chargebee: {
     providerType: 'chargebee',
@@ -208,7 +209,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
     ],
     sync: [pushInvoices],
     webhook: { events: ['payment_succeeded'] },
-    credentialHelp: 'https://docs.flexprice.io/integrations/chargebee/',
+    credentialHelp: DOCS.integrations.chargebee,
   },
   hubspot: {
     providerType: 'hubspot',
@@ -324,7 +325,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
     fields: [secret('api_key', 'API key', { placeholder: 'sk_live_…' }), webhookSecret()],
     sync: [pushInvoices],
     webhook: { events: ['invoice.paid', 'payment_link.paid'] },
-    credentialHelp: 'https://docs.flexprice.io/integrations/nomod/',
+    credentialHelp: DOCS.integrations.nomod,
   },
   moyasar: {
     providerType: 'moyasar',
@@ -357,7 +358,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
     ],
     sync: [{ ...pushInvoices, defaultOn: true }],
     webhook: { events: ['payment_paid', 'payment_failed'] },
-    credentialHelp: 'https://docs.flexprice.io/integrations/moyasar/',
+    credentialHelp: DOCS.integrations.moyasar,
   },
   paddle: {
     providerType: 'paddle',
@@ -426,7 +427,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
     prerequisites: [
       'Create an IAM role that allows aws-marketplace:BatchMeterUsage and trusts the Flexprice account with the external ID shown below.',
     ],
-    credentialHelp: 'https://docs.flexprice.io/marketplace-integration/aws/connection-setup',
+    credentialHelp: DOCS.integrations.awsMarketplace,
   },
   gcp_marketplace: {
     providerType: 'gcp_marketplace',
@@ -442,7 +443,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
       },
     ],
     sync: [],
-    credentialHelp: 'https://docs.flexprice.io/marketplace-integration/gcp/connection-setup',
+    credentialHelp: DOCS.integrations.gcpMarketplace,
   },
   azure_marketplace: {
     providerType: 'azure_marketplace',
@@ -453,7 +454,7 @@ export const CONNECTION_SPECS: Record<string, ConnectionSpec> = {
       secret('client_secret', 'Client secret'),
     ],
     sync: [],
-    credentialHelp: 'https://docs.flexprice.io/marketplace-integration/azure/connection-setup',
+    credentialHelp: DOCS.integrations.azureMarketplace,
   },
 }
 

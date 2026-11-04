@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  DOCS,
   type CreateServiceAccount,
   DEFAULT_SERVICE_ACCOUNT_QUERY,
   type Member,
@@ -35,7 +36,7 @@ import {
 } from './panelKit'
 import { useDraft } from './useDraft'
 
-const SERVICE_ACCOUNT_DOCS_URL = 'https://docs.flexprice.io/docs/rbac/service-accounts/create'
+const SERVICE_ACCOUNT_DOCS_URL = DOCS.serviceAccounts
 
 /**
  * Service accounts: the identities that are not people. Lives under

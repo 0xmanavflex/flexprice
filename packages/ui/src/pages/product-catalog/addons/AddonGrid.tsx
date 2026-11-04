@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { BookOpenIcon, CopyIcon, PencilIcon, PlusIcon, PuzzleIcon, ArchiveIcon } from '@ui/icons'
 import {
+  DOCS,
   ADDON_SORT_LABEL,
   ADDON_STATUS_LABEL,
   type Addon,
@@ -70,19 +71,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'What an add-on is',
     description: 'A priced extra a customer buys alongside a plan, never on its own.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/addons/overview',
+    href: DOCS.addons,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Creating an add-on',
     description: 'Name it, give it a lookup key, then attach its charges.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/addons/create',
+    href: DOCS.addonCreate,
     icon: <PuzzleIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Adding one to a contract',
     description: 'Put an add-on on a live contract and see it billed.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/addons/add-to-subscription',
+    href: DOCS.addonOnSubscription,
     icon: <PlusIcon aria-hidden className="size-4" />,
   },
 ]

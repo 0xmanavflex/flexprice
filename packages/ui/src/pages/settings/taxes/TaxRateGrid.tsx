@@ -9,6 +9,7 @@ import {
   Trash2Icon,
 } from '@ui/icons'
 import {
+  DOCS,
   DEFAULT_TAX_RATE_QUERY,
   TAX_RATE_SCOPE_LABEL,
   TAX_RATE_SORT_LABEL,
@@ -66,19 +67,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Applying a rate',
     description: 'Attaching a tax rate to a customer, a plan or a single charge.',
-    href: 'https://docs.flexprice.io/api-reference/tax-associations/create-tax-association',
+    href: DOCS.apiCreateTaxAssociation,
     icon: <LinkIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Seeing where one applies',
     description: 'Listing everything a rate is currently attached to.',
-    href: 'https://docs.flexprice.io/api-reference/tax-associations/list-tax-associations',
+    href: DOCS.apiListTaxAssociations,
     icon: <ListIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Changing an association',
     description: 'Moving a rate, or ending one without deleting the rate itself.',
-    href: 'https://docs.flexprice.io/api-reference/tax-associations/update-tax-association',
+    href: DOCS.apiUpdateTaxAssociation,
     icon: <PercentIcon aria-hidden className="size-4" />,
   },
 ]

@@ -1,4 +1,5 @@
 import type { ShellCrumb, ShellNavGroup, ShellNavItem } from '@fp/ui/compositions'
+import { DOCS } from '@fp/domain'
 
 /**
  * The navigation tree.
@@ -35,7 +36,7 @@ export interface NavEntry {
 }
 
 /** Flexprice's own documentation, where the Documentation row sends you. */
-export const DOCS_URL = 'https://docs.flexprice.io/docs/welcome-to-flexprice'
+export const DOCS_URL = DOCS.home
 
 export const NAV: NavEntry[] = [
   { id: 'home', label: 'Home', path: '/' },

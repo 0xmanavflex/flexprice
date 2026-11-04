@@ -1,3 +1,4 @@
+import { DOCS } from './docsLinks'
 /**
  * The integrations Flexprice can connect to, and whether this environment has
  * connected each. The catalogue is fixed product knowledge (V1 hard-codes it
@@ -22,7 +23,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     providerType: 'stripe',
     categories: ['Payments', 'Invoices'],
     description: 'Collect payments, sync invoices and calculate tax with Stripe.',
-    docsUrl: 'https://docs.flexprice.io/integrations/stripe/',
+    docsUrl: DOCS.integrations.stripe,
   },
   {
     id: 'razorpay',
@@ -30,7 +31,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     providerType: 'razorpay',
     categories: ['Payments', 'Invoices'],
     description: 'Send invoices to Razorpay and collect payment on them.',
-    docsUrl: 'https://docs.flexprice.io/integrations/razorpay/',
+    docsUrl: DOCS.integrations.razorpay,
   },
   {
     id: 'chargebee',
@@ -38,7 +39,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     providerType: 'chargebee',
     categories: ['Payments', 'Invoices'],
     description: 'Send invoices to Chargebee.',
-    docsUrl: 'https://docs.flexprice.io/integrations/chargebee/',
+    docsUrl: DOCS.integrations.chargebee,
   },
   {
     id: 'hubspot',
@@ -60,7 +61,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     providerType: 'quickbooks',
     categories: ['Accounting', 'Invoices'],
     description: 'Send invoices to QuickBooks Online and pull payments back.',
-    docsUrl: 'https://docs.flexprice.io/integrations/quickbooks/',
+    docsUrl: DOCS.integrations.quickbooks,
   },
   {
     id: 'nomod',
@@ -68,7 +69,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     providerType: 'nomod',
     categories: ['Payments', 'Invoices'],
     description: 'Collect payments with Nomod payment links.',
-    docsUrl: 'https://docs.flexprice.io/integrations/nomod',
+    docsUrl: DOCS.integrations.nomod,
   },
   {
     id: 'moyasar',
@@ -76,7 +77,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     providerType: 'moyasar',
     categories: ['Payments', 'Invoices'],
     description: 'Collect payments through Moyasar.',
-    docsUrl: 'https://docs.flexprice.io/integrations/moyasar/',
+    docsUrl: DOCS.integrations.moyasar,
   },
   {
     id: 'paddle',
@@ -105,7 +106,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     providerType: 'aws_marketplace',
     categories: ['Marketplace', 'Usage metering'],
     description: 'Bill AWS Marketplace buyers for their metered usage.',
-    docsUrl: 'https://docs.flexprice.io/integrations/marketplace-integration/aws/connection-setup',
+    docsUrl: DOCS.integrations.awsMarketplace,
   },
   {
     id: 'gcp_marketplace',
@@ -113,7 +114,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     providerType: 'gcp_marketplace',
     categories: ['Marketplace', 'Usage metering'],
     description: 'Bill GCP Marketplace buyers for their metered usage.',
-    docsUrl: 'https://docs.flexprice.io/integrations/marketplace-integration/gcp/connection-setup',
+    docsUrl: DOCS.integrations.gcpMarketplace,
   },
   {
     id: 'azure_marketplace',
@@ -121,8 +122,7 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
     providerType: 'azure_marketplace',
     categories: ['Marketplace', 'Usage metering'],
     description: 'Bill Azure Marketplace buyers for their metered usage.',
-    docsUrl:
-      'https://docs.flexprice.io/integrations/marketplace-integration/azure/connection-setup',
+    docsUrl: DOCS.integrations.azureMarketplace,
   },
   {
     id: 'salesforce',

@@ -3,6 +3,7 @@ import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { get, useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
+  DOCS,
   AGGREGATION_DESCRIPTION,
   AGGREGATION_LABEL,
   AggregationType,
@@ -609,9 +610,7 @@ export function FeatureForm(props: FeatureFormProps) {
               : 'The property on the event to aggregate.'
           }
           error={
-            expressionOn
-              ? (expressionError ?? message('meter.expression'))
-              : message('meter.field')
+            expressionOn ? (expressionError ?? message('meter.expression')) : message('meter.field')
           }
         >
           {({ id, ...field }) => (
@@ -650,7 +649,7 @@ export function FeatureForm(props: FeatureFormProps) {
                     Use a custom expression
                   </CheckboxRow>
                   <a
-                    href="https://docs.flexprice.io/docs/product-catalogue/features/custom-expression"
+                    href={DOCS.featureCustomExpression}
                     target="_blank"
                     rel="noreferrer"
                     aria-label="Custom expression docs"

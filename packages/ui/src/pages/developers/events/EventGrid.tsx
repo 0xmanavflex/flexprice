@@ -3,6 +3,7 @@ import { BookOpenIcon, CopyIcon, RefreshCwIcon, ScrollTextIcon, SendIcon } from 
 import { Button } from '@ui/components/primitives/button'
 import { cn } from '@ui/lib/cn'
 import {
+  DOCS,
   DEFAULT_RAW_EVENT_QUERY,
   RAW_EVENT_PERIODS,
   type RawEvent,
@@ -70,19 +71,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Sending an event',
     description: 'The shape of a usage event and the one field that makes it idempotent.',
-    href: 'https://docs.flexprice.io/api-reference/events/ingest-event',
+    href: DOCS.apiIngestEvent,
     icon: <SendIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Sending events in bulk',
     description: 'Backfilling or batching usage without a request per event.',
-    href: 'https://docs.flexprice.io/api-reference/events/bulk-ingest-events',
+    href: DOCS.apiBulkIngestEvents,
     icon: <ScrollTextIcon aria-hidden className="size-4" />,
   },
   {
     title: 'How events become usage',
     description: 'How a feature meters the events it receives.',
-    href: 'https://docs.flexprice.io/docs/product-catalogue/features/use-cases',
+    href: DOCS.featureUseCases,
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
 ]

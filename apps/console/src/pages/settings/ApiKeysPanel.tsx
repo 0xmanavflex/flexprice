@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  DOCS,
   API_KEY_STATUS_LABEL,
   API_KEY_TYPE_LABEL,
   type ApiKey,
@@ -39,7 +40,7 @@ import { currentUserId, isOwnKey } from './apiKeyOwnership'
 import { useSession } from '@/app/session'
 
 /** Where a key is used: the API reference's introduction covers authenticating with one. */
-const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
+const API_DOCS_URL = DOCS.apiReference
 
 /**
  * API keys: list, issue, revoke. Lives in Settings; `/api-keys` redirects to its section.

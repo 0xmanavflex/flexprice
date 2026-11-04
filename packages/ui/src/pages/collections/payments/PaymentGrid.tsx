@@ -2,6 +2,7 @@ import { integrationColumn, type IntegrationMappings } from '../../shared/integr
 import { useMemo } from 'react'
 import { BanknoteIcon, CopyIcon, CreditCardIcon, InfoIcon, ReceiptIcon } from '@ui/icons'
 import {
+  DOCS,
   DEFAULT_PAYMENT_QUERY,
   PAYMENT_SORT_LABEL,
   PAYMENT_STATUS_LABEL,
@@ -87,19 +88,19 @@ const GUIDES: EntityGuide[] = [
   {
     title: 'Recording a payment',
     description: 'Registering money that arrived, against the invoice it settles.',
-    href: 'https://docs.flexprice.io/api-reference/payments/create-payment',
+    href: DOCS.apiCreatePayment,
     icon: <BanknoteIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Correcting one',
     description: 'Amending a payment that was recorded against the wrong invoice or amount.',
-    href: 'https://docs.flexprice.io/api-reference/payments/update-payment',
+    href: DOCS.apiUpdatePayment,
     icon: <CreditCardIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Marking an invoice settled',
     description: 'Updating payment status when the money moved outside Flexprice.',
-    href: 'https://docs.flexprice.io/api-reference/invoices/update-invoice-payment-status',
+    href: DOCS.apiUpdateInvoicePaymentStatus,
     icon: <ReceiptIcon aria-hidden className="size-4" />,
   },
 ]
