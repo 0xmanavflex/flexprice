@@ -557,6 +557,7 @@ export function SubscriptionDetailView({
     label: (row: T) => string,
     removeLabel: string,
     onRemove: ((row: T) => void) | null,
+    canRemove: (row: T) => boolean = () => true,
   ): DetailColumn<T>[] =>
     onRemove && canEditCharges
       ? [
@@ -564,13 +565,14 @@ export function SubscriptionDetailView({
             key: 'actions',
             header: '',
             width: 48,
-            cell: (row: T) => (
-              <RowActionsMenu
-                label={label(row)}
-                onRemove={() => onRemove(row)}
-                removeLabel={removeLabel}
-              />
-            ),
+            cell: (row: T) =>
+              canRemove(row) ? (
+                <RowActionsMenu
+                  label={label(row)}
+                  onRemove={() => onRemove(row)}
+                  removeLabel={removeLabel}
+                />
+              ) : null,
           },
         ]
       : []
@@ -1486,6 +1488,22 @@ export function SubscriptionDetailView({
                                 sortBy: (row) => row.endDate?.getTime() ?? 0,
                                 cell: (row) => <Muted>{day(row.endDate)}</Muted>,
                               },
+                              ...removeColumn<SubscriptionCoupon>(
+                                (row) => row.name,
+                                'Remove coupon',
+                                onRemoveCoupon
+                                  ? (coupon) =>
+                                      askRemoval({
+                                        title: `Remove ${coupon.name}?`,
+                                        description:
+                                          'The discount stops applying to this contract.',
+                                        confirmLabel: 'Remove coupon',
+                                        run: () => onRemoveCoupon(coupon),
+                                      })
+                                  : null,
+                                // An ended coupon has nothing left to remove.
+                                (row) => row.active,
+                              ),
                             ]}
                           />
                         )}

@@ -2176,6 +2176,29 @@ export const RemovesATax: Story = {
   },
 }
 
+/** A contract-wide coupon comes off through its row menu and a confirm; an ended one offers nothing. */
+export const RemovesAContractCoupon: Story = {
+  parameters: menuA11y,
+  args: {
+    ...BASE,
+    onRemoveCoupon: fn(async () => undefined),
+    coupons: ready([
+      COUPONS[0]!,
+      { ...COUPONS[0]!, id: 'sc_ended', name: 'Old promo', code: 'OLD', active: false },
+    ]),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('OLD')).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Actions for Old promo' })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Launch partner' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove coupon' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove coupon' }))
+    await expect(args.onRemoveCoupon).toHaveBeenCalledWith(expect.objectContaining({ id: 'sc_1' }))
+  },
+}
+
 export const OverviewChargesFailed: Story = {
   args: { ...BASE, lines: { data: undefined, isError: true, onRetry: fn() } },
   play: async ({ canvasElement, args }) => {
