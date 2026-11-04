@@ -56,3 +56,34 @@ test.describe('Settings → Tags', () => {
     await expect(page).toHaveURL(/\/settings\?section=tags&tab=tags$/)
   })
 })
+
+test.describe('a tag and a coupon open inside Settings', () => {
+  const settingsRail = (page: import('@playwright/test').Page, name: string) =>
+    page.getByRole('navigation', { name: 'Settings' }).getByRole('button', { name })
+
+  test('a tag row has one menu, and View tag opens its page under Tags', async ({ page }) => {
+    await page.goto('/settings?section=tags&tab=tags')
+    const menu = page.getByRole('button', { name: /^Actions for / }).first()
+    await expect(menu).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('button', { name: 'Open', exact: true })).toHaveCount(0)
+
+    await menu.click()
+    await expect(page.getByRole('menuitem', { name: 'Copy tag ID' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Delete tag' })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'View tag' }).click()
+
+    await expect(page).toHaveURL(/\/groups\/[^/?]+/)
+    await expect(page.getByRole('tab', { name: 'Information' })).toBeVisible()
+    await expect(settingsRail(page, 'Tags')).toHaveAttribute('aria-current', 'page')
+  })
+
+  test('a coupon page sits under Coupons in Settings', async ({ page }) => {
+    await page.goto('/coupons')
+    const row = page.getByRole('row').nth(1)
+    await expect(row).toBeVisible({ timeout: 20_000 })
+    await row.click()
+
+    await expect(page).toHaveURL(/\/coupons\/[^/?]+/)
+    await expect(settingsRail(page, 'Coupons')).toHaveAttribute('aria-current', 'page')
+  })
+})

@@ -325,6 +325,9 @@ const PriceUnitFormPage = lazy(() =>
 const GroupFormPage = lazy(() =>
   import('@/pages/groups/GroupFormPage').then((m) => ({ default: m.GroupFormPage })),
 )
+const GroupDetailPage = lazy(() =>
+  import('@/pages/groups/GroupDetailPage').then((m) => ({ default: m.GroupDetailPage })),
+)
 const TaxFormPage = lazy(() =>
   import('@/pages/taxes/TaxFormPage').then((m) => ({ default: m.TaxFormPage })),
 )
@@ -1414,19 +1417,22 @@ function CouponDetailRouteComponent() {
   const { edit } = couponDetailRoute.useSearch()
   const navigate = useNavigate()
 
+  // Inside Settings, under Coupons, like a tax rate's page.
   return (
-    <CouponDetailPage
-      couponId={couponId}
-      startEditing={edit === true}
-      onBack={() => void navigate({ to: '/coupons', search: {} as never })}
-      onOpenContract={(subscriptionId) =>
-        void navigate({
-          to: '/contracts/$subscriptionId',
-          params: { subscriptionId },
-          search: {} as never,
-        })
-      }
-    />
+    <SettingsListFrame sectionId="discounts">
+      <CouponDetailPage
+        couponId={couponId}
+        startEditing={edit === true}
+        onBack={() => void navigate({ to: '/coupons', search: {} as never })}
+        onOpenContract={(subscriptionId) =>
+          void navigate({
+            to: '/contracts/$subscriptionId',
+            params: { subscriptionId },
+            search: {} as never,
+          })
+        }
+      />
+    </SettingsListFrame>
   )
 }
 
@@ -1537,6 +1543,9 @@ function GroupsRouteComponent() {
       <GroupListPage
         query={query}
         onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}
+        onOpenGroup={(group) =>
+          void navigate({ to: '/groups/$groupId', params: { groupId: group.id } })
+        }
         onCreateGroup={() => void navigate({ to: '/groups/new' })}
       />
     </SettingsListFrame>
@@ -1570,17 +1579,28 @@ const environmentCreateRoute = createRoute({
   },
 })
 
-/**
- * Groups have no page of their own: a group is a name and its members, and the
- * list already shows both, with the id one copy away. An old link lands on it.
- */
+/** One tag, as V1's group page: inside Settings, under Tags, like a tax rate. */
 const groupDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/groups/$groupId',
-  beforeLoad: () => {
-    throw redirect({ to: '/groups', search: {} as never })
-  },
+  component: GroupDetailRouteComponent,
 })
+
+function GroupDetailRouteComponent() {
+  const { groupId } = groupDetailRoute.useParams()
+  const navigate = useNavigate()
+
+  return (
+    <SettingsListFrame sectionId="tags">
+      <GroupDetailPage
+        groupId={groupId}
+        onNavigateToList={() =>
+          void navigate({ to: '/settings', search: { section: 'tags', tab: 'tags' } })
+        }
+      />
+    </SettingsListFrame>
+  )
+}
 
 const costSheetsRoute = createRoute({
   getParentRoute: () => shellRoute,

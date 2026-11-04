@@ -9,6 +9,7 @@ import { toListFailure } from '../shared/listFailure'
 export interface GroupListPageProps {
   query: GroupQuery
   onQueryChange: (query: GroupQuery) => void
+  onOpenGroup: (group: Group) => void
   onCreateGroup: () => void
 }
 
@@ -19,7 +20,12 @@ export interface GroupListPageProps {
  * wrong name means delete and recreate. The list stays URL-driven; the pending
  * delete is the only local state.
  */
-export function GroupListPage({ query, onQueryChange, onCreateGroup }: GroupListPageProps) {
+export function GroupListPage({
+  query,
+  onQueryChange,
+  onOpenGroup,
+  onCreateGroup,
+}: GroupListPageProps) {
   const groups = useGroups(query)
   const remove = useDeleteGroup()
 
@@ -60,6 +66,7 @@ export function GroupListPage({ query, onQueryChange, onCreateGroup }: GroupList
             total={groups.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            onGroupClick={onOpenGroup}
             onCreate={onCreateGroup}
             onDelete={setDeleting}
             onClearFilters={clearFilters}
