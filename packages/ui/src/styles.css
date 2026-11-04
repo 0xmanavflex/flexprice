@@ -403,18 +403,11 @@
 }
 
 /*
- * Support chat (Pylon, loaded by the console). Its bubble is fixed
- * bottom-right and covers the primary action on a right-hand sheet (Connect,
- * Continue). Park it bottom-left, with the chat window opening from that
- * corner. Pylon sets its own !important positions.
+ * Support chat (Pylon, loaded by the console). The bubble stays bottom-right
+ * but sits under sheets and dialogs (z-50), so an open sheet covers it instead
+ * of the bubble covering the sheet's primary action. The open chat window
+ * keeps Pylon's own stacking. Pylon sets its own !important values.
  */
 .PylonChat-bubbleFrameContainer {
-  right: auto !important;
-  left: 8px !important;
-}
-
-.PylonChat-chatWindowFrameContainer {
-  right: auto !important;
-  left: 8px !important;
-  transform-origin: 20px calc(100% - 76px) !important;
+  z-index: 40 !important;
 }
