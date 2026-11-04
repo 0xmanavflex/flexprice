@@ -678,6 +678,19 @@ export const Incomplete: Story = {
   },
 }
 
+/** A draft is labelled Draft (QA #17) and still offers Activate, like an incomplete contract. */
+export const Draft: Story = {
+  args: withSubscription({ status: SubscriptionStatus.Draft, currentPeriodStart: null }),
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByText('Draft').length).toBeGreaterThan(0)
+    await expect(canvas.queryByText('Incomplete')).toBeNull()
+    const banner = within(canvas.getByRole('alert'))
+    await userEvent.click(banner.getByRole('button', { name: 'Activate' }))
+    await expect(args.onActivate).toHaveBeenCalledOnce()
+  },
+}
+
 export const CancelsAtPeriodEnd: Story = {
   args: withSubscription({ cancelAtPeriodEnd: true }),
   parameters: menuA11y,

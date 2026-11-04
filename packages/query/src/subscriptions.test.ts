@@ -14,10 +14,8 @@ describe('toSubscription', () => {
     expect(toSubscription({ subscriptionStatus: 'paused' }).status).toBe(SubscriptionStatus.Paused)
   })
 
-  it("collapses the wire's draft into Incomplete", () => {
-    expect(toSubscription({ subscriptionStatus: 'draft' }).status).toBe(
-      SubscriptionStatus.Incomplete,
-    )
+  it("reads the wire's draft as Draft, not Incomplete", () => {
+    expect(toSubscription({ subscriptionStatus: 'draft' }).status).toBe(SubscriptionStatus.Draft)
   })
 
   it('falls back to Incomplete for an unknown or missing status', () => {
@@ -105,13 +103,17 @@ describe('toSubscriptionFilter', () => {
     })
   })
 
-  it('sends chosen statuses to the server, and Incomplete asks for drafts too', () => {
+  it('sends chosen statuses to the server, Draft and Incomplete each as itself', () => {
     // The search returns only active subscriptions when no status is given, so
     // a page-only filter could never find a trialing one.
     expect(
       toSubscriptionFilter({
         ...DEFAULT_SUBSCRIPTION_QUERY,
-        statuses: [SubscriptionStatus.Trialing, SubscriptionStatus.Incomplete],
+        statuses: [
+          SubscriptionStatus.Trialing,
+          SubscriptionStatus.Incomplete,
+          SubscriptionStatus.Draft,
+        ],
       }),
     ).toMatchObject({ subscriptionStatus: ['trialing', 'incomplete', 'draft'] })
   })

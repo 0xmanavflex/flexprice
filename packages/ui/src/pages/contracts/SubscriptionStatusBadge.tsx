@@ -2,7 +2,7 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   CircleDashedIcon,
-  type CircleIcon,
+  CircleIcon,
   CirclePauseIcon,
   CircleSlashIcon,
 } from '@ui/icons'
@@ -34,6 +34,8 @@ const SUBSCRIPTION_STATUS_ICON: Record<SubscriptionStatus, typeof CircleIcon> = 
   [SubscriptionStatus.Paused]: CirclePauseIcon,
   [SubscriptionStatus.Cancelled]: CircleSlashIcon,
   [SubscriptionStatus.Incomplete]: CircleAlertIcon,
+  // An empty circle: saved, nothing started yet.
+  [SubscriptionStatus.Draft]: CircleIcon,
 }
 
 export interface SubscriptionStatusBadgeProps {

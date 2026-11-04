@@ -77,6 +77,7 @@ import {
   type Subscription,
   type SubscriptionLine,
   isInheritedContract,
+  isUnstartedSubscription,
   lineLineages,
   type SubscriptionSchedule,
   type SubscriptionTax,
@@ -564,7 +565,7 @@ export function SubscriptionDetailView({
   const isCancelled = s.status === SubscriptionStatus.Cancelled
   const isCancelling = !isCancelled && (s.cancelAtPeriodEnd || s.cancelAt !== null)
   const canCancel = !isCancelled && !isCancelling && !s.cancelledAt
-  const canActivate = s.status === SubscriptionStatus.Incomplete && Boolean(onActivate)
+  const canActivate = isUnstartedSubscription(s.status) && Boolean(onActivate)
   const canPause = Boolean(onPause) && canPauseSubscription(s.status) && !isCancelling
   const canResume = Boolean(onResume) && canResumeSubscription(s.status)
   const title = `${s.customerName} on ${s.planName}`
@@ -1352,10 +1353,10 @@ export function SubscriptionDetailView({
                         title="Add-ons"
                         showTitle
                         part={addons ?? NO_PART}
-                        // Add-ons attach only to an active or draft (incomplete) contract.
+                        // Add-ons attach only to an active or not-yet-started (draft) contract.
                         create={
                           s.status === SubscriptionStatus.Active ||
-                          s.status === SubscriptionStatus.Incomplete
+                          isUnstartedSubscription(s.status)
                             ? createFor('addon', 'Add add-on', onAddAddon)
                             : undefined
                         }
@@ -2231,7 +2232,7 @@ function InvoicePreviewSection({
   const byPrice = new Map(contractLines.map((line) => [line.priceId, line]))
   const contractLineOf = (line: InvoicePreviewLine) =>
     line.priceId ? byPrice.get(line.priceId) : undefined
-  if (status === SubscriptionStatus.Cancelled || status === SubscriptionStatus.Incomplete) {
+  if (status === SubscriptionStatus.Cancelled || isUnstartedSubscription(status)) {
     return null
   }
   if (status === SubscriptionStatus.Trialing) {
@@ -2391,7 +2392,7 @@ function Banners({
 }) {
   const banners: ReactNode[] = []
 
-  if (s.status === SubscriptionStatus.Incomplete) {
+  if (isUnstartedSubscription(s.status)) {
     banners.push(
       <Alert key="incomplete" variant="warning">
         <CircleAlertIcon aria-hidden="true" />

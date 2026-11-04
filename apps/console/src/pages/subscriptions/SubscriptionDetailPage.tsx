@@ -8,6 +8,7 @@ import {
   DEFAULT_ADDON_QUERY,
   DEFAULT_COUPON_QUERY,
   DEFAULT_TAX_RATE_QUERY,
+  isUnstartedSubscription,
   PriceEntityType,
   SubscriptionStatus,
   type SubscriptionCancellationType,
@@ -402,7 +403,7 @@ export function SubscriptionDetailPage({
           ? { inheritedContracts: part(inheritedContracts) }
           : {})}
         onOpenInvoice={onOpenInvoice}
-        {...(data.status === SubscriptionStatus.Incomplete
+        {...(isUnstartedSubscription(data.status)
           ? { onActivate: () => setDialog('activate') }
           : {})}
         onCancel={() => setDialog('cancel')}

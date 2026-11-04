@@ -225,9 +225,9 @@ export async function withCustomerNames(
 }
 
 export function toSubscription(wire: SubscriptionWire): Subscription {
-  // Known statuses pass through; everything else: the API's `draft`, and any
-  // value this build has not learned: collapses to Incomplete, the state a
-  // subscription sits in before it is running.
+  // Known statuses pass through, `draft` included; any value this build has not
+  // learned collapses to Incomplete, the state a subscription sits in before
+  // it is running.
   const status = SUBSCRIPTION_STATUSES.has(wire.subscriptionStatus ?? '')
     ? (wire.subscriptionStatus as SubscriptionStatus)
     : SubscriptionStatus.Incomplete
@@ -627,12 +627,6 @@ const SORT_FIELD: Record<SubscriptionSortField, string> = {
  * nothing, which is the failure this comment exists to prevent. `plan` is named
  * explicitly rather than relied on as a default.
  */
-function toWireStatuses(statuses: readonly SubscriptionStatus[]): string[] {
-  return statuses.flatMap((status) =>
-    status === SubscriptionStatus.Incomplete ? [status, 'draft'] : [status],
-  )
-}
-
 export function toSubscriptionFilter(
   query: SubscriptionQuery,
   /** The customers the search matched; see {@link fetchSubscriptions}. */
@@ -645,10 +639,8 @@ export function toSubscriptionFilter(
     expand: 'customer,plan',
     // Status always goes to the server: it returns only active subscriptions
     // when none is named, so a trialing contract never reached the list.
-    // Incomplete also asks for the API's `draft`, which the domain shows as
-    // Incomplete. No status chosen means every contract.
-    subscriptionStatus:
-      query.statuses.length > 0 ? toWireStatuses(query.statuses) : ALL_SUBSCRIPTION_STATUSES,
+    // No status chosen means every contract.
+    subscriptionStatus: query.statuses.length > 0 ? [...query.statuses] : ALL_SUBSCRIPTION_STATUSES,
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }
       : {}),

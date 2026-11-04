@@ -386,6 +386,7 @@ export {
   isInheritedContract,
   canPauseSubscription,
   canResumeSubscription,
+  isUnstartedSubscription,
 } from './subscription'
 export type {
   ChangeLineQuantity,

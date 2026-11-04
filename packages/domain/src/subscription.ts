@@ -36,6 +36,8 @@ export const SubscriptionStatus = {
   Paused: 'paused',
   Cancelled: 'cancelled',
   Incomplete: 'incomplete',
+  /** Saved with "Save as draft": not started, waiting to be activated. */
+  Draft: 'draft',
 } as const
 export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus]
 
@@ -45,6 +47,15 @@ export const SUBSCRIPTION_STATUS_LABEL: Record<SubscriptionStatus, string> = {
   [SubscriptionStatus.Paused]: 'Paused',
   [SubscriptionStatus.Cancelled]: 'Cancelled',
   [SubscriptionStatus.Incomplete]: 'Incomplete',
+  [SubscriptionStatus.Draft]: 'Draft',
+}
+
+/**
+ * A contract that has not started billing: a draft, or one left incomplete.
+ * Both read "not started" and are the ones Activate is offered on.
+ */
+export function isUnstartedSubscription(status: SubscriptionStatus): boolean {
+  return status === SubscriptionStatus.Draft || status === SubscriptionStatus.Incomplete
 }
 
 /** The read model the list renders. */

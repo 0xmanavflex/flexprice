@@ -48,6 +48,15 @@ export const Incomplete: Story = {
   },
 }
 
+/** A contract saved with "Save as draft" reads Draft, as V1 and the API call it (QA #17). */
+export const Draft: Story = {
+  args: { status: SubscriptionStatus.Draft },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('Draft')).toBeVisible()
+    await expect(within(canvasElement).queryByText('Incomplete')).toBeNull()
+  },
+}
+
 /** Trialing carries the violet trial tone, the same dot as the contracts grid. */
 export const Trialing: Story = {
   args: { status: SubscriptionStatus.Trialing },
