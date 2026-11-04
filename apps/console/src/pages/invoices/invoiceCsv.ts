@@ -9,9 +9,13 @@ interface CsvColumn {
 
 const cell = (value: string) => (/[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)
 
-// Stops a spreadsheet running a typed line name as a formula.
+// Stops a spreadsheet running a typed line name as a formula, including one
+// behind leading spaces, which spreadsheets skip, and the full-width signs
+// (＝ ＋ － ＠) some of them also read as formulas. A plain number is left as is.
 const safe = (value: string) =>
-  /^[=+\-@\t\r]/.test(value) && !Number.isFinite(Number(value)) ? `'${value}` : value
+  /^[\s]*[=+\-@\uFF1D\uFF0B\uFF0D\uFF20]|^[\t\r]/.test(value) && !Number.isFinite(Number(value))
+    ? `'${value}`
+    : value
 
 const day = (date: Date) =>
   new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date)

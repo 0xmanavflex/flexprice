@@ -128,7 +128,6 @@ export function useMembers(query: MemberQuery) {
 
 /** Members read per request, and the most requests one scan makes. */
 const SCAN_PAGE_SIZE = 100
-const SCAN_MAX_PAGES = 50
 
 /**
  * Every member of the query's type, read page by page.
@@ -140,7 +139,9 @@ const SCAN_MAX_PAGES = 50
  */
 export async function fetchAllMembers(client: Flexprice, query: MemberQuery): Promise<MemberPage> {
   const members: Member[] = []
-  for (let page = 1; page <= SCAN_MAX_PAGES; page += 1) {
+  // Until the server's total is reached, however many pages that takes: a
+  // cut-off would hide members with no sign the list is incomplete.
+  for (let page = 1; ; page += 1) {
     const response = await call(() =>
       client.users.queryUser(toMemberFilter({ ...query, page, pageSize: SCAN_PAGE_SIZE }) as never),
     )

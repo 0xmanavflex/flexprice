@@ -34,4 +34,22 @@ describe('invoiceLinesCsv', () => {
     })
     expect(invoiceLinesCsv(invoice)).toBe('Display name,Quantity,Amount,Currency\r\nSetup,1,50,EUR')
   })
+
+  it('neutralises formulas, including ones behind spaces or in full-width signs', () => {
+    const names = ['  =HYPERLINK("x")', '\uFF1D1+1', '@SUM(A1)', '-5']
+    const invoice = toInvoiceDetail({
+      id: 'inv_3',
+      currency: 'usd',
+      lineItems: names.map((displayName) => ({ displayName, quantity: '1', amount: '1' })),
+    })
+    const firstCells = invoiceLinesCsv(invoice)
+      .split('\r\n')
+      .slice(1)
+      .map((row) => row.split(',')[0])
+    expect(firstCells[0]).toMatch(/^"?' {2}=HYPERLINK/)
+    expect(firstCells[1]).toBe("'\uFF1D1+1")
+    expect(firstCells[2]).toBe("'@SUM(A1)")
+    // A plain negative number is a number, not a formula.
+    expect(firstCells[3]).toBe('-5')
+  })
 })
