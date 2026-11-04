@@ -14,6 +14,7 @@ import { AccountRollforward } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
 import { rollforwardPeriods, type RollforwardSearch } from '@/app/rollforwardSearch'
 import { toListFailure } from '@/pages/shared/listFailure'
+import { contactToEnableRevenueRecognition } from './contactToEnable'
 
 const monthFormat = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -108,11 +109,9 @@ export function RollforwardPage({
         (Boolean(term) && !resolved) ||
         (Boolean(enabled.data) && !noMatch && rollforward.isPending)
       }
-      error={
-        enabled.data === false
-          ? 'Revenue recognition is off for this environment.'
-          : (failure?.message ?? null)
-      }
+      notEnabled={enabled.data === false}
+      onContact={contactToEnableRevenueRecognition()}
+      error={failure?.message ?? null}
       onRetry={() =>
         void (enabled.error
           ? enabled.refetch()

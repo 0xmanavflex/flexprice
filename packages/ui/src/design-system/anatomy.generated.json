@@ -86,6 +86,7 @@
         "EntityLink",
         "FilterSelect",
         "OverviewTiles",
+        "RevenueRecognitionNotEnabled",
         "Section",
         "Sheet",
         "SimpleTable",
@@ -6986,6 +6987,19 @@
       ],
       "story": null
     },
+    "RevenueRecognitionNotEnabled": {
+      "file": "src/pages/revenue/RevenueRecognitionNotEnabled.tsx",
+      "layer": "surface",
+      "composes": [
+        "Section",
+        "SectionEmpty"
+      ],
+      "usedBy": [
+        "AccountRollforward",
+        "RevenueRecognitionReport"
+      ],
+      "story": "./src/pages/revenue/RevenueRecognitionNotEnabled.stories.tsx"
+    },
     "RevenueRecognitionReport": {
       "file": "src/pages/revenue/RevenueRecognitionReport.tsx",
       "layer": "surface",
@@ -6994,6 +7008,7 @@
         "EntityLink",
         "FilterSelect",
         "RevenueAmount",
+        "RevenueRecognitionNotEnabled",
         "Section",
         "SimpleTable",
         "SubTabState"
@@ -7285,6 +7300,7 @@
         "PortalUsage",
         "ProviderConnections",
         "RelatedCard",
+        "RevenueRecognitionNotEnabled",
         "RevenueRecognitionReport",
         "S3ConnectionList",
         "SubscriptionDetailView",
@@ -7309,6 +7325,7 @@
         "DataExportDetail",
         "ExportRunList",
         "ExportsOverview",
+        "RevenueRecognitionNotEnabled",
         "RevenueReport",
         "S3ConnectionList",
         "SubTabState",
@@ -10549,6 +10566,13 @@
       "component": "AccountRollforward",
       "uses": [
         "AccountRollforward"
+      ]
+    },
+    "./src/pages/revenue/RevenueRecognitionNotEnabled.stories.tsx": {
+      "title": "App/Revenue/Revenue recognition not enabled",
+      "component": "RevenueRecognitionNotEnabled",
+      "uses": [
+        "RevenueRecognitionNotEnabled"
       ]
     },
     "./src/pages/revenue/RevenueRecognitionReport.stories.tsx": {

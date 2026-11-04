@@ -69,3 +69,14 @@ export const March: Story = {
 export const Unbilled: Story = { args: { account: 'unbilled_receivable' } }
 
 export const Loading: Story = { args: { rollforward: undefined, isLoading: true } }
+
+/** Revenue recognition is off for the environment: an explanation and a way to ask, not an error. */
+export const NotEnabled: Story = {
+  args: { rollforward: undefined, notEnabled: true, onContact: fn() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Deferred rollforward')).toBeVisible()
+    await expect(canvas.getByText("Revenue recognition isn't enabled yet")).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Contact us to enable it' })).toBeVisible()
+  },
+}

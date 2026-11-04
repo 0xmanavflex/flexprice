@@ -103,3 +103,14 @@ export const WithDetails: Story = {
 }
 
 export const Loading: Story = { args: { waterfall: undefined, isLoading: true } }
+
+/** Revenue recognition is off for the environment: an explanation and a way to ask, not an error. */
+export const NotEnabled: Story = {
+  args: { waterfall: undefined, notEnabled: true, onContact: fn() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText("Revenue recognition isn't enabled yet")).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Contact us to enable it' })).toBeVisible()
+    await expect(canvas.queryByRole('search')).toBeNull()
+  },
+}
