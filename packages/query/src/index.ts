@@ -384,6 +384,7 @@ export {
   useCreateBulkPrices,
   useFeatureCharges,
   useEntitiesCharges,
+  useChargesByIds,
   usePrices,
   usePriceHistory,
   usePlanPriceVersions,

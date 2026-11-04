@@ -400,3 +400,19 @@ describe('a customer-scoped invoice search', () => {
     expect(filter).not.toHaveProperty('externalCustomerId')
   })
 })
+
+describe('the customer an invoice bills', () => {
+  it("names the invoice's own customer, not a different expanded one", () => {
+    // A contract invoiced to another customer expands the contract's customer.
+    const invoice = toInvoice({
+      id: 'inv_1',
+      customerId: 'cust_billing',
+      customer: { id: 'cust_child', name: 'Active Child' },
+    })
+    expect(invoice.customerName).toBe('cust_billing')
+    expect(
+      toInvoice({ id: 'inv_2', customerId: 'cust_1', customer: { id: 'cust_1', name: 'Acme' } })
+        .customerName,
+    ).toBe('Acme')
+  })
+})

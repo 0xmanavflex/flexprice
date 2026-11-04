@@ -15,6 +15,8 @@ export interface InvoiceLine {
   amount: number
   /** Usage (metered) or fixed charge; `null` when the API does not say. */
   kind?: 'usage' | 'fixed' | null
+  /** The free-text note written on the line, printed under its description. */
+  note?: string
 }
 
 export interface InvoiceParty {
@@ -71,6 +73,8 @@ export interface InvoiceDocument {
   currency: string
   issuedAt: string | null
   dueAt: string | null
+  /** The memo written on the invoice (`description`), printed on the document. */
+  memo?: string
   billTo: InvoiceParty
   /** The issuer: the billing entity or the tenant. Absent while it loads or when it cannot be read; the block is then omitted. */
   from?: InvoiceParty

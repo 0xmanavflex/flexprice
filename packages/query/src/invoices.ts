@@ -180,7 +180,8 @@ export interface InvoiceWire {
   id?: string | undefined
   invoiceNumber?: string | undefined
   customerId?: string | undefined
-  customer?: { name?: string | undefined; email?: string | undefined } | undefined
+  customer?:
+    { id?: string | undefined; name?: string | undefined; email?: string | undefined } | undefined
   invoiceStatus?: string | undefined
   paymentStatus?: string | undefined
   currency?: string | undefined
@@ -193,9 +194,27 @@ export interface InvoiceWire {
   periodEnd?: Date | undefined
 }
 
+/**
+ * The expanded customer, when it is the one the invoice bills.
+ *
+ * An invoice raised for a contract with a separate invoicing customer stores
+ * that customer in `customer_id`, but the API expands the contract's customer.
+ * Read as the invoice's own, it put the wrong name under Bill to; a mismatched
+ * expansion is dropped instead, and the id stands until the page looks it up.
+ */
+function billedCustomer<C extends { id?: string | undefined }>(wire: {
+  customerId?: string | undefined
+  customer?: C | undefined
+}): C | undefined {
+  const customer = wire.customer
+  if (!customer) return undefined
+  return customer.id && wire.customerId && customer.id !== wire.customerId ? undefined : customer
+}
+
 export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
   const currency = wire.currency
   const amountRemaining = moneyOr(wire.amountRemaining, currency)
+  const customer = billedCustomer(wire)
 
   return {
     id: wire.id ?? '',
@@ -205,7 +224,7 @@ export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
     number: wire.invoiceNumber?.trim() ?? '',
     customerId: wire.customerId ?? '',
     // Resolved here so no cell has to fall back, and no grid joins data.
-    customerName: wire.customer?.name || wire.customer?.email || (wire.customerId ?? 'Unknown'),
+    customerName: customer?.name || customer?.email || (wire.customerId ?? 'Unknown'),
     status: deriveInvoiceStatus({
       invoiceStatus: wire.invoiceStatus,
       paymentStatus: wire.paymentStatus,
@@ -303,6 +322,7 @@ export function useInvoices(
 export interface InvoiceDetailWire extends InvoiceWire {
   customer?:
     | {
+        id?: string | undefined
         name?: string | undefined
         email?: string | undefined
         addressLine1?: string | undefined
@@ -357,7 +377,7 @@ function toLinePriceType(value: string | undefined): InvoiceLinePriceType | null
 
 export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDetail {
   const base = toInvoice(wire, now)
-  const customer = wire.customer
+  const customer = billedCustomer(wire)
   return {
     ...base,
     currency: wire.currency ?? '',

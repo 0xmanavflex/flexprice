@@ -4,6 +4,7 @@ import {
   ApiError,
   useAttemptInvoicePayment,
   useBillingEntities,
+  useChargesByIds,
   useCustomer,
   useCustomerBillingEntity,
   useFinalizeInvoice,
@@ -79,6 +80,11 @@ export function InvoiceDetailPage({
   const isDraft = invoice.data?.status === InvoiceStatus.Draft
   const customer = useCustomer(isDraft && entities.data ? (invoice.data?.customerId ?? '') : '')
   const customerEntity = useCustomerBillingEntity(customer.data)
+  // "Bill to" is the invoice's own customer, which the invoice's expanded
+  // customer is not when another customer is invoiced for the contract.
+  const billTo = useCustomer(invoice.data?.customerId ?? '')
+  // A line carries its amount, not its rate: the rate is on its price.
+  const charges = useChargesByIds((invoice.data?.lines ?? []).map((line) => line.priceId ?? ''))
   const payments = useInvoicePayments(invoiceId)
   const creditNotes = useInvoiceCreditNotes(invoiceId)
   const finalize = useFinalizeInvoice()
@@ -207,6 +213,8 @@ export function InvoiceDetailPage({
           // Null leaves the tenant's own block: entities off, or issued before them.
           billFrom: billFromFor(data, customerEntity, null),
           hostedUrl: hostedUrl.data ?? null,
+          billTo: billTo.data,
+          charges: charges.data,
           payments: payments.data,
           creditNotes: creditNotes.data,
           activity: activity.data ?? [],

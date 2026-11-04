@@ -399,6 +399,37 @@ export function useEntitiesCharges(entityType: PriceEntityType, entityIds: reado
 }
 
 /**
+ * Prices by id, ended ones included, keyed by id: the invoice document reads a
+ * line's own rate here, because an invoice line carries its amount and quantity
+ * but not the unit price it was billed at.
+ */
+export function useChargesByIds(priceIds: readonly string[]) {
+  const client = useFlexprice()
+  const ids = [...new Set(priceIds.filter((id) => id.length > 0))].sort()
+
+  return useQuery({
+    queryKey: queryKeys.prices.list({ priceIds: ids }),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.prices.queryPrice(
+            { priceIds: ids, allowExpiredPrices: true, limit: ids.length },
+            options,
+          ),
+        signal,
+      )
+      const charges = new Map<string, Charge>()
+      for (const item of response.items ?? []) {
+        const charge = toCharge(item as ChargeWire)
+        if (charge.id) charges.set(charge.id, charge)
+      }
+      return charges
+    },
+    enabled: ids.length > 0,
+  })
+}
+
+/**
  * Every price an entity has had, ended ones included: `allow_expired_prices`.
  *
  * The plain list leaves out a price once it ends, so editing a charge made its

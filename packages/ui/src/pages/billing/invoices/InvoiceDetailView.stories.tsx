@@ -30,6 +30,9 @@ interface InvoiceShape {
   discount?: number
   /** Tax IDs on the issuer's block, as a billing entity prints them. */
   issuerTaxIds?: string[]
+  /** The memo written on the invoice, and a note on its first line. */
+  memo?: string
+  lineNote?: string
   paymentsState: SubTabMode
   creditNotesState: SubTabMode
 }
@@ -70,6 +73,7 @@ function makeInvoice(
       unitPrice: zero ? null : 100,
       amount: zero ? 0 : 100 * (index + 1),
       kind: index % 2 === 0 ? ('fixed' as const) : ('usage' as const),
+      ...(index === 0 && args.lineNote ? { note: args.lineNote } : {}),
     }
   })
   const subtotal = lines.reduce((sum, line) => sum + line.amount, 0)
@@ -92,6 +96,7 @@ function makeInvoice(
     lines,
     prepaidCredits: Math.min(100, subtotal),
     ...(args.discount ? { discount: args.discount } : {}),
+    ...(args.memo ? { memo: args.memo } : {}),
     paid: args.paidAmount,
     payments: Array.from({ length: args.paymentCount }, (_, index) => ({
       id: `pay_${index + 1}`,
@@ -130,6 +135,8 @@ function InvoiceDetailPlayground({
   hasHostedLink = false,
   discount,
   issuerTaxIds,
+  memo,
+  lineNote,
   paymentsState,
   creditNotesState,
   onRetrySubTab,
@@ -149,6 +156,8 @@ function InvoiceDetailPlayground({
     hasHostedLink,
     ...(discount ? { discount } : {}),
     ...(issuerTaxIds ? { issuerTaxIds } : {}),
+    ...(memo ? { memo } : {}),
+    ...(lineNote ? { lineNote } : {}),
   })
   return (
     <InvoiceDetailView
@@ -267,7 +276,10 @@ export const Default: Story = {
     await expect(tabs).toHaveLength(3)
     await expect(tabs[0]).toHaveTextContent('Invoice details')
     await expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
-    await expect(canvas.queryByText('Invoice number')).toBeNull()
+    // The document carries its own number, as a printed invoice does (QA #22).
+    await expect(
+      within(canvas.getByRole('article')).getByText('Invoice number', { selector: 'dt' }),
+    ).toBeVisible()
     await expect(canvas.getByText('Amount due', { selector: 'p' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
@@ -402,6 +414,20 @@ export const WithDiscount: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Discount')).toBeVisible()
     await expect(canvas.getByText('− $50.00')).toBeVisible()
+  },
+}
+
+/** The document prints its number, the memo and a line's note, as the create form promises. */
+export const WithNotes: Story = {
+  args: { memo: 'Thanks for your business.', lineNote: 'Billed per active seat' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const document = within(canvas.getByRole('article'))
+    await expect(document.getByText('Invoice number')).toBeVisible()
+    await expect(document.getByText('INV-20418')).toBeVisible()
+    await expect(document.getByText('Memo')).toBeVisible()
+    await expect(document.getByText('Thanks for your business.')).toBeVisible()
+    await expect(document.getByText('Billed per active seat')).toBeVisible()
   },
 }
 

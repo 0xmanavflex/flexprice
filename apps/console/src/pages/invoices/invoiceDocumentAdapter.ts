@@ -1,8 +1,11 @@
 import {
+  BillingModel,
   CREDIT_NOTE_STATUS_LABEL,
   PAYMENT_METHOD_LABEL,
   PAYMENT_STATUS_LABEL,
+  type Charge,
   type CreditNote,
+  type CustomerDetail,
   type InvoiceDetail,
   type Payment,
   type Tenant,
@@ -48,14 +51,33 @@ const num = (value: string) => {
 /**
  * The per-unit price shown beside a line, for display only.
  *
- * The API sends a line's quantity and amount, not its unit price, so this is
- * the amount over the quantity. For tiered or package pricing that is the
- * effective (average) unit price. `null` when there is no quantity to divide by.
+ * An invoice line carries its quantity and its (rounded) amount, not the rate
+ * it was billed at, so the rate is read from the line's own price when that is
+ * a flat per-unit charge in the invoice's currency. Without one, the amount
+ * over the quantity is shown only when it multiplies back to the amount
+ * exactly: 7.04 over 3 is not the 2.3456 rate that produced it, and printing
+ * 2.346667 would state a price nobody set. `null` (a dash) otherwise.
  */
-function unitPrice(quantity: string, amount: string): number | null {
-  const qty = Number(quantity.replace(/,/g, ''))
+function unitPrice(
+  line: InvoiceDetail['lines'][number],
+  currency: string,
+  charge: Charge | undefined,
+): number | null {
+  if (charge) {
+    const flat =
+      charge.billingModel === BillingModel.FlatFee &&
+      !charge.priceUnit &&
+      !charge.transformQuantity &&
+      charge.currency.toLowerCase() === currency.toLowerCase()
+    const rate = Number(charge.amount)
+    return flat && charge.amount !== '' && Number.isFinite(rate) ? rate : null
+  }
+  const qty = Number(line.quantity.replace(/,/g, ''))
   if (!Number.isFinite(qty) || qty <= 0) return null
-  return num(amount) / qty
+  const amount = num(line.amount)
+  const rate = Number((amount / qty).toFixed(6))
+  // Compared in hundred-thousandths of a cent, clear of float noise.
+  return Math.round(rate * qty * 1e7) === Math.round(amount * 1e7) ? rate : null
 }
 
 export interface InvoiceDocumentSources {
@@ -71,6 +93,14 @@ export interface InvoiceDocumentSources {
   activityAwaiting?: boolean | undefined
   /** `hosted_invoice_url`: the link the customer receives. Null or omitted when there is none. */
   hostedUrl?: string | null | undefined
+  /**
+   * The invoice's own customer (`customer_id`), for "Bill to". The invoice's
+   * expanded customer can be the contract's instead, when another customer is
+   * invoiced for it. Omitted while it loads.
+   */
+  billTo?: CustomerDetail | undefined
+  /** The lines' prices by id, for each line's unit rate. Omitted while they load. */
+  charges?: ReadonlyMap<string, Charge> | undefined
 }
 
 /**
@@ -94,6 +124,8 @@ export function toInvoiceDocument(
     activityEmptyText,
     activityAwaiting,
     hostedUrl = null,
+    billTo,
+    charges,
   } = sources
   const supportEmail = tenant ? tenant.helpEmail || tenant.billingEmail : ''
 
@@ -105,11 +137,25 @@ export function toInvoiceDocument(
     currency: invoice.currency || 'USD',
     issuedAt: day(invoice.issuedAt),
     dueAt: day(invoice.dueDate),
-    billTo: {
-      name: invoice.customerName,
-      ...(invoice.customerEmail ? { email: invoice.customerEmail } : {}),
-      address: formatAddress(invoice.customerAddress),
-    },
+    ...(invoice.description.trim() ? { memo: invoice.description } : {}),
+    billTo: billTo
+      ? {
+          name: billTo.name || billTo.email || billTo.id,
+          ...(billTo.email ? { email: billTo.email } : {}),
+          address: formatAddress({
+            line1: billTo.addressLine1,
+            line2: billTo.addressLine2,
+            city: billTo.addressCity,
+            state: billTo.addressState,
+            postalCode: billTo.addressPostalCode,
+            country: billTo.addressCountry,
+          }),
+        }
+      : {
+          name: invoice.customerName,
+          ...(invoice.customerEmail ? { email: invoice.customerEmail } : {}),
+          address: formatAddress(invoice.customerAddress),
+        },
     ...(billFrom
       ? {
           from: {
@@ -136,9 +182,10 @@ export function toInvoiceDocument(
       description: line.description,
       ...linePeriod(line),
       quantity: line.quantity,
-      unitPrice: unitPrice(line.quantity, line.amount),
+      unitPrice: unitPrice(line, invoice.currency, charges?.get(line.priceId ?? '')),
       amount: num(line.amount),
       kind: line.priceType,
+      ...(line.note?.trim() ? { note: line.note } : {}),
     })),
     prepaidCredits: num(invoice.prepaidCredits),
     discount: num(invoice.discount),
