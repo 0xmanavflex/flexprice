@@ -321,6 +321,20 @@ export const NavigatesSections: Story = {
   },
 }
 
+/**
+ * The billing currency is shown with the rest of the billing details (QA #16):
+ * the API returned it, the page never showed it. Blank reads as the contract's
+ * own currency, which is what the API does with it.
+ */
+export const ShowsBillingCurrency: Story = {
+  args: { initialTab: 'information', customer: { ...CUSTOMER, billingCurrency: 'usd' } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Billing currency')).toBeInTheDocument()
+    await expect(canvas.getByText('USD')).toBeInTheDocument()
+  },
+}
+
 /** The Overview Contracts table carries its own Create contract action; the detail view only hands off. */
 export const CreatesContractFromTable: Story = {
   args: { onCreateContract: fn() },

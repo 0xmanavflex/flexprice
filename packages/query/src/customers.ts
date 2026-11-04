@@ -476,6 +476,7 @@ const CUSTOMER_TEXT_FIELDS = [
   ['email', 'email'],
   ['phone', 'contact'],
   ['timezone', 'timezone'],
+  ['billingCurrency', 'billingCurrency'],
   ['addressLine1', 'addressLine1'],
   ['addressLine2', 'addressLine2'],
   ['addressCity', 'addressCity'],
@@ -498,12 +499,28 @@ export function toCreateCustomerRequest(draft: CreateCustomer): Record<string, u
 }
 
 /**
- * Domain edit out, `UpdateCustomerRequest` in. The update patches, so blanks are
- * omitted and leave the stored value alone; the SDK cannot send an empty string
- * to clear a field, so clearing a value is not offered.
+ * Domain edit out, `UpdateCustomerRequest` in.
+ *
+ * The update patches: a key left out keeps the stored value, a key sent as `''`
+ * stores `''`. A field the draft carries is sent as it stands, blanks included
+ * (the edit form carries every field; an inline edit only the one it changed); omitting a blank would make clearing a field
+ * (address line 2, the billing currency) report success and change nothing.
+ * The API takes `''` on each of these (its validators are all `omitempty`), and
+ * reads a blank billing currency as "bill in the contract's currency". The
+ * timezone is the one exception: the API has no "no timezone", so a blank one
+ * is left out rather than stored as `''`.
  */
 export function toUpdateCustomerRequest(draft: EditCustomer): Record<string, unknown> {
-  return toCreateCustomerRequest(draft)
+  const request: Record<string, unknown> = { externalId: draft.externalId, name: draft.name }
+  for (const [field, wireKey] of CUSTOMER_TEXT_FIELDS) {
+    const value = draft[field]
+    // Absent (an inline edit of one field) keeps the stored value.
+    if (value === undefined) continue
+    if (value || field !== 'timezone') request[wireKey] = value
+  }
+  if (draft.taxTreatment) request.taxTreatment = draft.taxTreatment
+  if (draft.metadata) request.metadata = draft.metadata
+  return request
 }
 
 export function useCreateCustomer() {

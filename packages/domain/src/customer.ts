@@ -221,6 +221,11 @@ export const createCustomerSchema = z.object({
   email: z.union([z.literal(''), z.email('Enter a valid email address')]).optional(),
   phone: optionalText(20).optional(),
   timezone: optionalText(100).optional(),
+  /**
+   * The ISO currency invoices are issued in, lower-case; `''` bills in each
+   * contract's own currency. 10 is the API's limit (`max=10`).
+   */
+  billingCurrency: optionalText(10).optional(),
   taxTreatment: z.enum([CustomerTaxTreatment.Taxable, CustomerTaxTreatment.Exempt]).optional(),
   addressLine1: optionalText(255).optional(),
   addressLine2: optionalText(255).optional(),
@@ -248,6 +253,7 @@ export function emptyCustomer(): CreateCustomer {
     email: '',
     phone: '',
     timezone: '',
+    billingCurrency: '',
     taxTreatment: CustomerTaxTreatment.Taxable,
     addressLine1: '',
     addressLine2: '',
@@ -266,6 +272,7 @@ export function customerToEdit(customer: CustomerDetail): EditCustomer {
     email: customer.email,
     phone: customer.phone,
     timezone: customer.timezone,
+    billingCurrency: customer.billingCurrency ?? '',
     ...(customer.taxTreatment ? { taxTreatment: customer.taxTreatment } : {}),
     addressLine1: customer.addressLine1,
     addressLine2: customer.addressLine2,

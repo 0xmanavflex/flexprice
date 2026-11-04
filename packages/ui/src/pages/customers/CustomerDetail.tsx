@@ -84,8 +84,8 @@ import { statusTone } from '../shared/statusTones'
  * holding Create invoice, Edit and Top up)
  * over line `DetailTabs`; the active tab renders as reference-style sections. It is presentational: the page fetches and hands data in.
  *
- * It shows only what the API has. A customer record carries no plan, currency or
- * payment method, so the header does not invent them; sections with no read
+ * It shows only what the API has. A customer record carries no plan or payment
+ * method (only the currency it is billed in, on the Information tab), so the header does not invent them; sections with no read
  * model yet (per-feature revenue and cost) say "not available yet" rather than
  * show sample figures. A contracts or invoices read that is loading or failed is
  * shown as that, never as "none yet" or a zero.
@@ -1559,8 +1559,6 @@ function InvoiceTable({
   )
 }
 
-/** The update patches, so a blank is omitted and cannot clear a stored value. */
-const CLEAR_UNSUPPORTED = 'Clearing this value is not supported; enter a new one.'
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function InformationTab({
@@ -1599,21 +1597,15 @@ function InformationTab({
               label: 'Email',
               value: customer.email,
               placeholder: 'No email',
+              // A blank clears the stored email: the update sends it as ''.
               validate: (next) =>
-                next === ''
-                  ? customer.email
-                    ? CLEAR_UNSUPPORTED
-                    : null
-                  : EMAIL_PATTERN.test(next)
-                    ? null
-                    : 'Enter a valid email address.',
+                next === '' || EMAIL_PATTERN.test(next) ? null : 'Enter a valid email address.',
             },
             {
               key: 'phone',
               label: 'Phone',
               value: customer.phone,
               placeholder: 'No phone',
-              validate: (next) => (next === '' && customer.phone ? CLEAR_UNSUPPORTED : null),
             },
             {
               key: 'created',
@@ -1642,6 +1634,15 @@ function InformationTab({
               key: 'country',
               label: 'Country',
               value: customer.addressCountry ?? '',
+              readOnly: true,
+            },
+            {
+              key: 'billingCurrency',
+              label: 'Billing currency',
+              // Blank means invoices follow each contract's currency, which is a value, not a gap.
+              value: customer.billingCurrency
+                ? customer.billingCurrency.toUpperCase()
+                : "Contract's currency",
               readOnly: true,
             },
             { key: 'timezone', label: 'Timezone', value: customer.timezone || '', readOnly: true },

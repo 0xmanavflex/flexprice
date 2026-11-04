@@ -7,6 +7,7 @@ import {
   type CreateCustomer,
   CustomerTaxTreatment,
   createCustomerSchema,
+  currencyCodes,
   effectiveEntityId,
   emptyCustomer,
   KEY_PREFIX,
@@ -18,12 +19,13 @@ import { FormDisclosure } from '@ui/compositions/forms/FormDisclosure'
 import { FormPage } from '@ui/compositions/forms/FormPage'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { AddressPicker, useAddressRegions } from '@ui/compositions/forms/AddressRegionFields'
+import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { TimezoneCombobox } from '@ui/compositions/forms/TimezoneCombobox'
 import { provenance } from '@ui/provenance'
 
 /**
- * Create or edit a customer on its own page: name, ID and email, then billing configuration (tax treatment, timezone), then the billing address under a disclosure.
+ * Create or edit a customer on its own page: name, ID and email, then billing configuration (tax treatment, billing currency, timezone), then the billing address under a disclosure.
  *
  * Presentational: it emits a validated `CreateCustomer` (an edit carries the
  * same fields) and never imports `@fp/query`. The external ID is the key the
@@ -35,11 +37,12 @@ export const CustomerFormProvenance = provenance({
     'ui/input',
     'compositions/form-page',
     'compositions/option-select',
+    'compositions/option-combobox',
     'compositions/address-region-fields',
     'compositions/timezone-combobox',
     'compositions/form-disclosure',
   ],
-  note: 'RHF + the domain schema, one page: name, external ID and email up front, a Billing configuration card (tax treatment, timezone) shown on create and edit, the address folded under Billing address, no preview rail. Create and edit share it. Lineage: compositions/field.',
+  note: 'RHF + the domain schema, one page: name, external ID and email up front, a Billing configuration card (tax treatment, billing currency, timezone) shown on create and edit, the address folded under Billing address, no preview rail. Create and edit share it. Lineage: compositions/field.',
 })
 
 export interface CustomerFormProps {
@@ -66,6 +69,9 @@ const ADDRESS_FIELDS = [
   'addressPostalCode',
   'addressCountry',
 ] as const satisfies readonly (keyof CreateCustomer)[]
+
+/** The API keeps the billing currency lower-case; the list shows the ISO code. */
+const CURRENCY_OPTIONS = currencyCodes().map((code) => ({ value: code.toLowerCase(), label: code }))
 
 const TAX_OPTIONS = Object.values(CustomerTaxTreatment).map((value) => ({
   value,
@@ -278,6 +284,30 @@ export function CustomerForm({
         )}
       </FormRow>
       <FormRow
+        label="Billing currency"
+        hint="The currency this customer's invoices are issued in. Leave empty to bill in each contract's own currency."
+        error={errors.billingCurrency?.message}
+      >
+        {({ id, ...field }) => (
+          <Controller
+            control={form.control}
+            name="billingCurrency"
+            render={({ field: control }) => (
+              <OptionCombobox
+                id={id}
+                {...field}
+                value={control.value || undefined}
+                onValueChange={(value) => control.onChange(value)}
+                options={CURRENCY_OPTIONS}
+                searchable
+                placeholder="Contract's currency"
+                disabled={isSubmitting}
+              />
+            )}
+          />
+        )}
+      </FormRow>
+      <FormRow
         label="Timezone"
         hint="The customer's local time zone, e.g. Europe/London."
         error={errors.timezone?.message}
@@ -311,7 +341,7 @@ export function CustomerForm({
         <FormCard
           title="Billing configuration"
           status="optional"
-          description="How this customer is taxed and which time zone their billing runs in."
+          description="How this customer is taxed, the currency they are invoiced in and which time zone their billing runs in."
         >
           {billingRows}
         </FormCard>
