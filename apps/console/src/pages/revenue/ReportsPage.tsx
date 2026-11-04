@@ -5,6 +5,7 @@ import {
   reportCurrencies,
   reportScalar,
   reportSeries,
+  useCustomerNames,
   useReport,
   useRevenueOverview,
   type ReportPoint,
@@ -26,11 +27,13 @@ import {
   GRAIN_OPTIONS,
   DAY_MS,
   RANGE_OPTIONS,
+  agingTotals,
   amountOf,
   customerRows as dashboardCustomerRows,
   creditRows,
   creditTypeRows,
   alignToWindow,
+  eventsWindow,
   formatAmount,
   largestCurrency,
   percentOf,
@@ -59,7 +62,6 @@ import {
  * it stays on the revenue dashboard (`POST /dashboard/revenue-dashboard`).
  */
 
-/** The widest range the events report answers (its `max_range_days`). */
 /** How many customers a breakdown lists. */
 const TOP = 50
 
@@ -75,7 +77,6 @@ const AGING: Record<
   '61-90': { id: 'd90', label: '61–90 days', tone: 'critical', days: 90 },
   '90+': { id: 'd90p', label: '90+ days', tone: 'critical', days: 91 },
 }
-const NOT_DUE = 'Current'
 
 const isoDay = (date: Date) => date.toISOString().slice(0, 10)
 const dayLabel = new Intl.DateTimeFormat('en-US', {
@@ -201,10 +202,9 @@ export function ReportsPage({
   // `POST /events/analytics` returns no rows without a customer: the tenant
   // path is disabled on the server. `events_volume` is the count that works,
   // and it covers at most seven days.
-  const eventsStart = new Date(Math.max(window.start.getTime(), window.end.getTime() - 6 * DAY_MS))
-  const eventsLimited = eventsStart.getTime() > window.start.getTime()
+  const eventsSpan = eventsWindow(window)
   const eventsReport = useCardReport('events_volume', {
-    range: `${isoDay(eventsStart)}..${isoDay(new Date(window.end.getTime() + DAY_MS))}`,
+    range: eventsSpan.range,
     shape: 'timeseries',
     grain: 'day',
   })
@@ -221,12 +221,7 @@ export function ReportsPage({
   const arpu = reportScalar(arpuReport.data, 'arpu', currency)
   const outstanding = reportScalar(receivablesReport.data, 'total_receivables', currency).value ?? 0
   const aging = reportBreakdown(agingReport.data, 'receivables_aging', ['aging_bucket'], currency)
-  const notYetDue = aging
-    .filter((row) => row.keys['aging_bucket'] === NOT_DUE)
-    .reduce((sum, row) => sum + row.value, 0)
-  const overdue = aging
-    .filter((row) => row.keys['aging_bucket'] !== NOT_DUE)
-    .reduce((sum, row) => sum + row.value, 0)
+  const { notYetDue, overdue, noDueDate } = agingTotals(aging)
   const days = reportScalar(daysReport.data, 'days_to_pay', currency)
 
   // Customer names for every breakdown, in one lookup.
@@ -249,11 +244,35 @@ export function ReportsPage({
     currency,
   )
   // Names come from the revenue dashboard, which already returns them with the
-  // usage and contract split. Customer search is not called for this page.
+  // usage and contract split. It lists only some customers, so the rest are
+  // looked up in one customer search by id.
   const split = new Map(
     dashboardCustomerRows(overview.data?.customers ?? [], currency).map((row) => [row.id, row]),
   )
-  const nameOf = (id: string) => split.get(id)?.name ?? id
+  const creditBreakdown = reportBreakdown(
+    creditReport.data,
+    'credit_consumption',
+    ['customer_id', 'credit_type'],
+    currency,
+  )
+  const pageBreakdown = reportBreakdown(
+    customerPage.data,
+    'invoice_total',
+    ['customer_id'],
+    currency,
+  )
+  const unnamed = [
+    ...customerRevenue,
+    ...customerAging,
+    ...customerDays,
+    ...creditBreakdown,
+    ...pageBreakdown.slice(0, PAGE),
+  ].flatMap((row) => {
+    const id = row.keys['customer_id']
+    return id && !split.get(id)?.name ? [id] : []
+  })
+  const looked = useCustomerNames(overview.isPending ? [] : unnamed)
+  const nameOf = (id: string) => split.get(id)?.name || looked.data?.[id] || id
 
   const money = (value: number) => formatAmount(value, currency)
   const moneyOrDash = (value: number | null) => (value === null ? '—' : money(value))
@@ -287,12 +306,6 @@ export function ReportsPage({
     },
   }))
 
-  const creditBreakdown = reportBreakdown(
-    creditReport.data,
-    'credit_consumption',
-    ['customer_id', 'credit_type'],
-    currency,
-  )
   const topupBreakdown = reportBreakdown(
     topupReport.data,
     'credit_topups',
@@ -319,12 +332,6 @@ export function ReportsPage({
   }
   // A customer with nothing billed is not one to rank or chart.
   const customerRows = customerRevenue.filter((row) => row.value > 0).map(toRow)
-  const pageBreakdown = reportBreakdown(
-    customerPage.data,
-    'invoice_total',
-    ['customer_id'],
-    currency,
-  )
   const pageRows = pageBreakdown.slice(0, PAGE).map(toRow)
 
   // Aging by customer: overdue is every bucket past due; the oldest bucket is the worst.
@@ -363,7 +370,15 @@ export function ReportsPage({
 
   const events = reportSeries(eventsReport.data, 'events_volume')
   const eventsTotal = events.reduce((sum, point) => sum + point.value, 0)
-  const eventDays = Math.max(Math.ceil((window.end.getTime() - eventsStart.getTime()) / DAY_MS), 1)
+  const eventDays = Math.max(
+    Math.ceil((eventsSpan.end.getTime() - eventsSpan.start.getTime()) / DAY_MS),
+    1,
+  )
+  // The events report reaches back a week at most: a wider range says so,
+  // under the chart and in the empty state alike.
+  const eventsNote = eventsSpan.limited
+    ? 'Only the last 7 days are counted: usage analytics has no tenant-wide series, and the events report covers at most a week.'
+    : undefined
   const peak = events.reduce<ReportPoint | null>(
     (best, point) => (best === null || point.value > best.value ? point : best),
     null,
@@ -468,7 +483,11 @@ export function ReportsPage({
             },
             credits.length === 0 && topupBreakdown.length === 0,
           ),
-          reason: 'The credit reports did not respond.',
+          // Only a failed read did not respond; an empty one simply has nothing.
+          ...((creditReport.isError && !creditReport.data) ||
+          (topupReport.isError && !topupReport.data)
+            ? { reason: 'The credit reports did not respond.' }
+            : {}),
           onRetry: retry(creditReport, topupReport),
           rows: credits,
           total: money(credits.reduce((sum, row) => sum + row.total, 0)),
@@ -502,7 +521,7 @@ export function ReportsPage({
         overdue: money(overdue),
         overdueShare: percentOf(overdue, outstanding),
         notYetDue: money(notYetDue),
-        noDueDate: '—',
+        noDueDate: agingReport.data ? money(noDueDate) : '—',
         customers: overdueRows,
         onOpenCustomer: openCustomer,
       }}
@@ -538,17 +557,12 @@ export function ReportsPage({
       }}
       usage={{
         status: statusOf(eventsReport, eventsTotal === 0),
-        reason: eventsReport.isError ? 'The events report did not respond.' : undefined,
+        reason: eventsReport.isError ? 'The events report did not respond.' : eventsNote,
         onRetry: retry(eventsReport),
-        ...(eventsLimited
-          ? {
-              basedOn:
-                'The last 7 days. Usage analytics has no tenant-wide series, and the events report covers at most a week.',
-            }
-          : {}),
+        ...(eventsNote ? { basedOn: eventsNote } : {}),
         series: alignToWindow(
           events.map((point) => ({ at: point.bucket, value: point.value })),
-          { start: eventsStart, end: window.end },
+          eventsSpan,
           'day',
         ).map((point) => ({
           label: point.label,

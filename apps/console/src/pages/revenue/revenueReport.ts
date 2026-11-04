@@ -403,6 +403,29 @@ export function customerRows(
 
 /* ---- Receivables ----------------------------------------------------------- */
 
+/** The `receivables_aging` buckets that are not past due. */
+export const AGING_NOT_DUE = 'Current'
+export const AGING_NO_DUE_DATE = 'No due date'
+
+/**
+ * The aging report's buckets split three ways. An invoice without a due date
+ * cannot be overdue: the report keeps it in its own bucket, and so does this.
+ */
+export function agingTotals(rows: { keys: Record<string, string>; value: number }[]): {
+  notYetDue: number
+  overdue: number
+  noDueDate: number
+} {
+  const totals = { notYetDue: 0, overdue: 0, noDueDate: 0 }
+  for (const row of rows) {
+    const bucket = row.keys['aging_bucket']
+    if (bucket === AGING_NOT_DUE) totals.notYetDue += row.value
+    else if (bucket === AGING_NO_DUE_DATE) totals.noDueDate += row.value
+    else totals.overdue += row.value
+  }
+  return totals
+}
+
 const AGING: { id: string; label: string; tone: AgingBucket['tone']; from: number; to: number }[] =
   [
     { id: 'd30', label: '1–30 days', tone: 'warning', from: 1, to: 30 },
@@ -609,6 +632,29 @@ export function daysToPay(
 }
 
 /* ---- Events ------------------------------------------------------------------ */
+
+/** The widest window the `events_volume` report answers (its `max_range_days`). */
+export const EVENTS_MAX_DAYS = 7
+
+/**
+ * The part of a window the events report can count: its last seven days at
+ * most, through the end of today. `limited` says the range asked for is wider.
+ */
+export function eventsWindow(window: Window): Window & { range: string; limited: boolean } {
+  const start = new Date(
+    Math.max(
+      utcMidnight(window.start).getTime(),
+      utcMidnight(window.end).getTime() - (EVENTS_MAX_DAYS - 1) * DAY_MS,
+    ),
+  )
+  const through = new Date(utcMidnight(window.end).getTime() + DAY_MS)
+  return {
+    start,
+    end: window.end,
+    range: `${start.toISOString().slice(0, 10)}..${through.toISOString().slice(0, 10)}`,
+    limited: start.getTime() > utcMidnight(window.start).getTime(),
+  }
+}
 
 const compactCount = new Intl.NumberFormat('en-US', {
   notation: 'compact',

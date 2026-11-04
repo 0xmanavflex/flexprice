@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { InvoiceStatus, PaymentStatus, money, type Invoice, type Payment } from '@fp/domain'
 import { parseRevenueSearch } from '@/app/revenueSearch'
 import {
+  agingTotals,
   change,
+  eventsWindow,
   customerRows,
   daysToPay,
   creditRows,
@@ -359,5 +361,36 @@ describe('creditTypeRows', () => {
     )
     expect(rows[0]).toMatchObject({ id: 'paid', label: 'Paid credits', customers: 2, amount: 50 })
     expect(rows[1]).toMatchObject({ id: 'free', customers: 1, amount: 5 })
+  })
+})
+
+describe('agingTotals', () => {
+  it('keeps invoices with no due date out of overdue', () => {
+    const row = (bucket: string, value: number) => ({ keys: { aging_bucket: bucket }, value })
+    expect(
+      agingTotals([
+        row('Current', 100),
+        row('No due date', 386.01),
+        row('1-30', 5000),
+        row('90+', 31.87),
+      ]),
+    ).toEqual({ notYetDue: 100, noDueDate: 386.01, overdue: 5031.87 })
+  })
+})
+
+describe('eventsWindow', () => {
+  const now = new Date('2026-11-04T12:00:00Z')
+
+  it('counts the last 7 days, today included, of a wider range and says so', () => {
+    const span = eventsWindow(rangeWindow('30d', now))
+    expect(span.range).toBe('2026-10-29..2026-11-05')
+    expect(span.limited).toBe(true)
+    expect(alignToWindow([], span, 'day')).toHaveLength(7)
+  })
+
+  it('keeps a range that fits in a week whole', () => {
+    const span = eventsWindow(rangeWindow('month', now))
+    expect(span.range).toBe('2026-11-01..2026-11-05')
+    expect(span.limited).toBe(false)
   })
 })
