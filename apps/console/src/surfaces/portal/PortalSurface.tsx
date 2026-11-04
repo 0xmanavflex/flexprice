@@ -36,7 +36,7 @@ import {
 } from '@fp/ui/pages'
 import { isSafeNavigationUrl } from '../safeUrl'
 import type { ApiUrls } from '../publicApi'
-import { type PortalLocation, parsePortalLocation, portalHref, takePortalToken } from './link'
+import { type PortalLocation, parsePortalLocation, portalHref } from './link'
 
 const GENERIC_ERROR = 'Something went wrong. Please try again.'
 /** Transactions per page: "Load more" asks the API for the next ten. */
@@ -67,19 +67,9 @@ export function PortalSurface({
   const [location, setLocation] = useState(() =>
     parsePortalLocation(pathname, window.location.search, apiUrls, ownApiOrigin),
   )
-  const [token] = useState(() => {
-    if (!location) return null
-    const taken = takePortalToken(location.region, window.location.search, sessionStore())
-    // Out of the address bar before anything else can read or share it.
-    if (taken.cleanSearch !== null) {
-      window.history.replaceState(
-        window.history.state,
-        '',
-        `${window.location.pathname}${taken.cleanSearch}`,
-      )
-    }
-    return taken.token
-  })
+  // The token stays in the address bar, as the merchant's link has it; every
+  // address the portal moves to carries it (see `navigate`).
+  const [token] = useState(() => location?.token ?? null)
 
   useEffect(() => {
     const onPop = () => {
@@ -92,12 +82,12 @@ export function PortalSurface({
 
   const navigate = useCallback(
     (next: PortalLocation, mode: 'push' | 'replace' = 'push') => {
-      const href = portalHref(next, basePath)
+      const href = portalHref({ ...next, token: next.token ?? token }, basePath)
       if (mode === 'push') window.history.pushState(null, '', href)
       else window.history.replaceState(null, '', href)
       setLocation(next)
     },
-    [basePath],
+    [basePath, token],
   )
 
   if (!location) {
@@ -344,7 +334,7 @@ function isAuthError(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 401 || error.status === 403)
 }
 
-/** Where a gateway sends the customer back: this page as it is now (the token is already out of it). */
+/** Where a gateway sends the customer back: this page as it is now, token and all. */
 function returnUrl(): string {
   return window.location.href
 }
@@ -398,12 +388,4 @@ function messageOf(cause: unknown): string {
   return cause instanceof ApiError && cause.fromServer && cause.message
     ? cause.message
     : GENERIC_ERROR
-}
-
-function sessionStore(): Storage | null {
-  try {
-    return window.sessionStorage
-  } catch {
-    return null
-  }
 }
