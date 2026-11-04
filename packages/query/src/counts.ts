@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { type CallOptions, type Flexprice, call } from '@fp/api'
 import { type InvoiceStatus } from '@fp/domain'
-import { isServerFilterable, toInvoiceFilter } from './invoices'
+import { ALL_INVOICE_STATUSES, isServerFilterable, toInvoiceFilter } from './invoices'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 import { ALL_SUBSCRIPTION_STATUSES } from './subscriptionStatuses'
@@ -56,7 +56,8 @@ const COUNTERS: Record<CountableId, (client: Flexprice, options: CallOptions) =>
         { limit: 1, subscriptionStatus: ALL_SUBSCRIPTION_STATUSES },
         options,
       ),
-    invoices: (client, options) => client.invoices.queryInvoice({ limit: 1 }, options),
+    invoices: (client, options) =>
+      client.invoices.queryInvoice({ limit: 1, invoiceStatus: [...ALL_INVOICE_STATUSES] }, options),
   }
 
 async function fetchCount(

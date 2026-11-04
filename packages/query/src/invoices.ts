@@ -61,6 +61,16 @@ const STATUS_TO_API: Partial<Record<InvoiceStatus, string>> = {
   [InvoiceStatus.Skipped]: 'SKIPPED',
 }
 
+/**
+ * Every stored `invoice_status`, sent when the list asks for no particular one.
+ *
+ * Leaving the field out is not "any status": the search then drops SKIPPED
+ * invoices, so the ledger came up short and the Invoice status → Skipped
+ * filter (a filter condition, intersected with that default) found nothing.
+ * V1 sends all four for the same reason.
+ */
+export const ALL_INVOICE_STATUSES = ['DRAFT', 'FINALIZED', 'VOIDED', 'SKIPPED'] as const
+
 export function isServerFilterable(status: InvoiceStatus): boolean {
   return status in STATUS_TO_API
 }
@@ -81,7 +91,22 @@ export function toInvoiceFilter(
       ...(derived ? ['FINALIZED'] : []),
     ]),
   ]
-  const conditions = toFilterConditions(query.filters ?? [], specs)
+  const search = query.search.trim()
+  const conditions = [
+    ...toFilterConditions(query.filters ?? [], specs),
+    // The search box finds invoice numbers, as V1's does. It used to be sent as
+    // an external customer id, so a typed number 404'd as an unknown customer.
+    ...(search
+      ? [
+          {
+            field: 'invoice_number',
+            operator: 'contains',
+            dataType: 'string',
+            value: { string: search },
+          },
+        ]
+      : []),
+  ]
   const billingEntityId = toTopLevelChoice(query.filters ?? [], specs, BILLING_ENTITY_FILTER.field)
 
   return {
@@ -91,8 +116,7 @@ export function toInvoiceFilter(
     // Line items are never rendered in a list, and they dominate the payload.
     skipLineItems: true,
     ...(conditions.length > 0 ? { filters: conditions } : {}),
-    ...(statuses.length > 0 ? { invoiceStatus: statuses } : {}),
-    ...(query.search ? { externalCustomerId: query.search } : {}),
+    invoiceStatus: statuses.length > 0 ? statuses : [...ALL_INVOICE_STATUSES],
     ...(scope?.customerId ? { customerId: scope.customerId } : {}),
     ...(billingEntityId ? { billingEntityId } : {}),
   }
@@ -266,7 +290,8 @@ export function useInvoices(
       // Whether the entity filter is sent, so turning entities on refetches.
       ...(billingEntityId ? { billingEntityId } : {}),
     }),
-    queryFn: ({ signal }) => fetchInvoices(serverURL, auth, query, signal, undefined, options.specs),
+    queryFn: ({ signal }) =>
+      fetchInvoices(serverURL, auth, query, signal, undefined, options.specs),
     // Keeps the previous page on screen while the next one loads, so sorting a
     // grid does not blank it. TanStack's replacement for keepPreviousData.
     enabled: options.enabled ?? true,
