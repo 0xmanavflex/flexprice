@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type Flexprice, call } from '@fp/api'
+import { type Flexprice, type FlexpriceModels, call } from '@fp/api'
 import {
   type Charge,
   type CreateGroup,
@@ -99,9 +99,78 @@ export interface GroupPage {
   total: number
 }
 
+/** One page of a feature or price search narrowed to some groups: each member and its group. */
+export type GroupMemberSearch = (
+  entityType: GroupEntityType,
+  groupIds: string[],
+  offset: number,
+  limit: number,
+) => Promise<Array<{ id?: string | undefined; groupId?: string | undefined }>>
+
+const MEMBER_PAGE = 1000
+
+/**
+ * Fills in each group's members.
+ *
+ * The groups API answers `entity_ids: null` on both list and get (the lookup is
+ * commented out server-side), so every tag read 0 members and its detail page
+ * listed nothing. Membership lives on the feature or price (`group_id`), so it
+ * is read from there: one search per entity type for the whole page, filtered
+ * by `group_id`, the way V1's group page lists its features and prices.
+ */
+export async function withGroupMembers(
+  wires: readonly GroupWire[],
+  search: GroupMemberSearch,
+): Promise<GroupWire[]> {
+  const members = new Map<string, string[]>()
+  const byType = new Map<GroupEntityType, string[]>()
+  for (const wire of wires) {
+    if (!wire.id || (wire.entityIds?.length ?? 0) > 0) continue
+    const type = toGroup(wire).entityType
+    byType.set(type, [...(byType.get(type) ?? []), wire.id])
+  }
+  for (const [type, groupIds] of byType) {
+    for (let offset = 0; ; offset += MEMBER_PAGE) {
+      const items = await search(type, groupIds, offset, MEMBER_PAGE)
+      for (const item of items) {
+        if (!item.id || !item.groupId) continue
+        members.set(item.groupId, [...(members.get(item.groupId) ?? []), item.id])
+      }
+      if (items.length < MEMBER_PAGE) break
+    }
+  }
+  return wires.map((wire) =>
+    wire.id && members.has(wire.id) ? { ...wire, entityIds: members.get(wire.id) } : wire,
+  )
+}
+
+/** `GroupMemberSearch` over the SDK's feature and price searches. */
+function memberSearch(client: Flexprice, signal?: AbortSignal): GroupMemberSearch {
+  return async (entityType, groupIds, offset, limit) => {
+    const filter = {
+      limit,
+      offset,
+      filters: [
+        {
+          field: 'group_id',
+          operator: 'in',
+          dataType: 'array',
+          value: { array: groupIds },
+        } satisfies FlexpriceModels.FilterCondition,
+      ],
+    }
+    const response =
+      entityType === GroupEntityType.Feature
+        ? await call((options) => client.features.queryFeature(filter, options), signal)
+        : await call((options) => client.prices.queryPrice(filter, options), signal)
+    return response.items ?? []
+  }
+}
+
 export async function fetchGroups(client: Flexprice, query: GroupQuery): Promise<GroupPage> {
   const response = await call(() => client.groups.queryGroup(toGroupFilter(query) as never))
-  const groups = (response.items ?? []).map((item) => toGroup(item as GroupWire))
+  const wires = await withGroupMembers((response.items ?? []) as GroupWire[], memberSearch(client))
+  const groups = wires.map(toGroup)
 
   return {
     groups,
@@ -128,9 +197,10 @@ export function useGroup(id: string) {
 
   return useQuery({
     queryKey: queryKeys.groups.detail(id),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const response = await call(() => client.groups.getGroup(id))
-      return toGroup(response as GroupWire)
+      const [wire] = await withGroupMembers([response as GroupWire], memberSearch(client, signal))
+      return toGroup(wire!)
     },
     enabled: id.length > 0,
   })
