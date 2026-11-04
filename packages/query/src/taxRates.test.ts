@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { DEFAULT_TAX_RATE_QUERY, TaxRateScope, TaxRateStatus } from '@fp/domain'
+import { describe, expect, it, vi } from 'vitest'
+import { DEFAULT_TAX_RATE_QUERY, TaxRateScope, TaxRateSortField, TaxRateStatus } from '@fp/domain'
 import type { Flexprice } from '@fp/api'
 import { fetchTaxRates, toTaxRate, toTaxRateFilter, type TaxRateWire } from './taxRates'
 
@@ -103,5 +103,49 @@ describe('the tax rate status facet', () => {
       statuses: [TaxRateStatus.Published],
     })
     expect(published.taxRates.map((rate) => rate.id)).toEqual(['a', 'c'])
+  })
+})
+
+describe('the tax rate list reads every rate', () => {
+  const rates = Array.from({ length: 7 }, (_, index) => ({
+    id: `t${index}`,
+    name: `Rate ${String.fromCharCode(71 - index)}`,
+    code: index === 5 ? 'vat-de' : `code-${index}`,
+    createdAt: new Date(Date.UTC(2026, 0, index + 1)),
+    updatedAt: new Date(Date.UTC(2026, 1, 7 - index)),
+  }))
+  const getTaxRates = vi.fn(async ({ limit, offset }: { limit: number; offset: number }) => ({
+    items: rates.slice(offset, offset + limit),
+    pagination: { total: rates.length },
+  }))
+  const client = { taxRates: { getTaxRates } } as unknown as Flexprice
+
+  it('searches past the first page and counts the matches', async () => {
+    const page = await fetchTaxRates(client, {
+      ...DEFAULT_TAX_RATE_QUERY,
+      pageSize: 2,
+      search: 'VAT',
+    })
+    expect(page.taxRates.map((rate) => rate.id)).toEqual(['t5'])
+    expect(page.total).toBe(1)
+  })
+
+  it('sorts every rate by the chosen field and direction before paging', async () => {
+    const byName = await fetchTaxRates(client, {
+      ...DEFAULT_TAX_RATE_QUERY,
+      pageSize: 3,
+      sortBy: TaxRateSortField.Name,
+      sortDirection: 'asc',
+    })
+    expect(byName.taxRates.map((rate) => rate.name)).toEqual(['Rate A', 'Rate B', 'Rate C'])
+    expect(byName.total).toBe(7)
+    const oldest = await fetchTaxRates(client, {
+      ...DEFAULT_TAX_RATE_QUERY,
+      page: 3,
+      pageSize: 3,
+      sortBy: TaxRateSortField.CreatedAt,
+      sortDirection: 'asc',
+    })
+    expect(oldest.taxRates.map((rate) => rate.id)).toEqual(['t6'])
   })
 })
