@@ -30,6 +30,7 @@ import { Section } from '../../compositions/layout/Section'
 import { useDebouncedSearch } from '../../compositions/tables/useDebouncedSearch'
 import { FilterSelect, type FilterOption } from '../home/DashboardHome'
 import { EntityLink } from '../shared/cells'
+import { RevenueRecognitionNotEnabled } from './RevenueRecognitionNotEnabled'
 
 export const AccountRollforwardProvenance = provenance({
   source: 'composition',
@@ -136,6 +137,10 @@ export interface AccountRollforwardProps {
   entriesError?: string | null | undefined
   invoiceNumbers?: Readonly<Record<string, string>> | undefined
   onOpenInvoice?: ((invoiceId: string) => void) | undefined
+  /** Revenue recognition is off for the environment: the page explains it instead of the report. */
+  notEnabled?: boolean | undefined
+  /** With `notEnabled`: opens the console's contact path. */
+  onContact?: (() => void) | undefined
 }
 
 const dayFormat = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
@@ -193,6 +198,8 @@ export function AccountRollforward({
   entriesError,
   invoiceNumbers = {},
   onOpenInvoice,
+  notEnabled = false,
+  onContact,
 }: AccountRollforwardProps) {
   const copy = ACCOUNT[account]
   const searchBox = useDebouncedSearch(search, onSearchChange)
@@ -296,6 +303,18 @@ export function AccountRollforward({
     },
   ]
   const selectedContract = selected?.contractId ? contracts[selected.contractId] : undefined
+
+  if (notEnabled) {
+    return (
+      <div className="flex flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-medium tracking-tight">{copy.title}</h1>
+          <p className="text-muted-foreground text-[13px]">{copy.summary}</p>
+        </div>
+        <RevenueRecognitionNotEnabled onContact={onContact} />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">

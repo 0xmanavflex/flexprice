@@ -1,4 +1,4 @@
-import type { IntegrationLink } from '@fp/domain'
+import { invoiceProviderUrl, type IntegrationLink } from '@fp/domain'
 import {
   ContractIntegrations,
   type ContractIntegrationsProps,
@@ -15,9 +15,11 @@ import {
   LinkIcon,
   MoreHorizontalIcon,
   PencilIcon,
+  PlusIcon,
   ReceiptIcon,
   RefreshCwIcon,
   SendIcon,
+  UploadIcon,
   UserIcon,
   WalletIcon,
   XCircleIcon,
@@ -42,7 +44,13 @@ import {
 import { provenance } from '@ui/provenance'
 import { DetailShell } from '../../../compositions/detail/DetailShell'
 import { ActivitySection } from '../../../compositions/detail/ActivityLog'
-import { DetailTabs, TotalRow, TotalsList } from '../../../compositions/detail/DetailKit'
+import {
+  DetailMoreMenu,
+  DetailTabs,
+  TotalRow,
+  TotalsList,
+  type DetailMenuItem,
+} from '../../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../../compositions/detail/RelatedCard'
 import { Section } from '../../../compositions/layout/Section'
@@ -77,7 +85,7 @@ export const InvoiceDetailViewProvenance = provenance({
     'compositions/detail-kit',
     'ui/spinner',
   ],
-  note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Related rail), Payments and Credit memos tabs. Entity-specific integration controls share header and Related mappings, following the supplied HTML reference.',
+  note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Integrations, Related rail), Payments and Credit memos tabs. Entity-specific integration controls share header and Related mappings, following the supplied HTML reference.',
 })
 
 export interface InvoiceDetailViewProps {
@@ -150,7 +158,7 @@ type InvoiceTab = 'details' | 'payments' | 'credit-notes'
  * "Invoice" with the status pills under it, the ID chip and one More menu on the right; every
  * action, Download PDF and Copy link included, lives in that menu. Tabs sit under
  * the header: Invoice details (the invoice as a document, with the Activity,
- * Metadata, Related rail beside it), Payments and Credit memos.
+ * Metadata, Integrations, Related rail beside it), Payments and Credit memos.
  */
 export function InvoiceDetailView({
   integrationLinks,
@@ -184,6 +192,7 @@ export function InvoiceDetailView({
   pendingAction = null,
 }: InvoiceDetailViewProps) {
   const [tab, setTab] = useState<InvoiceTab>('details')
+  const [linkingIntegration, setLinkingIntegration] = useState(false)
   const totals = invoiceTotals(invoice)
   const money = (value: number) =>
     new Intl.NumberFormat(moneyFormatLocale(invoice.currency), {
@@ -227,6 +236,56 @@ export function InvoiceDetailView({
       toast.success('Hosted invoice link copied', {
         description: 'Anyone with the link can view and pay this invoice until it expires.',
       })
+    } catch {
+      toast.error('Couldn’t copy the link', {
+        description: 'Your browser blocked clipboard access.',
+      })
+    }
+  }
+
+  // The Integrations card's own menu: link a provider, and push to or pull
+  // from every provider that syncs invoices (the API reaches them all at once).
+  const integrationMenu: DetailMenuItem[] = integrationControls
+    ? [
+        ...(integrationControls.onLink && integrationControls.linkable.length > 0
+          ? [
+              {
+                id: 'link',
+                label: 'Link integration',
+                icon: <PlusIcon aria-hidden />,
+                onSelect: () => setLinkingIntegration(true),
+              },
+            ]
+          : []),
+        ...(integrationControls.onPush && integrationControls.pushProviders?.length
+          ? [
+              {
+                id: 'push',
+                label: `Push to ${integrationControls.pushProviders.join(', ')}`,
+                icon: <UploadIcon aria-hidden />,
+                onSelect: integrationControls.onPush,
+              },
+            ]
+          : []),
+        ...(integrationControls.onPull && integrationControls.pullProviders?.length
+          ? [
+              {
+                id: 'pull',
+                label: `Pull from ${integrationControls.pullProviders.join(', ')}`,
+                icon: <DownloadIcon aria-hidden />,
+                onSelect: integrationControls.onPull,
+              },
+            ]
+          : []),
+      ]
+    : []
+  const providerHref = (link: IntegrationLink) =>
+    invoiceProviderUrl(invoice.metadata, link.providerType)
+
+  const copyPaymentLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Payment link copied')
     } catch {
       toast.error('Couldn’t copy the link', {
         description: 'Your browser blocked clipboard access.',
@@ -513,30 +572,43 @@ export function InvoiceDetailView({
                 metadata={invoice.metadata ?? {}}
                 {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
               />
-              <RelatedCard items={related}>
-                {integrationControls ? (
-                  <ContractIntegrations
-                    {...integrationControls}
-                    entityLabel="invoice"
-                    layout="rows"
-                  />
-                ) : integrationLinks?.length ? (
-                  <ContractIntegrations
-                    layout="rows"
-                    links={integrationLinks}
-                    linkable={[]}
-                    entityLabel="invoice"
-                  />
-                ) : integrationsError ? (
-                  <button
-                    type="button"
-                    className="px-6 py-3 text-sm underline"
-                    onClick={onRetryIntegrations}
-                  >
-                    Retry integrations
-                  </button>
-                ) : null}
-              </RelatedCard>
+              {/* Rail order: Activity, Metadata, Integrations, then Related last. */}
+              {integrationControls || integrationLinks?.length || integrationsError ? (
+                <Section
+                  title="Integrations"
+                  flush
+                  action={<DetailMoreMenu label="Integration actions" items={integrationMenu} />}
+                >
+                  {integrationControls ? (
+                    <ContractIntegrations
+                      {...integrationControls}
+                      entityLabel="invoice"
+                      layout="rows"
+                      actionsInHeader
+                      linkOpen={linkingIntegration}
+                      onLinkOpenChange={setLinkingIntegration}
+                      providerHref={providerHref}
+                    />
+                  ) : integrationLinks?.length ? (
+                    <ContractIntegrations
+                      layout="rows"
+                      links={integrationLinks}
+                      linkable={[]}
+                      entityLabel="invoice"
+                      providerHref={providerHref}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="px-6 py-3 text-left text-sm underline"
+                      onClick={onRetryIntegrations}
+                    >
+                      Retry integrations
+                    </button>
+                  )}
+                </Section>
+              ) : null}
+              <RelatedCard items={related} />
             </div>
           </div>
         ) : null}
@@ -608,6 +680,32 @@ export function InvoiceDetailView({
                     header: 'Status',
                     cell: (row) => <Status value={row.status} />,
                   },
+                  // A payment link is sent to the customer, so its copy sits on the row itself.
+                  ...(invoice.payments.some((row) => row.paymentUrl)
+                    ? [
+                        {
+                          key: 'link',
+                          header: '',
+                          width: 56,
+                          cell: (row: InvoicePaymentRow) =>
+                            row.paymentUrl ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground size-7"
+                                aria-label="Copy payment link"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  void copyPaymentLink(row.paymentUrl ?? '')
+                                }}
+                              >
+                                <LinkIcon aria-hidden />
+                              </Button>
+                            ) : null,
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </SubTabState>
@@ -772,7 +870,7 @@ function InvoiceDocumentArticle({
           {invoice.number ? (
             <>
               <dt className="text-muted-foreground">Invoice number</dt>
-              <dd className="font-mono">{invoice.number}</dd>
+              <dd className="tabular-nums">{invoice.number}</dd>
             </>
           ) : null}
           <dt className="text-muted-foreground">Date of issue</dt>

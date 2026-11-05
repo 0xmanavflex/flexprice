@@ -21,7 +21,7 @@ export const TaxRateStatus = {
 export type TaxRateStatus = (typeof TaxRateStatus)[keyof typeof TaxRateStatus]
 
 export const TAX_RATE_STATUS_LABEL: Record<TaxRateStatus, string> = {
-  [TaxRateStatus.Published]: 'Published',
+  [TaxRateStatus.Published]: 'Active',
   [TaxRateStatus.Archived]: 'Archived',
 }
 

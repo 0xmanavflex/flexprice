@@ -16,6 +16,7 @@ import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import {
+  ArrowUpRightIcon,
   CircleSlashIcon,
   CopyIcon,
   MoreHorizontalIcon,
@@ -74,6 +75,16 @@ export interface ContractIntegrationsProps {
   /** Provider names a pull reads from (inbound sync on); one "Pull from {names}" action. */
   pullProviders?: string[]
   onPull?: () => void
+  /**
+   * Where a mapping can be opened at its provider (an invoice on Stripe). A
+   * row with one opens it from its name and from its menu.
+   */
+  providerHref?: ((link: IntegrationLink) => string | null) | undefined
+  /**
+   * The page puts Link, Push and Pull in its own header menu, so the rows
+   * only list the mappings.
+   */
+  actionsInHeader?: boolean
 }
 
 const stamp = new Intl.DateTimeFormat('en-US', {
@@ -102,6 +113,8 @@ export function ContractIntegrations({
   onPush,
   pullProviders,
   onPull,
+  providerHref,
+  actionsInHeader = false,
 }: ContractIntegrationsProps) {
   const [unlinking, setUnlinking] = useState<IntegrationLink | null>(null)
   const [internalLinking, setInternalLinking] = useState(false)
@@ -110,11 +123,11 @@ export function ContractIntegrations({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const canLink = showLink && Boolean(onLink) && linkable.length > 0
+  const canLink = showLink && !actionsInHeader && Boolean(onLink) && linkable.length > 0
   const pushTo = onPush && pushProviders && pushProviders.length > 0 ? pushProviders : null
-  const canPush = layout === 'rows' && pushTo !== null
+  const canPush = layout === 'rows' && !actionsInHeader && pushTo !== null
   const pullFrom = onPull && pullProviders && pullProviders.length > 0 ? pullProviders : null
-  const canPull = layout === 'rows' && pullFrom !== null
+  const canPull = layout === 'rows' && !actionsInHeader && pullFrom !== null
   const none = `No integrations linked to this ${entityLabel}.`
 
   // In the Related card the rows are the card's whole body, so rendering nothing
@@ -149,10 +162,26 @@ export function ContractIntegrations({
             key={link.providerType}
             className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-4 px-6 py-3"
           >
-            <span className="flex min-w-0 items-center gap-2.5">
-              <IntegrationMark integration={link} />
-              <span className="truncate text-sm">{link.name}</span>
-            </span>
+            {providerHref?.(link) ? (
+              <a
+                href={providerHref(link) ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Open this ${entityLabel} in ${link.name}`}
+                className="hover:text-foreground focus-visible:outline-ring flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-2"
+              >
+                <IntegrationMark integration={link} />
+                <span className="truncate text-sm underline-offset-2 hover:underline">
+                  {link.name}
+                </span>
+                <ArrowUpRightIcon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
+              </a>
+            ) : (
+              <span className="flex min-w-0 items-center gap-2.5">
+                <IntegrationMark integration={link} />
+                <span className="truncate text-sm">{link.name}</span>
+              </span>
+            )}
             <span className="flex min-w-0 items-center gap-1">
               <Tooltip>
                 {/* The row shows a shortened id; the accessible name carries it whole. */}
@@ -186,6 +215,7 @@ export function ContractIntegrations({
                 <IntegrationMenu
                   link={link}
                   entityLabel={entityLabel}
+                  href={providerHref?.(link) ?? null}
                   onUnlink={onUnlink}
                   onAskUnlink={() => {
                     setError(null)
@@ -223,6 +253,7 @@ export function ContractIntegrations({
             <IntegrationMenu
               link={link}
               entityLabel={entityLabel}
+              href={providerHref?.(link) ?? null}
               onUnlink={onUnlink}
               onAskUnlink={() => {
                 setError(null)
@@ -347,16 +378,23 @@ function copyEntityId(link: IntegrationLink, entityLabel: string) {
 function IntegrationMenu({
   link,
   entityLabel,
+  href,
   onUnlink,
   onAskUnlink,
 }: {
   link: IntegrationLink
   entityLabel: string
+  href: string | null
   onUnlink?: ContractIntegrationsProps['onUnlink']
   onAskUnlink: () => void
 }) {
   return (
     <DropdownMenuContent align="end" className="min-w-48">
+      {href ? (
+        <DropdownMenuItem onClick={() => void window.open(href, '_blank', 'noopener,noreferrer')}>
+          <ArrowUpRightIcon aria-hidden /> Open in {link.name}
+        </DropdownMenuItem>
+      ) : null}
       <DropdownMenuItem onClick={() => copyEntityId(link, entityLabel)}>
         <CopyIcon aria-hidden /> Copy {entityLabel} ID
       </DropdownMenuItem>

@@ -89,7 +89,7 @@ export function activityCardActor(entry: ActivityEntry): string {
 
 /**
  * One card row: title, time, the affected record with a one-line state
- * summary ("INV-202610-00210 · Finalized", "Taxable · Published"), and who
+ * summary ("INV-202610-00210 · Finalized", "Taxable · Active"), and who
  * did it. Everything else (fields, ids, request metadata) is in the drawer.
  */
 export function toActivityLogEntry(entry: ActivityEntry): ActivityLogEntry {

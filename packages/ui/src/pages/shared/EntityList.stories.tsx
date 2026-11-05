@@ -39,7 +39,7 @@ const COLUMNS = [
     hideable: false,
   }),
   pillColumn<Widget>('status', 'Status', (row) => ({
-    label: row.status === 'published' ? 'Published' : 'Archived',
+    label: row.status === 'published' ? 'Active' : 'Archived',
     tone: row.status === 'published' ? 'success' : 'neutral',
   })),
   idColumn<Widget>('lookup', 'Lookup key', (row) => row.lookup),
@@ -432,7 +432,7 @@ export const FilterBadge: Story = {
           label: 'Status',
           type: 'select',
           options: [
-            { value: 'published', label: 'Published' },
+            { value: 'published', label: 'Active' },
             { value: 'archived', label: 'Archived' },
           ],
           operators: [{ value: 'is_any_of', label: 'is any of', arity: 'many' }],

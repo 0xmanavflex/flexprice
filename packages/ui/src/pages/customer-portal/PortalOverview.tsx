@@ -316,7 +316,6 @@ function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: Portal
   return (
     <Section
       title="Payment methods"
-      description="Used for invoices and automatic top-ups"
       flush
       action={
         canAdd ? (
@@ -436,7 +435,7 @@ function Subscriptions({ brandName, data, now, locale }: PortalOverviewProps) {
   return (
     <Section
       title="Subscriptions"
-      description={`Plans on your account. To change a plan, contact ${brandName ?? 'your account team'}.`}
+      description={`To change a plan, contact ${brandName ?? 'your account team'}.`}
       flush
     >
       <Loaded load={data.subscriptions} label="subscriptions">

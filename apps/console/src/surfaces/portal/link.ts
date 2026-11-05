@@ -11,9 +11,10 @@ import { type ApiUrls, REGION_IDS, type RegionId } from '../publicApi'
  * The merchant mints a session (`GET /customers/portal/{external_id}`) and the
  * API answers `{ url: "<CustomerPortal.URL>?token=…" }`; each region's
  * `CustomerPortal.URL` is this surface plus its region, e.g.
- * `https://portal.flexprice.io/us`. The token arrives once in the query string
- * and is moved to session storage straight away, so it is not left in the
- * address bar, the history, or a `Referer`.
+ * `https://portal.flexprice.io/us`. The token stays in the query string for
+ * as long as the portal is open: every address the portal moves to carries
+ * it, so reload, back and a copied link all keep working, as the link the
+ * merchant sent does.
  */
 export interface PortalLocation {
   /** null: this deployment's own portal, on the console's own API. */
@@ -25,6 +26,8 @@ export interface PortalLocation {
   /** A calendar range on the Usage tab, `[start, end)` in local days; it replaces `range`. */
   customRange: { start: Date; end: Date } | null
   invoiceId: string | null
+  /** The session token from the link: the portal's only credential. */
+  token: string | null
 }
 
 export function parsePortalLocation(
@@ -54,16 +57,22 @@ export function parsePortalLocation(
     range: PORTAL_RANGES.some((r) => r.id === range) ? (range as PortalRange) : null,
     customRange: readDays(params.get('from'), params.get('to')),
     invoiceId: params.get('invoice') || null,
+    token: params.get('token')?.trim() || null,
   }
 }
 
 /** The address for a location: what `parsePortalLocation` reads back. */
-export function portalHref(location: Omit<PortalLocation, 'apiOrigin'>, basePath: string): string {
+export function portalHref(
+  location: Omit<PortalLocation, 'apiOrigin' | 'token'> & { token?: string | null },
+  basePath: string,
+): string {
   const segments = [location.region, location.view === 'overview' ? null : location.view].filter(
     Boolean,
   )
   const path = `${basePath}/${segments.join('/')}`.replace(/\/$/, '') || '/'
   const params = new URLSearchParams()
+  // The token first, as the merchant's link has it, and on every address.
+  if (location.token) params.set('token', location.token)
   if (location.view === 'usage' && location.customRange) {
     params.set('from', dayText(location.customRange.start))
     params.set('to', dayText(new Date(location.customRange.end.getTime() - 1)))
@@ -96,33 +105,18 @@ function readDays(from: string | null, to: string | null): { start: Date; end: D
   return { start, end: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1) }
 }
 
-const storageKey = (region: RegionId | null) => `fp:portal:${region ?? 'own'}`
+/** Marks the address a gateway sends the customer back to. */
+export const RETURNED_PARAM = 'returned'
 
 /**
- * The session token: from the link when it carries one (kept for this tab),
- * else the one this tab already holds. Returns the address to show with the
- * token taken out, when it was there.
+ * Where a gateway sends the customer back: this page, without the token. The
+ * token is the portal's only credential, and a gateway keeps its return
+ * address; the payment opens in a tab of its own, so the portal itself stays
+ * open where the customer left it, and the returned tab says so.
  */
-export function takePortalToken(
-  region: RegionId | null,
-  search: string,
-  storage: Pick<Storage, 'getItem' | 'setItem'> | null,
-): { token: string | null; cleanSearch: string | null } {
-  const params = new URLSearchParams(search)
-  const fromLink = params.get('token')?.trim()
-  if (fromLink) {
-    try {
-      storage?.setItem(storageKey(region), fromLink)
-    } catch {
-      // Storage blocked: the token still works for this page load.
-    }
-    params.delete('token')
-    const rest = params.toString()
-    return { token: fromLink, cleanSearch: rest ? `?${rest}` : '' }
-  }
-  try {
-    return { token: storage?.getItem(storageKey(region)) ?? null, cleanSearch: null }
-  } catch {
-    return { token: null, cleanSearch: null }
-  }
+export function returnUrl(href: string): string {
+  const url = new URL(href)
+  url.searchParams.delete('token')
+  url.searchParams.set(RETURNED_PARAM, '1')
+  return url.toString()
 }

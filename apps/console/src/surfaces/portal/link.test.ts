@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parsePortalLocation, portalHref, takePortalToken } from './link'
+import { parsePortalLocation, portalHref, returnUrl } from './link'
 
 const urls = { us: 'https://us.api.flexprice.io', in: 'https://api.cloud.flexprice.io' }
 
@@ -12,6 +12,7 @@ describe('parsePortalLocation', () => {
       range: null,
       customRange: null,
       invoiceId: null,
+      token: null,
     })
     expect(parsePortalLocation('/in/usage/', '?range=7d&invoice=inv_1', urls)).toMatchObject({
       region: 'in',
@@ -85,37 +86,19 @@ describe('portalHref', () => {
   })
 })
 
-describe('takePortalToken', () => {
-  const memory = () => {
-    const map = new Map<string, string>()
-    return {
-      getItem: (k: string) => map.get(k) ?? null,
-      setItem: (k: string, v: string) => void map.set(k, v),
-    }
-  }
-
-  it('moves the token from the link into storage and strips it', () => {
-    const storage = memory()
-    expect(takePortalToken('us', '?token=abc&range=7d', storage)).toEqual({
-      token: 'abc',
-      cleanSearch: '?range=7d',
-    })
-    expect(takePortalToken('us', '', storage)).toEqual({ token: 'abc', cleanSearch: null })
-    // Per region: another region's link is another customer.
-    expect(takePortalToken('in', '', storage).token).toBeNull()
+describe('the session token', () => {
+  it('is read from the link and kept on every address the portal moves to', () => {
+    const at = parsePortalLocation('/us/usage', '?token=abc&range=7d', urls)
+    expect(at?.token).toBe('abc')
+    expect(portalHref({ ...at!, view: 'invoices', invoiceId: 'inv_1' }, '')).toBe(
+      '/us/invoices?token=abc&invoice=inv_1',
+    )
+    expect(portalHref({ ...at!, view: 'overview' }, '/p')).toBe('/p/us?token=abc')
   })
 
-  it('still works when storage throws', () => {
-    const blocked = {
-      getItem: () => {
-        throw new Error('blocked')
-      },
-      setItem: () => {
-        throw new Error('blocked')
-      },
-    }
-    expect(takePortalToken('us', '?token=abc', blocked)).toEqual({ token: 'abc', cleanSearch: '' })
-    expect(takePortalToken('us', '', blocked).token).toBeNull()
+  it('is null when the link has none', () => {
+    expect(parsePortalLocation('/us', '', urls)?.token).toBeNull()
+    expect(parsePortalLocation('/us', '?token=%20', urls)?.token).toBeNull()
   })
 })
 
@@ -154,15 +137,12 @@ describe('a region-less link (this deployment’s own portal)', () => {
       ),
     ).toBe('/p/usage?range=7d')
   })
+})
 
-  it('keeps its token apart from a regional one', () => {
-    const map = new Map<string, string>()
-    const storage = {
-      getItem: (k: string) => map.get(k) ?? null,
-      setItem: (k: string, v: string) => void map.set(k, v),
-    }
-    takePortalToken(null, '?token=own', storage)
-    expect(takePortalToken('us', '', storage).token).toBeNull()
-    expect(takePortalToken(null, '', storage).token).toBe('own')
+describe('returnUrl', () => {
+  it('sends a gateway back without the token, marked as a return', () => {
+    expect(returnUrl('https://portal.flexprice.io/us/invoices?token=secret&invoice=inv_1')).toBe(
+      'https://portal.flexprice.io/us/invoices?invoice=inv_1&returned=1',
+    )
   })
 })

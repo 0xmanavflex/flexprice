@@ -489,6 +489,32 @@ export function toPortalWallets(wire: unknown): PortalWallet[] {
   return items.map(toPortalWallet).filter((w) => w.statusLabel.toLowerCase() !== 'closed')
 }
 
+/**
+ * The wallets with one wallet's auto top-up as just saved. Applied to the
+ * loaded list the moment a save succeeds, so "Auto top-up on/off" and the
+ * dialog show the saved settings before the refetch answers, not the old ones.
+ */
+export function withPortalAutoTopup(
+  wallets: readonly PortalWallet[],
+  walletId: string,
+  saved: NonNullable<PortalWallet['autoTopup']>,
+): PortalWallet[] {
+  // A null field was not sent, and the server keeps what it had: so does the cache.
+  return wallets.map((w) =>
+    w.id === walletId
+      ? {
+          ...w,
+          autoTopup: {
+            enabled: saved.enabled,
+            threshold: saved.threshold ?? w.autoTopup?.threshold ?? null,
+            credits: saved.credits ?? w.autoTopup?.credits ?? null,
+            cooldown: saved.cooldown ?? w.autoTopup?.cooldown ?? null,
+          },
+        }
+      : w,
+  )
+}
+
 export type PortalTransactionDirection = 'in' | 'out'
 
 export interface PortalWalletTransaction {

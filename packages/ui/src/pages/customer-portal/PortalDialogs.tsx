@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import {
   type PortalCooldownUnit,
   type PortalGateway,
@@ -430,12 +430,6 @@ export function AutoTopupDialog({
   onSave: (wallet: PortalWallet, settings: AutoTopupSettings) => Promise<void>
 }) {
   const a = wallet?.autoTopup ?? null
-  const [enabled, setEnabled] = useState(a?.enabled ?? Boolean(card))
-  const [threshold, setThreshold] = useState(a?.threshold ?? '500')
-  const [amount, setAmount] = useState(a?.credits ?? '2000')
-  const [cool, setCool] = useState(Boolean(a?.cooldown))
-  const [coolValue, setCoolValue] = useState(String(a?.cooldown?.value ?? 6))
-  const [coolUnit, setCoolUnit] = useState<PortalCooldownUnit>(a?.cooldown?.unit ?? 'hour')
   const { pending, error, run } = useRun()
   const money = (credits: string) => {
     const value = wallet ? creditsCost(credits || '0', wallet.creditPrice, wallet.currency) : null
@@ -462,130 +456,178 @@ export function AutoTopupDialog({
       isPending={pending}
     >
       {wallet ? (
-        <Composer
-          submitLabel="Save"
-          onCancel={onClose}
-          submitting={pending}
-          disabled={enabled && !card}
-          onSubmit={() =>
-            void run(async () => {
-              await onSave(wallet, {
-                enabled,
-                threshold: parseCreditAmount(threshold),
-                credits: parseCreditAmount(amount),
-                cooldown: cool
-                  ? { value: Math.max(1, Number(coolValue) || 1), unit: coolUnit }
-                  : null,
-              })
-              onClose()
-            })
-          }
-        >
-          <label className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
-            <span>
-              <span className="block text-sm">Top up automatically</span>
-              <span className="text-muted-foreground block text-xs">
-                {cardLabel ? `Charged to ${cardLabel}` : 'Needs a saved card'}
-              </span>
-            </span>
-            <Switch
-              checked={enabled}
-              onCheckedChange={setEnabled}
-              aria-label="Enable auto top-up"
-            />
-          </label>
-
-          {!card ? (
-            <Alert variant="warning">
-              <TriangleAlertIcon aria-hidden="true" />
-              <AlertTitle>No saved card</AlertTitle>
-              <AlertDescription>
-                Add a card on the Overview tab to turn on automatic top-ups.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          <fieldset
-            disabled={!enabled}
-            className={cn('grid gap-5 sm:grid-cols-2', !enabled && 'opacity-50')}
-          >
-            <Field>
-              <FieldLabel htmlFor="auto-threshold">When balance falls below</FieldLabel>
-              <InputGroup className="h-9">
-                <InputGroupInput
-                  id="auto-threshold"
-                  inputMode="numeric"
-                  value={threshold}
-                  onChange={(event) => setThreshold(event.target.value)}
-                />
-                <InputGroupAddon align="inline-end">
-                  <InputGroupText>credits</InputGroupText>
-                </InputGroupAddon>
-              </InputGroup>
-              <p className="text-muted-foreground text-xs tabular-nums">
-                {money(parseCreditAmount(threshold) ?? '0')}
-              </p>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="auto-amount">Add</FieldLabel>
-              <InputGroup className="h-9">
-                <InputGroupInput
-                  id="auto-amount"
-                  inputMode="numeric"
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
-                />
-                <InputGroupAddon align="inline-end">
-                  <InputGroupText>credits</InputGroupText>
-                </InputGroupAddon>
-              </InputGroup>
-              <p className="text-muted-foreground text-xs tabular-nums">
-                Charged {money(parseCreditAmount(amount) ?? '0')} each time
-              </p>
-            </Field>
-          </fieldset>
-
-          <fieldset disabled={!enabled} className={cn('space-y-3', !enabled && 'opacity-50')}>
-            <label className="flex items-center justify-between gap-4">
-              <span>
-                <span className="block text-sm">Wait between top-ups</span>
-                <span className="text-muted-foreground block text-xs">
-                  Avoids several charges in a burst of usage
-                </span>
-              </span>
-              <Switch checked={cool} onCheckedChange={setCool} aria-label="Wait between top-ups" />
-            </label>
-            {cool ? (
-              <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
-                <Input
-                  className="h-9"
-                  inputMode="numeric"
-                  value={coolValue}
-                  onChange={(event) => setCoolValue(event.target.value)}
-                  aria-label="Wait duration"
-                />
-                <Select
-                  value={coolUnit}
-                  onValueChange={(value) => value && setCoolUnit(value as PortalCooldownUnit)}
-                >
-                  <SelectTrigger className="h-9 w-full" aria-label="Wait unit">
-                    <SelectValue>{(value) => `${String(value)}s`}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {UNITS.map((u) => (
-                      <SelectItem key={u} value={u}>
-                        {u}s
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-          </fieldset>
-          {error ? <FieldError>{error}</FieldError> : null}
-        </Composer>
+        <AutoTopupForm
+          // The form starts from the saved settings. When they arrive or change
+          // (a refetch after a save), it starts again from them rather than
+          // keep showing what was on screen before.
+          key={savedKey(a, card)}
+          wallet={wallet}
+          saved={a}
+          card={card}
+          cardLabel={cardLabel}
+          money={money}
+          pending={pending}
+          error={error}
+          run={run}
+          onClose={onClose}
+          onSave={onSave}
+        />
       ) : null}
     </FormDialog>
+  )
+}
+
+/** What the form is seeded from: the saved settings, or (with none) whether a card can be charged. */
+function savedKey(saved: PortalWallet['autoTopup'], card: PortalPaymentMethod | null): string {
+  return saved ? JSON.stringify(saved) : `none:${card ? 'card' : 'no-card'}`
+}
+
+function AutoTopupForm({
+  wallet,
+  saved: a,
+  card,
+  cardLabel,
+  money,
+  pending,
+  error,
+  run,
+  onClose,
+  onSave,
+}: {
+  wallet: PortalWallet
+  saved: PortalWallet['autoTopup']
+  card: PortalPaymentMethod | null
+  cardLabel: string | null
+  money: (credits: string) => ReactNode
+  pending: boolean
+  error: string | null
+  run: ReturnType<typeof useRun>['run']
+  onClose: () => void
+  onSave: (wallet: PortalWallet, settings: AutoTopupSettings) => Promise<void>
+}) {
+  const [enabled, setEnabled] = useState(a?.enabled ?? Boolean(card))
+  const [threshold, setThreshold] = useState(a?.threshold ?? '500')
+  const [amount, setAmount] = useState(a?.credits ?? '2000')
+  const [cool, setCool] = useState(Boolean(a?.cooldown))
+  const [coolValue, setCoolValue] = useState(String(a?.cooldown?.value ?? 6))
+  const [coolUnit, setCoolUnit] = useState<PortalCooldownUnit>(a?.cooldown?.unit ?? 'hour')
+  return (
+    <Composer
+      submitLabel="Save"
+      onCancel={onClose}
+      submitting={pending}
+      disabled={enabled && !card}
+      onSubmit={() =>
+        void run(async () => {
+          await onSave(wallet, {
+            enabled,
+            threshold: parseCreditAmount(threshold),
+            credits: parseCreditAmount(amount),
+            cooldown: cool ? { value: Math.max(1, Number(coolValue) || 1), unit: coolUnit } : null,
+          })
+          onClose()
+        })
+      }
+    >
+      <label className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
+        <span>
+          <span className="block text-sm">Top up automatically</span>
+          <span className="text-muted-foreground block text-xs">
+            {cardLabel ? `Charged to ${cardLabel}` : 'Needs a saved card'}
+          </span>
+        </span>
+        <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Enable auto top-up" />
+      </label>
+
+      {!card ? (
+        <Alert variant="warning">
+          <TriangleAlertIcon aria-hidden="true" />
+          <AlertTitle>No saved card</AlertTitle>
+          <AlertDescription>
+            Add a card on the Overview tab to turn on automatic top-ups.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <fieldset
+        disabled={!enabled}
+        className={cn('grid gap-5 sm:grid-cols-2', !enabled && 'opacity-50')}
+      >
+        <Field>
+          <FieldLabel htmlFor="auto-threshold">When balance falls below</FieldLabel>
+          <InputGroup className="h-9">
+            <InputGroupInput
+              id="auto-threshold"
+              inputMode="numeric"
+              value={threshold}
+              onChange={(event) => setThreshold(event.target.value)}
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupText>credits</InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
+          <p className="text-muted-foreground text-xs tabular-nums">
+            {money(parseCreditAmount(threshold) ?? '0')}
+          </p>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="auto-amount">Add</FieldLabel>
+          <InputGroup className="h-9">
+            <InputGroupInput
+              id="auto-amount"
+              inputMode="numeric"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupText>credits</InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
+          <p className="text-muted-foreground text-xs tabular-nums">
+            Charged {money(parseCreditAmount(amount) ?? '0')} each time
+          </p>
+        </Field>
+      </fieldset>
+
+      <fieldset disabled={!enabled} className={cn('space-y-3', !enabled && 'opacity-50')}>
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="block text-sm">Wait between top-ups</span>
+            <span className="text-muted-foreground block text-xs">
+              Avoids several charges in a burst of usage
+            </span>
+          </span>
+          <Switch checked={cool} onCheckedChange={setCool} aria-label="Wait between top-ups" />
+        </label>
+        {cool ? (
+          <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
+            <Input
+              className="h-9"
+              inputMode="numeric"
+              value={coolValue}
+              onChange={(event) => setCoolValue(event.target.value)}
+              aria-label="Wait duration"
+            />
+            <Select
+              value={coolUnit}
+              onValueChange={(value) => value && setCoolUnit(value as PortalCooldownUnit)}
+            >
+              <SelectTrigger className="h-9 w-full" aria-label="Wait unit">
+                <SelectValue>{(value) => `${String(value)}s`}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {UNITS.map((u) => (
+                  <SelectItem key={u} value={u}>
+                    {u}s
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+      </fieldset>
+      {error ? <FieldError>{error}</FieldError> : null}
+    </Composer>
   )
 }
 

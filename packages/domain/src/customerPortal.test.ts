@@ -27,6 +27,7 @@ import {
   toPortalSubscriptions,
   toPortalWalletTransactions,
   toPortalWallets,
+  withPortalAutoTopup,
   walletFlows,
 } from './customerPortal'
 import { money } from './money'
@@ -300,6 +301,40 @@ describe('wallets', () => {
       credits: '18640',
       creditPrice: '0.1',
       autoTopup: { enabled: true, threshold: '500', credits: '2000' },
+    })
+  })
+
+  it('applies a saved auto top-up to its wallet only', () => {
+    const other = { ...wallets[0]!, id: 'w3', autoTopup: null }
+    const saved = { enabled: false, threshold: '100', credits: '900', cooldown: null }
+    const next = withPortalAutoTopup([wallets[0]!, other], 'w1', saved)
+    expect(next[0]!.autoTopup).toEqual(saved)
+    expect(next[1]).toBe(other)
+    // The loaded list is not changed in place.
+    expect(wallets[0]!.autoTopup?.enabled).toBe(true)
+  })
+
+  it('keeps a field the save did not send, as the server does', () => {
+    const before = {
+      ...wallets[0]!,
+      autoTopup: {
+        enabled: true,
+        threshold: '500',
+        credits: '2000',
+        cooldown: { value: 2, unit: 'hour' as const },
+      },
+    }
+    const next = withPortalAutoTopup([before], 'w1', {
+      enabled: false,
+      threshold: null,
+      credits: '900',
+      cooldown: null,
+    })
+    expect(next[0]!.autoTopup).toEqual({
+      enabled: false,
+      threshold: '500',
+      credits: '900',
+      cooldown: { value: 2, unit: 'hour' },
     })
   })
 

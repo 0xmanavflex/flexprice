@@ -19,6 +19,7 @@ import { useDebouncedSearch } from '../../compositions/tables/useDebouncedSearch
 import { FilterSelect, type FilterOption } from '../home/DashboardHome'
 import { EntityLink } from '../shared/cells'
 import { RevenueAmount, amountOrDash, currentPeriod, monthLabel } from './RevenueAmount'
+import { RevenueRecognitionNotEnabled } from './RevenueRecognitionNotEnabled'
 
 const dayFormat = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
 
@@ -58,6 +59,10 @@ export interface RevenueRecognitionReportProps {
   pageSize: number
   onPageChange: (page: number) => void
   onOpenCustomer?: ((customerId: string) => void) | undefined
+  /** Revenue recognition is off for the environment: the page explains it instead of the report. */
+  notEnabled?: boolean | undefined
+  /** With `notEnabled`: opens the console's contact path. */
+  onContact?: (() => void) | undefined
 }
 
 /**
@@ -118,6 +123,8 @@ export function RevenueRecognitionReport({
   pageSize,
   onPageChange,
   onOpenCustomer,
+  notEnabled = false,
+  onContact,
 }: RevenueRecognitionReportProps) {
   const thisMonth = currentPeriod()
   const periods = waterfall?.periods ?? []
@@ -190,6 +197,15 @@ export function RevenueRecognitionReport({
     document
       .querySelector(`[data-period="${thisMonth}"]`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+
+  if (notEnabled) {
+    return (
+      <div className="flex flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
+        <h1 className="text-xl font-medium tracking-tight">Revenue recognition</h1>
+        <RevenueRecognitionNotEnabled onContact={onContact} />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">

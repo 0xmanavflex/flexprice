@@ -798,6 +798,7 @@ export {
 } from './fxRates'
 export type { FxRateOwner, FxRateWire } from './fxRates'
 export {
+  isRevenueRecognitionEnabled,
   toContractJournal,
   toPerformanceObligation,
   toRollforward,

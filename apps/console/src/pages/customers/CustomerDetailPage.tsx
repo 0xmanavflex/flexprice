@@ -267,7 +267,7 @@ export function CustomerDetailPage({
                   onSelect: () => setOpenActivityId(entry.id),
                 }
                 // On its own page the customer is the subject already: the
-                // line is its state ("Taxable · Published"), not its name.
+                // line is its state ("Taxable · Active"), not its name.
                 if (entry.entityType === 'customer' && entry.entityId === customerId) {
                   const { record: _record, ...rest } = row
                   return rest

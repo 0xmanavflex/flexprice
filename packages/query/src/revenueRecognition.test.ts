@@ -1,11 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import { revenuePeriods } from '@fp/domain'
 import {
+  isRevenueRecognitionEnabled,
   toContractJournal,
   toPerformanceObligation,
   toRevenueWaterfall,
   toRollforward,
 } from './revenueRecognition'
+
+describe('isRevenueRecognitionEnabled', () => {
+  it('is on only for an explicit enabled: true', () => {
+    expect(isRevenueRecognitionEnabled({ enabled: true })).toBe(true)
+    expect(isRevenueRecognitionEnabled({ enabled: true, other: 1 })).toBe(true)
+  })
+
+  it('is off for the backend defaults, a missing value and anything malformed', () => {
+    expect(isRevenueRecognitionEnabled({ enabled: false })).toBe(false)
+    expect(isRevenueRecognitionEnabled({})).toBe(false)
+    expect(isRevenueRecognitionEnabled(null)).toBe(false)
+    expect(isRevenueRecognitionEnabled(undefined)).toBe(false)
+    expect(isRevenueRecognitionEnabled({ enabled: 'true' })).toBe(false)
+    expect(isRevenueRecognitionEnabled(true)).toBe(false)
+  })
+})
 
 describe('toRevenueWaterfall', () => {
   it('keeps posted, pending and scheduled apart and totals each row exactly', () => {

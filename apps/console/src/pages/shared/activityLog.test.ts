@@ -41,7 +41,7 @@ describe('the Activity card', () => {
     const row = toActivityLogEntry(
       entry({ state: { tax_treatment: 'taxable', timezone: 'UTC', status: 'published' } }),
     )
-    expect(row.summary).toBe('Taxable · Published')
+    expect(row.summary).toBe('Taxable · Active')
     expect(row.fields).toBeUndefined()
     expect(row.by).toBe('Subrat · Dashboard')
   })

@@ -14,6 +14,7 @@ import {
   type RevenueRecognitionSearch,
 } from '@/app/revenueRecognitionSearch'
 import { toListFailure } from '@/pages/shared/listFailure'
+import { contactToEnableRevenueRecognition } from './contactToEnable'
 
 const monthFormat = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -73,11 +74,9 @@ export function RevenueRecognitionPage({
         (Boolean(search.search) && matches.isPending) ||
         (Boolean(enabled.data) && !noMatch && revenue.isPending)
       }
-      error={
-        enabled.data === false
-          ? 'Revenue recognition is off for this environment.'
-          : (failure?.message ?? null)
-      }
+      notEnabled={enabled.data === false}
+      onContact={contactToEnableRevenueRecognition()}
+      error={failure?.message ?? null}
       onRetry={() =>
         void (enabled.error
           ? enabled.refetch()

@@ -54,7 +54,7 @@ export const FeatureStatus = {
 export type FeatureStatus = (typeof FeatureStatus)[keyof typeof FeatureStatus]
 
 export const FEATURE_STATUS_LABEL: Record<FeatureStatus, string> = {
-  [FeatureStatus.Published]: 'Published',
+  [FeatureStatus.Published]: 'Active',
   [FeatureStatus.Archived]: 'Archived',
 }
 
@@ -483,7 +483,7 @@ export interface FeatureQuery {
 
 /**
  * The list opens on published (active) features only, as V1 did: a visible,
- * removable "Status is Published" filter, sent to the search endpoint, so
+ * removable "Status is Active" filter, sent to the search endpoint, so
  * archived features stay out of the list and its totals until asked for.
  */
 export const ACTIVE_FEATURES_FILTER: ListFilter = {
@@ -543,7 +543,7 @@ export const FEATURE_FILTERS: readonly ListFilterSpec[] = [
     label: 'Status',
     kind: 'options',
     options: [
-      { value: 'published', label: 'Published' },
+      { value: 'published', label: 'Active' },
       { value: 'archived', label: 'Archived' },
     ],
   },

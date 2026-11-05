@@ -1,5 +1,6 @@
 import type { ShellChangelogEntry } from '@fp/ui/compositions'
 import { DOCS } from '@fp/domain'
+import { env } from '@/env'
 
 /**
  * What changed from the old console (V1) to this one, newest first, for the
@@ -12,7 +13,7 @@ import { DOCS } from '@fp/domain'
  * oldest to stay at six. Every `href` is a page on docs.flexprice.io that
  * explains the change, and `scene` is the product figure for its area.
  */
-export const CHANGELOG: ShellChangelogEntry[] = [
+const RELEASES: ShellChangelogEntry[] = [
   {
     id: '2026-11-console-v2',
     title: 'A new console',
@@ -56,6 +57,28 @@ export const CHANGELOG: ShellChangelogEntry[] = [
     scene: 'developers',
   },
 ]
+
+/**
+ * Flexprice for Slack leads while its demo video is configured
+ * (`VITE_SLACK_DEMO_VIDEO_URL`, a Loom link that can change without a
+ * release); without it there is nothing to show, and the card is left out.
+ */
+export function changelogEntries(slackDemoVideoUrl: string | null): ShellChangelogEntry[] {
+  const slack: ShellChangelogEntry[] = slackDemoVideoUrl
+    ? [
+        {
+          id: '2026-11-slack-agent',
+          title: 'Flexprice for Slack',
+          summary: 'Ask billing questions in any thread and get the real numbers back.',
+          href: slackDemoVideoUrl,
+          scene: 'developers',
+        },
+      ]
+    : []
+  return [...slack, ...RELEASES].slice(0, 6)
+}
+
+export const CHANGELOG: ShellChangelogEntry[] = changelogEntries(env.slackDemoVideoUrl)
 
 /** The `localStorage` key holding the ids of dismissed entries. */
 export const CHANGELOG_STORAGE_KEY = 'fp.changelog.dismissed'

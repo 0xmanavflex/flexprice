@@ -50,7 +50,7 @@ export const Playground = {
   args: {
     name: 'Enterprise onboarding',
     id: '01JF8Z3K7Q9W2E4R6T8Y0U1I2O',
-    statusLabel: 'Published',
+    statusLabel: 'Active',
     statusTone: 'success',
     amount: '1249.50',
     currency: 'USD',
@@ -205,7 +205,7 @@ export const ColumnHelpers: Story = {
     const columns = [
       textColumn<Row>('name', 'Name', (row) => row.name),
       idColumn<Row>('id', 'Identifier', (row) => row.id),
-      pillColumn<Row>('status', 'Status', () => ({ label: 'Published', tone: 'success' })),
+      pillColumn<Row>('status', 'Status', () => ({ label: 'Active', tone: 'success' })),
       moneyColumn<Row>('amount', 'Amount', (row) => row.amount, { locale: 'en-US' }),
       numberColumn<Row>('seats', 'Seats', (row) => row.seats, { locale: 'en-US' }),
       dateColumn<Row>('created', 'Created', (row) => row.created, { locale: 'en-US' }),

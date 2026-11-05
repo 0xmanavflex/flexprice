@@ -27,6 +27,7 @@ import {
   type Payment,
   PaymentStatus,
   compareMoney,
+  customerEmailSchema,
   formatMoney,
   isZeroMoney,
   SubscriptionStatus,
@@ -1560,8 +1561,6 @@ function InvoiceTable({
   )
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
 function InformationTab({
   customer,
   formatDate,
@@ -1598,9 +1597,10 @@ function InformationTab({
               label: 'Email',
               value: customer.email,
               placeholder: 'No email',
-              // A blank clears the stored email: the update sends it as ''.
+              // A blank clears the stored email: the update sends it as ''. The
+              // same check as the create/edit form, so neither takes what the other refuses.
               validate: (next) =>
-                next === '' || EMAIL_PATTERN.test(next) ? null : 'Enter a valid email address.',
+                customerEmailSchema.safeParse(next).error?.issues[0]?.message ?? null,
             },
             {
               key: 'phone',

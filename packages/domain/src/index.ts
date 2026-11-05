@@ -339,6 +339,7 @@ export {
   isCustomerQueryFiltered,
   CUSTOMER_FILTERS,
   createCustomerSchema,
+  customerEmailSchema,
   editCustomerSchema,
   emptyCustomer,
   customerToEdit,
@@ -461,6 +462,7 @@ export {
   RECORDABLE_PAYMENT_METHODS,
   PAYMENT_LINK_GATEWAYS,
   PAYMENT_METHOD_LABEL,
+  paymentMethodName,
   PAYMENT_SORT_LABEL,
   PAYMENT_STATUS_LABEL,
   PaymentMethod,
@@ -1025,6 +1027,7 @@ export {
   toPortalWallet,
   toPortalWalletTransactions,
   toPortalWallets,
+  withPortalAutoTopup,
   walletFlows,
 } from './customerPortal'
 export type {
@@ -1150,3 +1153,5 @@ export {
 } from './billingEntity'
 export { DOCS } from './docsLinks'
 export { eventPropertyNames, expressionProblem } from './featureExpression'
+export { invoiceProviderUrl } from './invoice'
+export { OPEN_START_DATE, isOpenStart } from './price'

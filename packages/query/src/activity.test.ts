@@ -114,7 +114,7 @@ describe('toActivityEntry', () => {
       fields: [
         { label: 'Tax treatment', value: 'Taxable' },
         { label: 'Timezone', value: 'UTC' },
-        { label: 'Status', value: 'Published' },
+        { label: 'Status', value: 'Active' },
       ],
     })
     expect(describeActivity(entry).record).not.toBe('actlog-read-1791926997-a')

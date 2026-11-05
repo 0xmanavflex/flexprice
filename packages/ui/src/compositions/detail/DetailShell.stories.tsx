@@ -19,7 +19,7 @@ const meta = {
   args: {
     title: 'Scale',
     identifier: 'plan_scale_monthly',
-    badges: <Badge variant="success-light">Published</Badge>,
+    badges: <Badge variant="success-light">Active</Badge>,
     primary: <Button variant="outline">Edit</Button>,
     metrics: [
       {
@@ -89,7 +89,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     identifier: 'plan_scale_monthly',
     email: 'billing@scale.example',
     children: <p className="text-muted-foreground text-sm">The tabbed body goes here.</p>,
-    badgeLabel: 'Published',
+    badgeLabel: 'Active',
     badgeVariant: 'success-light',
     showActions: true,
     metricCount: 4,
@@ -139,7 +139,7 @@ export const HeaderCluster: Story = {
     await expect(copy).toHaveTextContent('ID')
     await expect(canvas.queryByText('plan_scale_monthly')).not.toBeInTheDocument()
     const edit = canvas.getByRole('button', { name: 'Edit' })
-    const chip = canvas.getByText('Published')
+    const chip = canvas.getByText('Active')
     // Document order: the status pill under the title, then the primary action, then the id chip.
     await expect(chip.compareDocumentPosition(edit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     await expect(edit.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

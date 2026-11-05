@@ -21,7 +21,7 @@ export const CostSheetStatus = {
 export type CostSheetStatus = (typeof CostSheetStatus)[keyof typeof CostSheetStatus]
 
 export const COST_SHEET_STATUS_LABEL: Record<CostSheetStatus, string> = {
-  [CostSheetStatus.Published]: 'Published',
+  [CostSheetStatus.Published]: 'Active',
   [CostSheetStatus.Archived]: 'Archived',
 }
 
@@ -92,7 +92,7 @@ export const COST_SHEET_FILTERS: readonly ListFilterSpec[] = [
     label: 'Status',
     kind: 'options',
     options: [
-      { value: 'published', label: 'Published' },
+      { value: 'published', label: 'Active' },
       { value: 'archived', label: 'Archived' },
     ],
   },

@@ -9,18 +9,22 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('invoice mapping stays consistent across Related, header and list', async ({ page }) => {
+test('invoice mapping stays consistent across Integrations, header and list', async ({ page }) => {
   await page.goto('/invoices')
   await expect(page.getByRole('columnheader', { name: 'Integrations' })).toBeVisible()
   await page.getByRole('row').nth(1).click()
-  await page.getByRole('button', { name: 'Link integration', exact: true }).click()
+  // An invoice's integrations are their own card, with Link in its menu.
+  await page.getByRole('button', { name: 'Integration actions', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Link integration', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Link an integration' })
   await dialog.getByLabel('Invoice ID at the provider').fill('external_invoice_mapping')
   await dialog.getByRole('button', { name: 'Link', exact: true }).click()
   await expect(dialog).toBeHidden()
-  const related = page.getByRole('region', { name: 'Related', exact: true })
-  await expect(related.getByRole('button', { name: /ID external_invoice_mapping$/ })).toBeVisible()
-  const manage = related.getByRole('button', { name: /^Manage .* integration$/ })
+  const integrations = page.getByRole('region', { name: 'Integrations', exact: true })
+  await expect(
+    integrations.getByRole('button', { name: /ID external_invoice_mapping$/ }),
+  ).toBeVisible()
+  const manage = integrations.getByRole('button', { name: /^Manage .* integration$/ })
   const provider = (await manage.getAttribute('aria-label'))!
     .replace(/^Manage /, '')
     .replace(/ integration$/, '')

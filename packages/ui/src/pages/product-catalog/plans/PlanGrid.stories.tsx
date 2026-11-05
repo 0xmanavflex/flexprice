@@ -62,7 +62,7 @@ export const Populated: Story = {
     await expect(canvas.getByText('Usage-based')).toBeInTheDocument()
     await expect(canvas.getByText('No charges yet')).toBeInTheDocument()
 
-    await expect(canvas.getAllByText('Published').length).toBeGreaterThan(0)
+    await expect(canvas.getAllByText('Active').length).toBeGreaterThan(0)
   },
 }
 

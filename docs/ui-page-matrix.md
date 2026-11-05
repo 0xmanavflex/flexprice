@@ -56,7 +56,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | invoices | `InvoiceEditPage` | Form | ConfirmDialog, Field | AppFailure, EditableInvoice, EditableLine, InvoiceEditDraft, InvoiceForm, LoadingRows, PageBody |
 | invoices | `InvoiceFormPage` | Form | ConfirmDialog, Field | InvoiceForm, LoadingRows, PageBody |
 | invoices | `InvoiceListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | InvoiceGrid, ListState, PageBody |
-| payments | `PaymentDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, Field, FormCard, MetricRail | AppFailure, CatalogDetailFrame, CreditCardIcon, EditableCard, EntityLink, IntegrationMark, LoadingRows, PageBody, PaymentStatusBadge, Pill, PlayIcon, Trash2Icon |
+| payments | `PaymentDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailShell, DetailTabs, Field, FormCard, MetricRail | AppFailure, CatalogDetailFrame, CopyChip, CopyIcon, CreditCardIcon, EditableCard, EntityLink, IntegrationMark, LinkIcon, LoadingRows, PageBody, PaymentStatusBadge, Pill, PlayIcon, Trash2Icon |
 | payments | `PaymentFormPage` | Form | ConfirmDialog, Field, FormCard, FormPage, Section, WorkflowStepper | LoadingRows, PageBody, PaymentForm, PaymentLink |
 | payments | `PaymentListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | ListState, PageBody, PaymentGrid |
 | plans | `PlanAiSetupPage` | Other | Section, SimpleTable | PlanAiSetupView |

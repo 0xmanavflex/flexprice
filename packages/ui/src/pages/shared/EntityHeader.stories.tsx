@@ -151,7 +151,7 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'API calls' })).toBeVisible()
-    await expect(canvas.getByText('Published')).toBeVisible()
+    await expect(canvas.getByText('Active')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Copy ID feat_01HZX3API' })).toBeVisible()
     await expect(canvas.queryByRole('button', { name: 'Edit feature' })).not.toBeInTheDocument()
   },

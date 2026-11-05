@@ -35,10 +35,19 @@ test.describe('the customers list', () => {
       context.waitForEvent('page'),
       openRowMenu(page, 'Open customer portal'),
     ])
-    // The session token arrives in the link and is moved out of the address bar on load.
-    await expect(portal).toHaveURL(/\/p(\?|$)/)
+    // The session token arrives in the link and stays in the address bar.
+    await expect(portal).toHaveURL(/\/p\?token=/)
     await expect(portal.getByText('Payment methods')).toBeVisible({ timeout: 20_000 })
-    await expect(portal).not.toHaveURL(/token=/)
+    await expect(portal).toHaveURL(/token=/)
+    // Moving between tabs keeps it, so a reload still works.
+    await portal.getByRole('tab', { name: 'Invoices' }).click()
+    await expect(portal).toHaveURL(/\/p\/invoices\?token=/)
+    await portal.reload()
+    await expect(portal.getByRole('tab', { name: 'Invoices' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+      { timeout: 20_000 },
+    )
   })
 
   test('the row menu opens the portal but does not copy its link', async ({ page }) => {

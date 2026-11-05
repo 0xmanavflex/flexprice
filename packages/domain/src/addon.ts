@@ -16,7 +16,7 @@ export const AddonStatus = {
 export type AddonStatus = (typeof AddonStatus)[keyof typeof AddonStatus]
 
 export const ADDON_STATUS_LABEL: Record<AddonStatus, string> = {
-  [AddonStatus.Published]: 'Published',
+  [AddonStatus.Published]: 'Active',
   [AddonStatus.Archived]: 'Archived',
 }
 
@@ -93,7 +93,7 @@ export const ADDON_FILTERS: readonly ListFilterSpec[] = [
     label: 'Status',
     kind: 'options',
     options: [
-      { value: 'published', label: 'Published' },
+      { value: 'published', label: 'Active' },
       { value: 'archived', label: 'Archived' },
     ],
   },

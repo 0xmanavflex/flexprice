@@ -50,7 +50,9 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
   const [paying, setPaying] = useState<PortalInvoice | null>(null)
   const [downloading, setDownloading] = useState<PortalInvoice | null>(null)
   const [topUp, setTopUp] = useState<PortalWallet | null>(null)
-  const [autoTopup, setAutoTopup] = useState<PortalWallet | null>(null)
+  // The wallet's id, not a copy of it: the dialog reads the wallet as loaded now,
+  // so a refetch (after a save) shows in it rather than the state when it opened.
+  const [autoTopupId, setAutoTopupId] = useState<string | null>(null)
   const [addingCard, setAddingCard] = useState(false)
   const [removing, setRemoving] = useState<PortalPaymentMethod | null>(null)
 
@@ -154,7 +156,7 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
           periodStart={periodStart}
           onWalletChange={actions.onWalletChange}
           onAddCredits={() => wallet && setTopUp(wallet)}
-          onAutoTopup={() => wallet && setAutoTopup(wallet)}
+          onAutoTopup={() => wallet && setAutoTopupId(wallet.id)}
           onShowMore={actions.onShowMoreTransactions}
           locale={locale}
         />
@@ -195,7 +197,7 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
         onPdf={actions.downloadInvoice}
       />
       <AddCreditsDialog
-        key={topUp?.id ?? 'closed'}
+        key={`top-up:${topUp?.id ?? 'closed'}`}
         wallet={topUp}
         gateways={gateways}
         defaultCard={chargeable}
@@ -210,11 +212,11 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
         onCopied={copied}
       />
       <AutoTopupDialog
-        key={autoTopup?.id ?? 'closed'}
-        wallet={autoTopup}
+        key={`auto-topup:${autoTopupId ?? 'closed'}`}
+        wallet={wallets.find((w) => w.id === autoTopupId) ?? null}
         card={chargeable}
         locale={locale}
-        onClose={() => setAutoTopup(null)}
+        onClose={() => setAutoTopupId(null)}
         onSave={async (target, settings) => {
           await actions.saveAutoTopup(target, settings)
           toast.success(settings.enabled ? 'Auto top-up is on' : 'Auto top-up is off')

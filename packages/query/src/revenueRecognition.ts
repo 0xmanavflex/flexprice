@@ -145,7 +145,22 @@ function useAuth() {
   }
 }
 
-/** Whether revenue recognition is on for the environment (`revenue_recognition_config`). */
+/**
+ * Whether a `revenue_recognition_config` value turns the feature on. Only an explicit
+ * `enabled: true` does: a never-written key reads back as the backend's defaults (off),
+ * and anything malformed is treated as off rather than guessed at.
+ */
+export function isRevenueRecognitionEnabled(value: unknown): boolean {
+  return (
+    value !== null && typeof value === 'object' && (value as { enabled?: unknown }).enabled === true
+  )
+}
+
+/**
+ * Whether revenue recognition is on for the environment (`revenue_recognition_config`).
+ * `false` is the "not enabled" state the revenue pages explain; a 404 for the key (a
+ * deployment without the module) reads as `false` too, not as a failure to retry.
+ */
 export function useRevenueRecognitionEnabled(
   environmentId: string | null,
 ): UseQueryResult<boolean> {
@@ -154,13 +169,18 @@ export function useRevenueRecognitionEnabled(
     queryKey: queryKeys.revenueRecognition.enabled(environmentId),
     queryFn: async () => {
       const auth = await authFor(environmentId as string)
-      const value = await getSetting(
-        auth.serverURL,
-        auth.token,
-        auth.environmentId,
-        SettingKey.RevenueRecognitionConfig,
-      )
-      return (value as { enabled?: unknown } | null)?.enabled === true
+      try {
+        const value = await getSetting(
+          auth.serverURL,
+          auth.token,
+          auth.environmentId,
+          SettingKey.RevenueRecognitionConfig,
+        )
+        return isRevenueRecognitionEnabled(value)
+      } catch (error) {
+        if (error instanceof ApiError && error.kind === ErrorKind.NotFound) return false
+        throw error
+      }
     },
     enabled: Boolean(environmentId),
     staleTime: 5 * 60_000,

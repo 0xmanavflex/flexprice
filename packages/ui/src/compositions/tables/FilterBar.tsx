@@ -309,7 +309,7 @@ export function readSelectFilter(
 /**
  * Status (or any multi-value enum) as the advanced filter's one field.
  *
- * The dropdown and this builder write the same array, so picking "Published"
+ * The dropdown and this builder write the same array, so picking "Active"
  * in either place shows up in the other.
  */
 export function statusFilter<S extends string>({
