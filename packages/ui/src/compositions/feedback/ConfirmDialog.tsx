@@ -41,8 +41,11 @@ export interface ConfirmDialogProps {
   onOpenChange: (open: boolean) => void
   title: string
   description?: ReactNode
+  /** Content under the description: a link field, a short list. Not inside the description text. */
+  children?: ReactNode
   confirmLabel: string
-  cancelLabel?: string
+  /** `null` drops the Cancel button, for a dialog whose one action is to finish. */
+  cancelLabel?: string | null
   onConfirm: () => void
   /** Request in flight: dismissal is blocked and the confirm button shows progress. */
   isPending?: boolean
@@ -58,6 +61,7 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
+  children,
   confirmLabel,
   cancelLabel = 'Cancel',
   onConfirm,
@@ -103,6 +107,8 @@ export function ConfirmDialog({
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
 
+        {children}
+
         {error ? (
           <p role="alert" className="text-destructive text-sm">
             {error}
@@ -110,13 +116,15 @@ export function ConfirmDialog({
         ) : null}
 
         <DialogFooter>
-          <DialogClose
-            render={
-              <Button variant="outline" disabled={isPending}>
-                {cancelLabel}
-              </Button>
-            }
-          />
+          {cancelLabel === null ? null : (
+            <DialogClose
+              render={
+                <Button variant="outline" disabled={isPending}>
+                  {cancelLabel}
+                </Button>
+              }
+            />
+          )}
           <Button
             variant={destructive ? 'destructive' : 'default'}
             onClick={handleConfirm}

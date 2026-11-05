@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { ConfirmDialog } from './ConfirmDialog'
+import { PaymentLink } from './PaymentLink'
 
 /** Holds `open` so Cancel and Escape really close it, with a button to reopen; the `open` control still drives it. */
 function Controlled(args: ComponentProps<typeof ConfirmDialog>) {
@@ -148,5 +149,22 @@ export const WithError: Story = {
   args: { error: 'The coupon could not be archived. Try again.' },
   play: async () => {
     await expect(await screen.findByRole('alert')).toHaveTextContent(/could not be archived/i)
+  },
+}
+
+/** A body under the description, here a payment link, and one closing action with no Cancel. */
+export const WithBodyAndOneAction: Story = {
+  args: {
+    title: 'Checkout link ready',
+    description: 'Send this link to the customer. The credits land once they pay.',
+    children: <PaymentLink url="https://rzp.io/rzp/FQDMXiuA" label="Checkout link" />,
+    confirmLabel: 'Done',
+    cancelLabel: null,
+  },
+  play: async () => {
+    const dialog = await screen.findByRole('dialog')
+    await expect(dialog).toHaveTextContent('https://rzp.io/rzp/FQDMXiuA')
+    await expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull()
+    await expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument()
   },
 }

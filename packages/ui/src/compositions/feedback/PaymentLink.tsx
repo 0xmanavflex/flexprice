@@ -1,26 +1,68 @@
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { Button, buttonVariants } from '@ui/components/primitives/button'
+import { CheckIcon, CopyIcon, ExternalLinkIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
 
 /**
- * A payment or checkout link to hand to a customer, shown in a confirm dialog's
- * description: on its own line in a mono box, so a long provider URL wraps
- * cleanly instead of running through the sentence. It opens in a new tab.
+ * A payment or checkout link to hand to a customer, in a confirm dialog's body:
+ * a read-only field showing the URL on one line, with Copy and Open (new tab)
+ * beside it. The whole URL is the tooltip and the copied text.
  */
 export const PaymentLinkProvenance = provenance({
   source: 'composition',
-  composes: [],
-  note: 'A boxed, wrapping, new-tab link for a provider payment URL; used in wallet top-up and record-payment dialogs.',
+  composes: ['ui/button'],
+  note: 'A read-only field for a provider payment URL with copy and open-in-new-tab icon buttons; used in wallet top-up and record-payment dialogs.',
 })
 
-export function PaymentLink({ url }: { url: string | null | undefined }) {
+export function PaymentLink({
+  url,
+  label = 'Payment link',
+}: {
+  url: string | null | undefined
+  /** What the link is, for the buttons' names and the toast: "Checkout link". */
+  label?: string
+}) {
+  const [copied, setCopied] = useState(false)
+  const reset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(reset.current), [])
   if (!url) return null
+
+  const copy = () => {
+    void navigator.clipboard
+      ?.writeText(url)
+      .then(() => {
+        setCopied(true)
+        toast.success(`${label} copied`)
+        clearTimeout(reset.current)
+        reset.current = setTimeout(() => setCopied(false), 1200)
+      })
+      .catch(() => toast.error('Copy failed'))
+  }
+
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="border-border bg-muted text-foreground mt-3 block rounded-md border px-3 py-2 font-mono text-xs break-all no-underline"
-    >
-      {url}
-    </a>
+    <div className="border-input bg-muted/40 flex h-9 w-full min-w-0 items-center gap-1 rounded-lg border pr-1 pl-3">
+      <span title={url} className="text-foreground min-w-0 flex-1 truncate font-mono text-xs">
+        {url}
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Copy ${label.toLowerCase()}`}
+        onClick={copy}
+      >
+        {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
+      </Button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Open ${label.toLowerCase()} in a new tab`}
+        className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
+      >
+        <ExternalLinkIcon aria-hidden />
+      </a>
+    </div>
   )
 }

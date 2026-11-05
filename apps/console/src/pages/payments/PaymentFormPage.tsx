@@ -7,7 +7,7 @@ import {
   useInvoices,
   useRecordPayment,
 } from '@fp/query'
-import { PaymentForm, toast } from '@fp/ui/pages'
+import { PaymentForm } from '@fp/ui/pages'
 import { ConfirmDialog, LoadingRows, PageBody, PaymentLink } from '@fp/ui/compositions'
 import { getActiveEnvironmentId } from '@/app/session'
 import { ENVIRONMENT_PARAM } from '@/app/shell/environmentParam'
@@ -140,21 +140,13 @@ export function PaymentFormPage({ invoiceId, onCancel, onDone }: PaymentFormPage
         open={link !== null}
         onOpenChange={(open) => (open || !link ? undefined : onDone(link.paymentId))}
         title="Payment link ready"
-        description={
-          <>
-            Send this link to the customer. The invoice is paid once they complete it.
-            <PaymentLink url={link?.url} />
-          </>
-        }
-        confirmLabel="Copy link"
-        cancelLabel="Done"
-        onConfirm={() =>
-          void navigator.clipboard
-            ?.writeText(link?.url ?? '')
-            .then(() => toast.success('Payment link copied'))
-            .catch(() => toast.error('Copy failed'))
-        }
-      />
+        description="Send this link to the customer. The invoice is paid once they complete it."
+        confirmLabel="Done"
+        cancelLabel={null}
+        onConfirm={() => link && onDone(link.paymentId)}
+      >
+        <PaymentLink url={link?.url} />
+      </ConfirmDialog>
     </>
   )
 }

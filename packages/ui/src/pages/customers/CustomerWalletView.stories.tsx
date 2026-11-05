@@ -413,6 +413,37 @@ export const ExpiredNotConsumed: Story = {
   },
 }
 
+/** A purchase still waiting for its invoice or checkout: the API pre-fills its credits, but none have landed. */
+const PENDING_TOP_UP: WalletTransaction = {
+  id: 'wtx_pending',
+  direction: 'in',
+  reason: 'Purchased credits (invoiced)',
+  description: 'Purchased credits - pending payment',
+  credits: '1000',
+  amount: money('1000.00', 'USD'),
+  createdAt: new Date('2026-11-05T00:00:00Z'),
+  creditsAvailable: '1000',
+  expiresAt: null,
+  status: 'pending',
+}
+
+/** A top-up awaiting payment shows no remaining credits and no consumption, only its status. */
+export const AwaitingPayment: Story = {
+  args: {
+    transactions: [
+      PENDING_TOP_UP,
+      { ...PENDING_TOP_UP, id: 'wtx_failed', credits: '100', creditsAvailable: '100', status: 'failed' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Awaiting payment')).toBeInTheDocument()
+    await expect(canvas.getByText('Payment failed')).toBeInTheDocument()
+    await expect(canvas.queryByRole('img', { name: /consumed/ })).toBeNull()
+    await expect(canvas.queryByText(/pending payment/)).toBeNull()
+  },
+}
+
 export const LongLedger: Story = { args: { transactions: makeTransactions(40) } }
 
 /** A debit raised for an invoice: its reference and metadata show, and search finds them. */
