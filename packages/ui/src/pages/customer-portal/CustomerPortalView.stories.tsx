@@ -21,11 +21,11 @@ import {
   portalSpend,
   portalWallets,
 } from './fixtures'
-import type { CustomerPortalData } from './types'
+import type { AddCreditsResult, CustomerPortalData } from './types'
 
 const CHECKOUT = 'https://checkout.stripe.com/c/pay/cs_demo'
 const payInvoice = fn(() => Promise.resolve<string | null>(CHECKOUT))
-const addCredits = fn(() => Promise.resolve<string | null>(null))
+const addCredits = fn((..._args: unknown[]) => Promise.resolve<AddCreditsResult>(null))
 const addCard = fn(() => Promise.resolve<string | null>(CHECKOUT))
 const saveAutoTopup = fn(() => Promise.resolve())
 const retryTotals = fn()
@@ -249,6 +249,84 @@ export const AddCredits: Story = {
   },
 }
 
+/** No saved card and one checkout gateway: the one way to pay is shown, with no choice to make. */
+export const AddCreditsOneWayToPay: Story = {
+  args: {
+    data: {
+      ...portalData,
+      paymentMethods: { status: 'ready', data: [] },
+      gateways: {
+        status: 'ready',
+        data: portalData.gateways.status === 'ready' ? portalData.gateways.data.slice(0, 1) : [],
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    addCredits.mockClear()
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Add credits' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add credits' }))
+    await expect(dialog.getByText('Stripe checkout')).toBeVisible()
+    await expect(dialog.queryByRole('radiogroup', { name: 'Payment method' })).toBeNull()
+    await userEvent.click(dialog.getByRole('button', { name: /^Pay / }))
+    await waitFor(() =>
+      expect(addCredits).toHaveBeenCalledWith(
+        expect.anything(),
+        '5000',
+        { kind: 'checkout', provider: 'stripe' },
+        '',
+      ),
+    )
+  },
+}
+
+/**
+ * The API made no new checkout because a Razorpay one is still open: the
+ * customer can finish that one, or cancel it and pay with the gateway picked.
+ */
+export const AddCreditsCheckoutAlreadyOpen: Story = {
+  play: async ({ canvasElement }) => {
+    addCredits.mockReset()
+    addCredits.mockImplementation((...args: unknown[]) =>
+      Promise.resolve<AddCreditsResult>(
+        (args[2] as { replace?: boolean }).replace
+          ? CHECKOUT
+          : {
+              alreadyOpen: {
+                url: 'https://rzp.io/rzp/FQDMXiuA',
+                provider: 'razorpay',
+                label: 'Razorpay',
+                expiresAt: new Date('2026-11-05T16:08:46Z'),
+              },
+            },
+      ),
+    )
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Add credits' }))
+    let dialog = within(await screen.findByRole('dialog', { name: 'Add credits' }))
+    await userEvent.click(dialog.getByRole('radio', { name: /Stripe checkout/ }))
+    await userEvent.click(dialog.getByRole('button', { name: /^Pay / }))
+    dialog = within(await screen.findByRole('dialog', { name: 'A checkout is already open' }))
+    await expect(dialog.getByText('Razorpay checkout')).toBeVisible()
+    await expect(dialog.getByRole('link', { name: 'Open Razorpay checkout' })).toHaveAttribute(
+      'href',
+      'https://rzp.io/rzp/FQDMXiuA',
+    )
+    await userEvent.click(
+      dialog.getByRole('button', { name: 'Cancel it and pay $500.00 with Stripe' }),
+    )
+    await waitFor(() =>
+      expect(addCredits).toHaveBeenLastCalledWith(
+        expect.anything(),
+        '5000',
+        { kind: 'checkout', provider: 'stripe', replace: true },
+        '',
+      ),
+    )
+    await screen.findByRole('dialog', { name: 'Complete your payment' })
+    addCredits.mockReset()
+    addCredits.mockImplementation(() => Promise.resolve<AddCreditsResult>(null))
+  },
+}
+
 /** Adding a card goes to the gateway; only gateways that save cards are offered. */
 export const AddCard: Story = {
   play: async ({ canvasElement }) => {
@@ -256,9 +334,16 @@ export const AddCard: Story = {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Add card' }))
     const dialog = await screen.findByRole('dialog', { name: 'Add a card' })
     await expect(within(dialog).queryByText('Razorpay')).toBeNull()
+    // One provider saves cards: it is shown, with its logo, but there is nothing to choose.
+    await expect(within(dialog).queryByRole('radio')).toBeNull()
+    await expect(within(dialog).getByText('Stripe', { selector: 'p' })).toBeVisible()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(addCard).toHaveBeenCalledWith('stripe'))
-    await screen.findByRole('dialog', { name: 'Add your card' })
+    const handoff = within(await screen.findByRole('dialog', { name: 'Finish adding your card' }))
+    // Saving a card charges nothing: the words are about the card, not a payment.
+    await expect(handoff.getByText('Enter your card details in the new tab')).toBeVisible()
+    await expect(handoff.queryByText(/paying/)).toBeNull()
+    await expect(handoff.getByRole('button', { name: 'I’ve added it' })).toBeVisible()
   },
 }
 

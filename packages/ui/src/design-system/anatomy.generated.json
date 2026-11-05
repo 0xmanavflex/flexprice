@@ -177,6 +177,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -206,6 +207,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -711,6 +713,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -1351,6 +1354,7 @@
         "Loaded",
         "Mark",
         "OverviewTiles",
+        "PaymentLink",
         "PlanAiSetupView",
         "PlanPreviewCard",
         "PortalEmpty",
@@ -1959,6 +1963,7 @@
         "MetadataCard",
         "OverviewTiles",
         "PaymentGrid",
+        "PaymentLink",
         "PlanGrid",
         "PortalEmpty",
         "PriceUnitGrid",
@@ -3033,6 +3038,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -4783,8 +4789,14 @@
       "layer": "surface",
       "composes": [],
       "usedBy": [
+        "AddCardDialog",
+        "AddCreditsDialog",
+        "AutoTopupDialog",
         "ContractIntegrations",
-        "CustomerDetail"
+        "CustomerDetail",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "RemoveCardDialog"
       ],
       "story": null
     },
@@ -5989,6 +6001,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -6023,7 +6036,10 @@
     "PaymentLink": {
       "file": "src/compositions/feedback/PaymentLink.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [],
       "story": "./src/compositions/feedback/PaymentLink.stories.tsx"
     },
@@ -6186,6 +6202,7 @@
         "SubscriptionStatusPill",
         "SummaryCell",
         "UsageSyncDetailSheet",
+        "WalletLedgerTable",
         "WebhookEndpointDetail",
         "WebhookEventCatalog",
         "WebhookStatusPill",
@@ -6922,6 +6939,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -8786,7 +8804,8 @@
       "file": "src/pages/customers/WalletLedgerTable.tsx",
       "layer": "surface",
       "composes": [
-        "DetailTable"
+        "DetailTable",
+        "Pill"
       ],
       "usedBy": [
         "CustomerWalletView"
@@ -9198,7 +9217,8 @@
       "title": "Building blocks/Feedback & states/ConfirmDialog",
       "component": "ConfirmDialog",
       "uses": [
-        "ConfirmDialog"
+        "ConfirmDialog",
+        "PaymentLink"
       ]
     },
     "./src/compositions/feedback/DataBoundary.stories.tsx": {

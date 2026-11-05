@@ -775,7 +775,7 @@ export {
   useTopUpPortalWallet,
   useUpdatePortalAutoTopup,
 } from './customerPortal'
-export type { PortalAction, PortalQuery } from './customerPortal'
+export type { PortalAction, PortalQuery, PortalTopUpOutcome } from './customerPortal'
 export type { PortalAuth } from '@fp/api'
 export { useCreateCustomerPortalSession } from './customerPortalSession'
 export { useInvoiceHostedLink, useInvoiceHostedUrl } from './invoiceHostedLink'

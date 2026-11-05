@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { type PortalRange, type PortalView, portalRangeWindow } from '@fp/domain'
+import {
+  type PortalOpenCheckout,
+  type PortalRange,
+  type PortalView,
+  portalRangeWindow,
+} from '@fp/domain'
 import {
   ApiError,
   type PortalAuth,
@@ -263,26 +268,27 @@ function Portal({
           returnUrl: gatewayReturnUrl(window.location.href),
         }),
       ),
-    addCredits: (target, credits, via, note) =>
-      via.kind === 'saved'
-        ? settle(() =>
-            topUp.run({
-              walletId: target.id,
-              credits,
-              provider: null,
-              note,
-              returnUrl: gatewayReturnUrl(window.location.href),
-            }),
-          )
-        : inNewTab(() =>
-            topUp.run({
-              walletId: target.id,
-              credits,
-              provider: via.provider,
-              note,
-              returnUrl: gatewayReturnUrl(window.location.href),
-            }),
-          ),
+    addCredits: async (target, credits, via, note) => {
+      const request = {
+        walletId: target.id,
+        credits,
+        note,
+        returnUrl: gatewayReturnUrl(window.location.href),
+      }
+      if (via.kind === 'saved') return settle(() => topUp.run({ ...request, provider: null }))
+      // Another checkout already open: no new tab, the dialog asks what to do.
+      let alreadyOpen: PortalOpenCheckout | null = null
+      const url = await inNewTab(async () => {
+        const outcome = await topUp.run({
+          ...request,
+          provider: via.provider,
+          ...(via.replace ? { replace: true } : {}),
+        })
+        alreadyOpen = outcome.alreadyOpen
+        return outcome.url
+      })
+      return alreadyOpen ? { alreadyOpen } : url
+    },
     addCard: (provider) =>
       inNewTab(() => addCard.run({ provider, returnUrl: gatewayReturnUrl(window.location.href) }), {
         required: true,

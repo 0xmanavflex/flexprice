@@ -15,6 +15,7 @@ import {
   totalDue,
   unitPriceLabel,
   toPortalActionUrl,
+  toPortalOpenCheckout,
   DEFAULT_PORTAL_CONFIG,
   toPortalConfig,
   toPortalCustomer,
@@ -672,6 +673,31 @@ describe('payment methods and gateways', () => {
       toPortalActionUrl({ checkout_session: { payment_action: { url: 'https://pay.example/c' } } }),
     ).toBe('https://pay.example/c')
     expect(toPortalActionUrl({ wallet: {} })).toBeNull()
+  })
+
+  it('reads the checkout already open when the API made no new one', () => {
+    const session = {
+      id: 'cs_1',
+      payment_provider: 'razorpay',
+      payment_action: { type: 'payment_link', url: 'https://rzp.io/rzp/FQDMXiuA' },
+      expires_at: '2026-11-05T16:08:46Z',
+    }
+    expect(
+      toPortalOpenCheckout({
+        checkout_session: {
+          ...session,
+          entity_creation_result: { status: 'failed_already_exists', entity_id: 'cs_1' },
+        },
+      }),
+    ).toEqual({
+      url: 'https://rzp.io/rzp/FQDMXiuA',
+      provider: 'razorpay',
+      label: 'Razorpay',
+      expiresAt: new Date('2026-11-05T16:08:46Z'),
+    })
+    // A checkout that was just made is not a conflict.
+    expect(toPortalOpenCheckout({ checkout_session: session })).toBeNull()
+    expect(toPortalOpenCheckout({ wallet: {} })).toBeNull()
   })
 })
 

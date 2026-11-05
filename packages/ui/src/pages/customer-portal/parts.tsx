@@ -253,15 +253,19 @@ export function RadioRows({
 export function CheckoutLinkPanel({
   url,
   amount,
+  purpose = 'pay',
   onCopy,
   onDone,
 }: {
   url: string
-  /** "$500.00", or "nothing now" for saving a card. */
+  /** "$500.00", or null when it is not known here. Unused when saving a card. */
   amount: ReactNode
+  /** `card`: the page saves a card and charges nothing, so the words say so. */
+  purpose?: 'pay' | 'card'
   onCopy: () => void
   onDone: () => void
 }) {
+  const card = purpose === 'card'
   return (
     <div className="flex flex-col gap-5">
       <div className="bg-muted/40 flex items-start gap-3 rounded-lg border p-4">
@@ -269,10 +273,17 @@ export function CheckoutLinkPanel({
           <ExternalLinkIcon />
         </IconTile>
         <div className="flex flex-col gap-1 text-[13px]">
-          <p className="text-sm font-medium">Finish paying {amount} in the new tab</p>
+          <p className="text-sm font-medium">
+            {card ? (
+              'Enter your card details in the new tab'
+            ) : (
+              <>Finish paying{amount ? <> {amount}</> : null} in the new tab</>
+            )}
+          </p>
           <p className="text-muted-foreground">
-            We opened the payment page in a new tab. If it didn’t open, use the link below. This
-            page updates by itself once the payment goes through.
+            {card
+              ? 'We opened a secure page in a new tab. If it didn’t open, use the link below. Nothing is charged now; your card shows here once it is saved.'
+              : 'We opened the payment page in a new tab. If it didn’t open, use the link below. This page updates by itself once the payment goes through.'}
           </p>
         </div>
       </div>
@@ -293,11 +304,11 @@ export function CheckoutLinkPanel({
           render={<a href={url} target="_blank" rel="noopener noreferrer" role="link" />}
         >
           <ExternalLinkIcon aria-hidden="true" />
-          Open payment page
+          {card ? 'Open card page' : 'Open payment page'}
         </Button>
         <Button className="h-8 px-3" onClick={onDone}>
           <CheckIcon aria-hidden="true" />
-          I’ve paid
+          {card ? 'I’ve added it' : 'I’ve paid'}
         </Button>
       </div>
     </div>

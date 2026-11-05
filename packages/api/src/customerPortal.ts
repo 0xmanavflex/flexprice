@@ -130,6 +130,10 @@ export const topUpPortalWallet = (
       success_url?: string
       cancel_url?: string
       failure_url?: string
+      /** `supersede` cancels the checkout already open for this wallet. */
+      entity_creation_options?: {
+        entity_creation_conflict_policies: { on_existing_entity: 'supersede' }
+      }
     }
   },
 ) => post(auth, `/wallets/${id(walletId)}/top-up`, body)

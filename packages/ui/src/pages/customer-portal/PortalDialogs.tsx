@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react'
 import {
   type PortalCooldownUnit,
   type PortalGateway,
+  type PortalOpenCheckout,
   type PortalInvoice,
   type PortalPaymentMethod,
   type PortalWallet,
@@ -10,7 +11,9 @@ import {
   moneyFormatLocale,
   parseCreditAmount,
 } from '@fp/domain'
-import { FileTextIcon, SheetIcon, TriangleAlertIcon } from '@ui/icons'
+import { ExternalLinkIcon, FileTextIcon, SheetIcon, TriangleAlertIcon } from '@ui/icons'
+import { Button } from '@ui/components/primitives/button'
+import { Spinner } from '@ui/components/primitives/spinner'
 import { Field, FieldError, FieldLabel } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
 import {
@@ -34,10 +37,11 @@ import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Money } from '../shared/Money'
+import { IntegrationMark } from '../customers/IntegrationMark'
 import { CardLogo } from './CardLogo'
 import { formatNumber } from './format'
 import { CheckoutLinkPanel, RadioRows } from './parts'
-import type { AutoTopupSettings, PayVia } from './types'
+import type { AddCreditsResult, AutoTopupSettings, PayVia } from './types'
 
 /**
  * The portal's dialogs, after the portal prototype (`portal/flows.tsx`): pay an
@@ -161,6 +165,12 @@ export function PayInvoiceDialog({
                 {brandName ?? 'your account team'} to pay this invoice.
               </AlertDescription>
             </Alert>
+          ) : options.length === 1 && options[0] ? (
+            <OnlyMethod
+              media={<GatewayMark provider={options[0].provider} label={options[0].label} />}
+              label={`Pay with ${options[0].label}`}
+              description="Opens a secure payment page. Saved cards are offered there."
+            />
           ) : (
             <RadioRows
               label="Payment method"
@@ -168,7 +178,8 @@ export function PayInvoiceDialog({
               onChange={setProvider}
               options={options.map((g) => ({
                 value: g.provider,
-                label: options.length > 1 ? `Pay with ${g.label}` : 'Card or bank transfer',
+                media: <GatewayMark provider={g.provider} label={g.label} />,
+                label: `Pay with ${g.label}`,
                 description: 'Opens a secure payment page. Saved cards are offered there.',
               }))}
             />
@@ -186,6 +197,112 @@ function amountText(invoice: PortalInvoice, locale: string | undefined): string 
     style: 'currency',
     currency: invoice.amountDue.currency,
   }).format(Number(invoice.amountDue.amount))
+}
+
+/** A payment gateway's logo, from the same files as the Integrations page. */
+function GatewayMark({ provider, label }: { provider: string; label: string }) {
+  return (
+    <IntegrationMark
+      integration={{ id: provider.toLowerCase(), name: label }}
+      className="size-8 rounded-md"
+    />
+  )
+}
+
+/**
+ * The one way to pay, when there is no choice to make: the same row as a
+ * `RadioRows` option, without the radio.
+ */
+function OnlyMethod({
+  media,
+  label,
+  description,
+}: {
+  media: ReactNode
+  label: string
+  description: string
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border px-3.5 py-3">
+      {media}
+      <div className="min-w-0">
+        <p className="text-sm">{label}</p>
+        <p className="text-muted-foreground text-xs">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The API made no new checkout because one is already open for this wallet,
+ * possibly at another gateway: finish that one, or cancel it and pay as picked.
+ */
+function OpenCheckoutStep({
+  checkout,
+  picked,
+  payLabel,
+  pending,
+  error,
+  onContinue,
+  onReplace,
+}: {
+  checkout: PortalOpenCheckout
+  /** The gateway picked in the form, when it is a checkout. */
+  picked: string | null
+  /** "Pay $5,000.00". */
+  payLabel: string
+  pending: boolean
+  error: string | null
+  onContinue: () => void
+  onReplace: () => void
+}) {
+  const until = checkout.expiresAt
+    ? checkout.expiresAt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : null
+  const otherGateway = picked !== null && picked !== checkout.label
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-muted-foreground text-sm">
+        You started a {checkout.label} checkout for this wallet that isn’t finished yet, so no new
+        one was made. Finish that one, or cancel it and{' '}
+        {otherGateway ? `pay with ${picked}` : 'start again'}.
+      </p>
+      <OnlyMethod
+        media={<GatewayMark provider={checkout.provider} label={checkout.label} />}
+        label={`${checkout.label} checkout`}
+        description={until ? `Open until ${until}` : 'Still open'}
+      />
+      {error ? <FieldError>{error}</FieldError> : null}
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-5">
+        {checkout.url ? (
+          <Button
+            variant="outline"
+            className="h-8 px-3"
+            disabled={pending}
+            nativeButton={false}
+            render={
+              <a
+                href={checkout.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                role="link"
+                onClick={onContinue}
+              />
+            }
+          >
+            <ExternalLinkIcon aria-hidden="true" />
+            Open {checkout.label} checkout
+          </Button>
+        ) : null}
+        <Button className="h-8 px-3" disabled={pending} onClick={onReplace}>
+          {pending ? <Spinner aria-hidden className="size-3.5" /> : null}
+          Cancel it and {payLabel.charAt(0).toLowerCase()}
+          {payLabel.slice(1)}
+          {otherGateway ? ` with ${picked}` : ''}
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 /* ---- Add credits --------------------------------------------------------- */
@@ -218,11 +335,15 @@ export function AddCreditsDialog({
     credits: string,
     via: PayVia,
     note: string,
-  ) => Promise<string | null>
+  ) => Promise<AddCreditsResult>
   onPaid: () => void
   onCopied: () => void
 }) {
   const [raw, setRaw] = useState('5000')
+  /** The checkout the API answered with instead of making a new one. */
+  const [alreadyOpen, setAlreadyOpen] = useState<PortalOpenCheckout | null>(null)
+  /** The open checkout was continued, so the amount is not this form's. */
+  const [continued, setContinued] = useState(false)
   const [via, setVia] = useState(defaultCard ? 'saved' : '')
   const [note, setNote] = useState('')
   const [link, setLink] = useState<string | null>(null)
@@ -236,18 +357,59 @@ export function AddCreditsDialog({
   const after = wallet && credits ? creditsAfter(wallet.credits, credits) : null
   const methods = [...(defaultCard ? ['saved'] : []), ...checkouts.map((g) => g.provider)]
   const method = methods.includes(via) ? via : (methods[0] ?? '')
+  const methodOptions = [
+    ...(defaultCard
+      ? [
+          {
+            value: 'saved',
+            media: <CardLogo network={defaultCard.network} label={defaultCard.brand} />,
+            label: `${defaultCard.brand} •••• ${defaultCard.last4}`,
+            description: 'Charged now · credits land right away',
+          },
+        ]
+      : []),
+    ...checkouts.map((g) => ({
+      value: g.provider,
+      media: <GatewayMark provider={g.provider} label={g.label} />,
+      label: `${g.label} checkout`,
+      description: `Pay on ${g.label}’s page in a new tab`,
+    })),
+  ]
   const close = () => {
     setLink(null)
+    setAlreadyOpen(null)
+    setContinued(false)
     onClose()
   }
+  const payLabel = cost
+    ? `Pay ${new Intl.NumberFormat(moneyFormatLocale(cost.currency), { style: 'currency', currency: cost.currency }).format(Number(cost.amount))}`
+    : 'Pay'
+  const submit = (replace: boolean) => {
+    if (!wallet || !credits || !method) return
+    const payVia: PayVia =
+      method === 'saved'
+        ? { kind: 'saved' }
+        : { kind: 'checkout', provider: method, ...(replace ? { replace: true } : {}) }
+    void run(() => onAdd(wallet, credits, payVia, note)).then((result) => {
+      if (result === undefined) return
+      if (result === null) close()
+      else if (typeof result === 'string') {
+        setAlreadyOpen(null)
+        setLink(result)
+      } else setAlreadyOpen(result.alreadyOpen)
+    })
+  }
+  const picked = checkouts.find((g) => g.provider === method)
 
   return (
     <FormDialog
       open={wallet !== null}
       onOpenChange={(open) => !open && close()}
-      title={link ? 'Complete your payment' : 'Add credits'}
+      title={
+        link ? 'Complete your payment' : alreadyOpen ? 'A checkout is already open' : 'Add credits'
+      }
       description={
-        link || !wallet ? undefined : (
+        link || alreadyOpen || !wallet ? undefined : (
           <>
             To {wallet.name}. 1 credit ={' '}
             {money({ amount: wallet.creditPrice, currency: wallet.currency })}.
@@ -260,32 +422,34 @@ export function AddCreditsDialog({
       {link ? (
         <CheckoutLinkPanel
           url={link}
-          amount={cost ? money(cost) : null}
+          amount={continued ? null : cost ? money(cost) : null}
           onCopy={() => copy(link, onCopied)}
           onDone={() => {
             onPaid()
             close()
           }}
         />
+      ) : alreadyOpen ? (
+        <OpenCheckoutStep
+          checkout={alreadyOpen}
+          picked={picked?.label ?? null}
+          payLabel={payLabel}
+          pending={pending}
+          error={error}
+          onContinue={() => {
+            setContinued(true)
+            setLink(alreadyOpen.url)
+            setAlreadyOpen(null)
+          }}
+          onReplace={() => submit(true)}
+        />
       ) : wallet ? (
         <Composer
-          submitLabel={
-            cost
-              ? `Pay ${new Intl.NumberFormat(moneyFormatLocale(cost.currency), { style: 'currency', currency: cost.currency }).format(Number(cost.amount))}`
-              : 'Pay'
-          }
+          submitLabel={payLabel}
           onCancel={close}
           submitting={pending}
           disabled={!credits || !cost || !method}
-          onSubmit={() => {
-            if (!credits || !method) return
-            const payVia: PayVia =
-              method === 'saved' ? { kind: 'saved' } : { kind: 'checkout', provider: method }
-            void run(() => onAdd(wallet, credits, payVia, note)).then((url) => {
-              if (url) setLink(url)
-              else if (url === null) close()
-            })
-          }}
+          onSubmit={() => submit(false)}
         >
           <Field>
             <FieldLabel>Credits</FieldLabel>
@@ -338,41 +502,20 @@ export function AddCreditsDialog({
 
           <Field>
             <FieldLabel>Pay with</FieldLabel>
-            {methods.length === 0 ? (
+            {methodOptions.length === 0 ? (
               <Alert>
                 <AlertDescription>
                   Buying credits online isn’t set up for this account.
                 </AlertDescription>
               </Alert>
+            ) : methodOptions.length === 1 && methodOptions[0] ? (
+              <OnlyMethod {...methodOptions[0]} />
             ) : (
               <RadioRows
                 label="Payment method"
                 value={method}
                 onChange={setVia}
-                options={[
-                  ...(defaultCard
-                    ? [
-                        {
-                          value: 'saved',
-                          media: (
-                            <CardLogo network={defaultCard.network} label={defaultCard.brand} />
-                          ),
-                          label: `${defaultCard.brand} •••• ${defaultCard.last4}`,
-                          description: 'Charged now · credits land right away',
-                        },
-                      ]
-                    : []),
-                  ...checkouts.map((g) => ({
-                    value: g.provider,
-                    media: (
-                      <span className="bg-muted flex h-6 w-9 shrink-0 items-center justify-center rounded-[5px] border text-[9px] font-medium">
-                        {g.label.slice(0, 3).toUpperCase()}
-                      </span>
-                    ),
-                    label: `${g.label} checkout`,
-                    description: `Pay on ${g.label}’s page in a new tab`,
-                  })),
-                ]}
+                options={methodOptions}
               />
             )}
           </Field>
@@ -662,7 +805,7 @@ export function AddCardDialog({
     <FormDialog
       open={open}
       onOpenChange={(next) => !next && close()}
-      title={link ? 'Add your card' : 'Add a card'}
+      title={link ? 'Finish adding your card' : 'Add a card'}
       description={
         link ? undefined : 'Card details are entered on the payment provider’s page, never here.'
       }
@@ -672,7 +815,8 @@ export function AddCardDialog({
       {link ? (
         <CheckoutLinkPanel
           url={link}
-          amount="nothing now"
+          amount={null}
+          purpose="card"
           onCopy={() => copy(link, onCopied)}
           onDone={() => {
             onPaid()
@@ -692,24 +836,34 @@ export function AddCardDialog({
             })
           }}
         >
-          <RadioRows
-            label="Provider"
-            value={chosen?.provider ?? ''}
-            onChange={setProvider}
-            options={options.map((g) => ({
-              value: g.provider,
-              label: g.label,
-              description: g.autoCharge
-                ? 'Can pay invoices and top-ups automatically'
-                : 'Used at checkout only',
-            }))}
-          />
+          {options.length === 1 && options[0] ? (
+            <OnlyMethod
+              media={<GatewayMark provider={options[0].provider} label={options[0].label} />}
+              label={options[0].label}
+              description={cardUse(options[0])}
+            />
+          ) : (
+            <RadioRows
+              label="Provider"
+              value={chosen?.provider ?? ''}
+              onChange={setProvider}
+              options={options.map((g) => ({
+                value: g.provider,
+                media: <GatewayMark provider={g.provider} label={g.label} />,
+                label: g.label,
+                description: cardUse(g),
+              }))}
+            />
+          )}
           {error ? <FieldError>{error}</FieldError> : null}
         </Composer>
       )}
     </FormDialog>
   )
 }
+
+const cardUse = (g: PortalGateway) =>
+  g.autoCharge ? 'Can pay invoices and top-ups automatically' : 'Used at checkout only'
 
 export function RemoveCardDialog({
   card,

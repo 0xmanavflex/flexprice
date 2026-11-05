@@ -2,6 +2,7 @@ import type {
   PortalParts,
   PortalCustomer,
   PortalGateway,
+  PortalOpenCheckout,
   PortalInvoice,
   PortalPaymentMethod,
   PortalQuota,
@@ -21,7 +22,16 @@ export type Load<T> =
   { status: 'loading' } | { status: 'error'; retry: () => void } | { status: 'ready'; data: T }
 
 /** How a top-up is paid: the saved default card now, or a gateway's checkout page. */
-export type PayVia = { kind: 'saved' } | { kind: 'checkout'; provider: string }
+export type PayVia =
+  | { kind: 'saved' }
+  /** `replace`: cancel the checkout already open for this wallet and start this one. */
+  | { kind: 'checkout'; provider: string; replace?: boolean }
+
+/**
+ * What adding credits came to: a gateway page to finish on, null when the
+ * saved card was charged, or the checkout already open for the wallet.
+ */
+export type AddCreditsResult = string | null | { alreadyOpen: PortalOpenCheckout }
 
 export interface CustomerPortalData {
   customer: Load<PortalCustomer>
@@ -72,7 +82,7 @@ export interface CustomerPortalActions {
     credits: string,
     via: PayVia,
     note: string,
-  ) => Promise<string | null>
+  ) => Promise<AddCreditsResult>
   addCard: (provider: string) => Promise<string | null>
   saveAutoTopup: (wallet: PortalWallet, settings: AutoTopupSettings) => Promise<void>
   removeCard: (card: PortalPaymentMethod) => Promise<void>

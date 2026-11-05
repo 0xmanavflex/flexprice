@@ -28,6 +28,7 @@ import {
   type PortalConfig,
   type PortalCustomer,
   type PortalGateway,
+  type PortalOpenCheckout,
   type PortalInvoice,
   type PortalPaymentMethod,
   type PortalQuota,
@@ -38,6 +39,7 @@ import {
   type PortalWalletTotals,
   type PortalWalletTransaction,
   toPortalActionUrl,
+  toPortalOpenCheckout,
   toPortalConfig,
   toPortalPropertyKeys,
   toPortalCustomer,
@@ -356,8 +358,8 @@ export const usePortalPropertyKeys = (
 
 /* ---- Actions -------------------------------------------------------------- */
 
-export interface PortalAction<A> {
-  run: (args: A) => Promise<string | null>
+export interface PortalAction<A, R = string | null> {
+  run: (args: A) => Promise<R>
   isPending: boolean
 }
 
@@ -369,16 +371,17 @@ export interface PortalAction<A> {
  * One idempotency key per attempt: a retry after a failure sends the same
  * key, so the backend answers with what it may already have done.
  */
-function usePortalAction<A>(
+function usePortalAction<A, R = string | null>(
   auth: PortalAuth,
   call: (args: A, idempotencyKey: string) => Promise<unknown>,
-): PortalAction<A> {
+  read: (wire: unknown) => R = toPortalActionUrl as (wire: unknown) => R,
+): PortalAction<A, R> {
   const queryClient = useQueryClient()
   const key = useRef<string | null>(null)
   const mutation = useMutation({
     mutationFn: async (args: A) => {
       key.current ??= crypto.randomUUID()
-      return toPortalActionUrl(await call(args, key.current))
+      return read(await call(args, key.current))
     },
     onSuccess: () => {
       key.current = null
@@ -407,23 +410,54 @@ export function usePayPortalInvoice(auth: PortalAuth) {
   )
 }
 
+/**
+ * A top-up's outcome: the gateway page to open (null when the saved card was
+ * charged), or the checkout already open for this wallet, when the API made
+ * no new one.
+ */
+export type PortalTopUpOutcome =
+  { url: string | null; alreadyOpen: null } | { url: null; alreadyOpen: PortalOpenCheckout }
+
 export function useTopUpPortalWallet(auth: PortalAuth) {
-  return usePortalAction<{
-    walletId: string
-    credits: string
-    /** A gateway's checkout, or null to charge the saved default card. */
-    provider: string | null
-    note: string
-    returnUrl: string
-  }>(auth, ({ walletId, credits, provider, note, returnUrl }, idempotency_key) =>
-    topUpPortalWallet(auth, walletId, {
-      credits_to_add: credits,
-      idempotency_key,
-      ...(note.trim() ? { description: note.trim() } : {}),
-      checkout: provider
-        ? { payment_provider: provider, ...returnUrls(returnUrl) }
-        : { use_saved_method: true, ...returnUrls(returnUrl) },
-    }),
+  return usePortalAction<
+    {
+      walletId: string
+      credits: string
+      /** A gateway's checkout, or null to charge the saved default card. */
+      provider: string | null
+      note: string
+      returnUrl: string
+      /** Cancel the checkout already open for this wallet and start this one. */
+      replace?: boolean
+    },
+    PortalTopUpOutcome
+  >(
+    auth,
+    ({ walletId, credits, provider, note, returnUrl, replace }, idempotency_key) =>
+      topUpPortalWallet(auth, walletId, {
+        credits_to_add: credits,
+        idempotency_key,
+        ...(note.trim() ? { description: note.trim() } : {}),
+        checkout: provider
+          ? {
+              payment_provider: provider,
+              ...returnUrls(returnUrl),
+              ...(replace
+                ? {
+                    entity_creation_options: {
+                      entity_creation_conflict_policies: { on_existing_entity: 'supersede' },
+                    },
+                  }
+                : {}),
+            }
+          : { use_saved_method: true, ...returnUrls(returnUrl) },
+      }),
+    (wire) => {
+      const alreadyOpen = toPortalOpenCheckout(wire)
+      return alreadyOpen
+        ? { url: null, alreadyOpen }
+        : { url: toPortalActionUrl(wire), alreadyOpen: null }
+    },
   )
 }
 

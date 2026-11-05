@@ -797,6 +797,35 @@ export function toPortalActionUrl(wire: unknown): string | null {
   )
 }
 
+/**
+ * A checkout the customer already has open for this wallet. The API makes only
+ * one at a time: asked for another, it creates nothing and answers with the
+ * open one (`entity_creation_result.status: failed_already_exists`), which may
+ * be at a different gateway than the one picked.
+ */
+export interface PortalOpenCheckout {
+  url: string
+  provider: string
+  label: string
+  expiresAt: Date | null
+}
+
+/** The open checkout a top-up ran into instead of creating one, or null. */
+export function toPortalOpenCheckout(wire: unknown): PortalOpenCheckout | null {
+  const session = record(record(wire)['checkout_session'])
+  if (text(record(session['entity_creation_result'])['status']) !== 'failed_already_exists')
+    return null
+  const provider = text(session['payment_provider'])
+  const expires = text(session['expires_at'])
+  const expiresAt = expires ? new Date(expires) : null
+  return {
+    url: text(record(session['payment_action'])['url']),
+    provider,
+    label: provider ? gatewayLabel(provider) : 'payment provider',
+    expiresAt: expiresAt && !Number.isNaN(expiresAt.getTime()) ? expiresAt : null,
+  }
+}
+
 /* ---- Usage ---------------------------------------------------------------- */
 
 export interface PortalQuota {
