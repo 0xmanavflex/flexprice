@@ -37,6 +37,18 @@ export const WORKFLOW_STATUS_WIRE: Record<WorkflowStatus, string> = {
   [WorkflowStatus.TimedOut]: 'TimedOut',
 }
 
+/** The latest run that synced one invoice or customer to one provider. */
+export interface EntitySyncRun {
+  /** The integration catalogue id (`stripe`, `zoho`), which also picks the logo. */
+  providerId: string
+  provider: string
+  status: WorkflowStatus | null
+  startTime: Date | null
+  closeTime: Date | null
+  workflowId: string
+  runId: string
+}
+
 export interface WorkflowRun {
   /** The run id: unique per attempt, where `workflowId` is shared by retries. */
   id: string

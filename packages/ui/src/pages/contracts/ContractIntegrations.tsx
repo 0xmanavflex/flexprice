@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { IntegrationLink } from '@fp/domain'
+import { WorkflowStatus, type EntitySyncRun, type IntegrationLink } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -27,6 +27,7 @@ import {
 import { provenance } from '@ui/provenance'
 import { toast } from 'sonner'
 import { IntegrationMark } from '../customers/IntegrationMark'
+import { Pill, type PillTone } from '../shared/cells'
 
 /**
  * The contract header's integration marks. The mappings belong to the contract's
@@ -78,6 +79,11 @@ export interface ContractIntegrationsProps {
   /** A push or pull request is on its way: both actions wait for it. */
   syncing?: boolean | undefined
   /**
+   * The latest sync run per provider (a push starts one per provider and
+   * answers before any finishes). Shown under the mappings in the rows layout.
+   */
+  syncRuns?: EntitySyncRun[] | undefined
+  /**
    * Where a mapping can be opened at its provider (an invoice on Stripe). A
    * row with one opens it from its name and from its menu.
    */
@@ -96,6 +102,16 @@ const stamp = new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',
   minute: '2-digit',
 })
+
+const SYNC_STATE: Record<string, { label: string; tone: PillTone }> = {
+  [WorkflowStatus.Running]: { label: 'Syncing', tone: 'info' },
+  [WorkflowStatus.ContinuedAsNew]: { label: 'Syncing', tone: 'info' },
+  [WorkflowStatus.Completed]: { label: 'Synced', tone: 'success' },
+  [WorkflowStatus.Failed]: { label: 'Failed', tone: 'danger' },
+  [WorkflowStatus.TimedOut]: { label: 'Timed out', tone: 'danger' },
+  [WorkflowStatus.Terminated]: { label: 'Stopped', tone: 'warning' },
+  [WorkflowStatus.Canceled]: { label: 'Canceled', tone: 'neutral' },
+}
 
 function when(value: Date | null): string {
   return value && !Number.isNaN(value.getTime()) ? stamp.format(value) : 'Unknown'
@@ -116,6 +132,7 @@ export function ContractIntegrations({
   pullProviders,
   onPull,
   syncing = false,
+  syncRuns = [],
   providerHref,
   actionsInHeader = false,
 }: ContractIntegrationsProps) {
@@ -138,7 +155,14 @@ export function ContractIntegrations({
   // marks have nowhere to put a sentence, so they still render nothing: unless
   // the parent opened the link dialog itself (a plan's overflow menu), which
   // has to mount even though there is nothing to show beside it.
-  if (links.length === 0 && !canLink && !linking && !canPush && !canPull) {
+  if (
+    links.length === 0 &&
+    !canLink &&
+    !linking &&
+    !canPush &&
+    !canPull &&
+    (layout !== 'rows' || syncRuns.length === 0)
+  ) {
     return layout === 'rows' ? (
       <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
     ) : null
@@ -328,6 +352,34 @@ export function ContractIntegrations({
           <DownloadIcon aria-hidden className="size-3.5" />
           Pull from {pullFrom.join(', ')}
         </Button>
+      ) : null}
+
+      {layout === 'rows' && syncRuns.length > 0 ? (
+        <div className="space-y-2 px-6 py-3">
+          <p className="text-muted-foreground text-xs">Last sync</p>
+          <ul className="space-y-1.5">
+            {syncRuns.map((run) => {
+              const shown = SYNC_STATE[run.status ?? ''] ?? { label: 'Unknown', tone: 'neutral' }
+              const at = run.closeTime ?? run.startTime
+              return (
+                <li
+                  key={run.providerId}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="min-w-0 truncate">{run.provider}</span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {at ? (
+                      <span className="text-muted-foreground text-xs tabular-nums">{when(at)}</span>
+                    ) : null}
+                    <Pill size="sm" tone={shown.tone}>
+                      {shown.label}
+                    </Pill>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       ) : null}
 
       <ConfirmDialog

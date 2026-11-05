@@ -743,7 +743,13 @@ export {
   WorkflowActivityStatus,
   WorkflowStatus,
 } from './workflowRun'
-export type { WorkflowActivity, WorkflowQuery, WorkflowRun, WorkflowRunDetail } from './workflowRun'
+export type {
+  EntitySyncRun,
+  WorkflowActivity,
+  WorkflowQuery,
+  WorkflowRun,
+  WorkflowRunDetail,
+} from './workflowRun'
 export { DEFAULT_USAGE_SYNC_QUERY, USAGE_SYNC_STATE, USAGE_SYNC_STATE_LABEL } from './usageSync'
 export type { UsageSync, UsageSyncEntry, UsageSyncQuery, UsageSyncState } from './usageSync'
 export {

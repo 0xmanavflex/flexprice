@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
+import { WorkflowStatus } from '@fp/domain'
 import { RelatedCard } from '@ui/compositions/detail/RelatedCard'
 import { ContractIntegrations } from './ContractIntegrations'
 
@@ -75,6 +76,59 @@ export const FirstPush: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Push to Stripe' }))
     await expect(args.onPush).toHaveBeenCalledTimes(1)
+  },
+}
+
+/** While a push request is on its way, Push waits for it: a second click would queue it twice. */
+export const PushWaits: Story = {
+  args: { pushProviders: ['Stripe'], onPush: fn(), syncing: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Push to Stripe' })).toBeDisabled()
+  },
+}
+
+/** Each provider's latest sync: still running, done, or failed. */
+export const LastSync: Story = {
+  args: {
+    pushProviders: ['Stripe', 'Zoho Books', 'HubSpot'],
+    onPush: fn(),
+    syncRuns: [
+      {
+        providerId: 'stripe',
+        provider: 'Stripe',
+        status: WorkflowStatus.Running,
+        startTime: new Date('2026-11-06T12:00:00Z'),
+        closeTime: null,
+        workflowId: 'w1',
+        runId: 'r1',
+      },
+      {
+        providerId: 'zoho',
+        provider: 'Zoho Books',
+        status: WorkflowStatus.Completed,
+        startTime: new Date('2026-11-06T11:00:00Z'),
+        closeTime: new Date('2026-11-06T11:00:04Z'),
+        workflowId: 'w2',
+        runId: 'r2',
+      },
+      {
+        providerId: 'hubspot',
+        provider: 'HubSpot',
+        status: WorkflowStatus.Failed,
+        startTime: new Date('2026-11-06T10:00:00Z'),
+        closeTime: new Date('2026-11-06T10:00:09Z'),
+        workflowId: 'w3',
+        runId: 'r3',
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Last sync')).toBeVisible()
+    await expect(canvas.getByText('Syncing')).toBeVisible()
+    await expect(canvas.getByText('Synced')).toBeVisible()
+    await expect(canvas.getByText('Failed')).toBeVisible()
   },
 }
 

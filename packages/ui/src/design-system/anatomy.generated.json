@@ -1820,6 +1820,7 @@
         "IntegrationMark",
         "LabelWithHint",
         "OptionSelect",
+        "Pill",
         "PlusIcon"
       ],
       "usedBy": [
@@ -6172,6 +6173,7 @@
         "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
+        "ContractIntegrations",
         "CreditNoteDetailView",
         "CustomerActivityView",
         "CustomerDetail",

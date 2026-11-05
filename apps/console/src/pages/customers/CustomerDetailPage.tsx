@@ -44,6 +44,7 @@ import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { FxRatesPanel } from '@/pages/forex/FxRatesPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
+import { useSyncWatch } from '@/pages/integrations/useSyncWatch'
 import { ConfirmDialog, EmptyState, Section } from '@fp/ui/compositions'
 import { toActivityLogEntry } from '@/pages/shared/activityLog'
 import { CustomerActivityPanel, toActivityRow } from './CustomerActivityPanel'
@@ -109,6 +110,10 @@ export function CustomerDetailPage({
   const linkIntegration = useLinkCustomerIntegration(customerId)
   const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const pushCustomer = usePushCustomerToIntegrations(customerId)
+  // A push only starts the provider syncs; this follows them to their end.
+  const syncWatch = useSyncWatch('customer', customerId, () => {
+    void integrationLinks.refetch()
+  })
   const entitiesOn = useBillingEntityStatus().data === BillingEntityMode.Enabled
   const entities = useBillingEntities()
   // With entities on, a push reaches the customer's entity's connection.
@@ -237,16 +242,18 @@ export function CustomerDetailPage({
                   linkIntegration.mutateAsync(input),
                 onUnlink: (input: { providerType: string }) => unlinkIntegration.mutateAsync(input),
                 syncing: pushCustomer.isPending,
+                syncRuns: syncWatch.runs,
                 ...(pushTargets.length > 0
                   ? {
                       pushProviders: pushTargets,
                       onPush: () =>
                         pushCustomer.mutate(undefined, {
-                          onSuccess: () =>
-                            toast.success(`Pushing customer to ${pushTargets.join(', ')}`, {
-                              description:
-                                'The provider record is created or updated in the background.',
-                            }),
+                          onSuccess: () => {
+                            syncWatch.watch()
+                            toast(`Pushing customer to ${pushTargets.join(', ')}`, {
+                              description: 'You are told here when each provider has it.',
+                            })
+                          },
                           onError: (cause) =>
                             toast.error(
                               cause instanceof Error
