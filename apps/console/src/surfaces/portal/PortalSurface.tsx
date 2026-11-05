@@ -52,7 +52,7 @@ import {
 const GENERIC_ERROR = 'Something went wrong. Please try again.'
 /** Transactions per page: "Load more" asks the API for the next ten. */
 const PAGE = 10
-/** Top-ups shown at once; a wallet rarely has more grants and purchases than this. */
+/** Top-ups read at once; "Load older top-ups" reads this many more. */
 const TOP_UPS = 100
 
 /**
@@ -150,6 +150,7 @@ function Portal({
 }) {
   const [walletId, setWalletId] = useState<string | null>(null)
   const [groupBy, setGroupBy] = useState<string | null>(null)
+  const [topUpLimit, setTopUpLimit] = useState(TOP_UPS)
 
   const customer = usePortalCustomer(auth)
   const config = usePortalConfig(auth)
@@ -220,7 +221,7 @@ function Portal({
   // "Added since" and "Used since": over the whole window, not just the loaded pages.
   // Only the Credits view shows them, and a long ledger takes many requests.
   const flows = usePortalWalletFlows(auth, wallet, periodStart, location.view === 'credits')
-  const topUps = usePortalTopUps(auth, wallet, TOP_UPS)
+  const topUps = usePortalTopUps(auth, wallet, topUpLimit)
   const invoiceDetail = usePortalInvoice(auth, location.invoiceId)
 
   const pay = usePayPortalInvoice(auth)
@@ -251,9 +252,10 @@ function Portal({
     onGroupByChange: setGroupBy,
     onWalletChange: (id) => {
       setWalletId(id)
+      setTopUpLimit(TOP_UPS)
     },
     onShowMoreTransactions: transactions.loadMore,
-    onShowMoreTopUps: () => undefined,
+    onShowMoreTopUps: () => setTopUpLimit((limit) => limit + TOP_UPS),
     // "I've paid": the gateway may not have told the API yet; look again now, and on focus as always.
     onRefresh: () =>
       void queryClient.invalidateQueries({
@@ -275,7 +277,20 @@ function Portal({
         note,
         returnUrl: gatewayReturnUrl(window.location.href),
       }
-      if (via.kind === 'saved') return settle(() => topUp.run({ ...request, provider: null }))
+      if (via.kind === 'saved') {
+        // Charged at once, unless the card's bank asks the customer to confirm: that page
+        // opens in a new tab (and stays in the dialog), as a checkout's would.
+        const next = await topUp
+          .run({ ...request, provider: null })
+          .then((outcome) => outcome.url)
+          .catch((cause: unknown) => {
+            throw new Error(messageOf(cause), { cause })
+          })
+        if (next === null) return null
+        if (!isSafeNavigationUrl(next)) throw new Error(GENERIC_ERROR)
+        window.open(next, '_blank', 'noopener,noreferrer')
+        return next
+      }
       // Another checkout already open: no new tab, the dialog asks what to do.
       let alreadyOpen: PortalOpenCheckout | null = null
       const url = await inNewTab(async () => {
@@ -339,7 +354,8 @@ function Portal({
         subscriptions: load(subscriptions),
         invoices: load(invoices),
         wallets: load(wallets),
-        paymentMethods: load(paymentMethods),
+        paymentMethods: loadPart(paymentMethods, (saved) => saved.cards),
+        cardProviderErrors: paymentMethods.data?.unavailable ?? [],
         gateways: load(gateways),
         quotas: load(quotas),
         spend: load(spend),
@@ -360,6 +376,11 @@ function load<T>(query: PortalQuery<T>): Load<T> {
   if (query.data !== undefined) return { status: 'ready', data: query.data }
   if (query.error) return { status: 'error', retry: query.refetch }
   return { status: 'loading' }
+}
+
+function loadPart<T, U>(query: PortalQuery<T>, pick: (data: T) => U): Load<U> {
+  const loaded = load(query)
+  return loaded.status === 'ready' ? { status: 'ready', data: pick(loaded.data) } : loaded
 }
 
 function isAuthError(error: unknown): boolean {

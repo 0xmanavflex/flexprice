@@ -23,6 +23,7 @@ import {
   RepeatIcon,
   StarIcon,
   Trash2Icon,
+  TriangleAlertIcon,
   WalletIcon,
 } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
@@ -34,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
 import { Skeleton } from '@ui/components/primitives/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { IconTile } from '@ui/components/reui/icon-tile'
 import { type SimpleColumn, SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
@@ -56,6 +58,7 @@ export const PortalOverviewProvenance = provenance({
     'compositions/layout/Section',
     'compositions/detail/DetailKit',
     'primitives/dropdown-menu',
+    'reui/alert',
     'reui/icon-tile',
     'shared/Money',
   ],
@@ -311,6 +314,7 @@ function AccountSummary({
 function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: PortalOverviewProps) {
   const gateways: PortalGateway[] = data.gateways.status === 'ready' ? data.gateways.data : []
   const canAdd = gateways.some((g) => g.savesCards)
+  const unavailable = data.cardProviderErrors ?? []
   const managed = (card: PortalPaymentMethod) =>
     gateways.some((g) => g.provider === card.provider && g.savesCards)
   return (
@@ -326,14 +330,33 @@ function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: Portal
         ) : undefined
       }
     >
+      {unavailable.map((failure) => (
+        <div key={failure.provider} className="px-6 pt-4">
+          <Alert variant="warning">
+            <TriangleAlertIcon aria-hidden="true" />
+            <AlertTitle>Couldn’t load your {failure.label} cards</AlertTitle>
+            <AlertDescription>
+              {failure.message} Cards saved with {failure.label} may not be listed here.
+            </AlertDescription>
+          </Alert>
+        </div>
+      ))}
       <Loaded load={data.paymentMethods} label="payment methods">
         {(cards) =>
           cards.length === 0 ? (
-            <PortalEmpty
-              icon={<CreditCardIcon />}
-              title="No saved cards"
-              description="Save a card to pay invoices in one click and turn on automatic top-ups."
-            />
+            unavailable.length > 0 ? null : canAdd ? (
+              <PortalEmpty
+                icon={<CreditCardIcon />}
+                title="No saved cards"
+                description="Save a card to pay invoices in one click and turn on automatic top-ups."
+              />
+            ) : (
+              <PortalEmpty
+                icon={<CreditCardIcon />}
+                title="No saved cards"
+                description="Saving a card isn’t available on this account. You can still pay each invoice from its page."
+              />
+            )
           ) : (
             // Cards live at a provider, and each provider keeps its own default:
             // with more than one, each gets its own group so the two defaults read right.

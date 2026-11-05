@@ -1,5 +1,6 @@
 import type {
   PortalParts,
+  PortalCardProviderError,
   PortalCustomer,
   PortalGateway,
   PortalOpenCheckout,
@@ -39,6 +40,8 @@ export interface CustomerPortalData {
   invoices: Load<PortalInvoice[]>
   wallets: Load<PortalWallet[]>
   paymentMethods: Load<PortalPaymentMethod[]>
+  /** Gateways whose saved cards could not be listed: their cards are unknown, not absent. */
+  cardProviderErrors?: readonly PortalCardProviderError[]
   gateways: Load<PortalGateway[]>
   quotas: Load<PortalQuota[]>
   spend: Load<PortalSpend>

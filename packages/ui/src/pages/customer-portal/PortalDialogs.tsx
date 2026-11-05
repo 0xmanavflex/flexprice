@@ -556,7 +556,7 @@ export function AddCreditsDialog({
 
 /* ---- Auto top-up --------------------------------------------------------- */
 
-const UNITS: PortalCooldownUnit[] = ['minute', 'hour', 'day']
+const UNITS: PortalCooldownUnit[] = ['second', 'minute', 'hour', 'day']
 
 /** `PUT /wallets/{id}/auto-topup` {enabled, threshold, amount, cooldown}. Needs a card that can be charged. */
 export function AutoTopupDialog({
@@ -662,11 +662,21 @@ function AutoTopupForm({
       disabled={enabled && !card}
       onSubmit={() =>
         void run(async () => {
+          const below = parseCreditAmount(threshold)
+          const add = parseCreditAmount(amount)
+          if (enabled && (!below || !add)) {
+            throw new Error('Enter a balance and an amount of credits, both more than zero.')
+          }
           await onSave(wallet, {
             enabled,
-            threshold: parseCreditAmount(threshold),
-            credits: parseCreditAmount(amount),
-            cooldown: cool ? { value: Math.max(1, Number(coolValue) || 1), unit: coolUnit } : null,
+            threshold: below,
+            credits: add,
+            // Off clears a wait already saved (`0`); with none saved there is nothing to send.
+            cooldown: cool
+              ? { value: Math.max(1, Math.floor(Number(coolValue)) || 1), unit: coolUnit }
+              : a?.cooldown
+                ? { value: 0, unit: a.cooldown.unit }
+                : null,
           })
           onClose()
         })

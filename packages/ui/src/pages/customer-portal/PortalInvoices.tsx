@@ -11,7 +11,7 @@ import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
 import { Money } from '../shared/Money'
-import { formatDate } from './format'
+import { formatDate, formatPeriod } from './format'
 import { InvoiceStatusPill, Loaded, PortalEmpty, invoiceStatusLabel } from './parts'
 import type { CustomerPortalData } from './types'
 
@@ -106,7 +106,7 @@ function invoiceColumns({
       cell: (invoice) => (
         <span className="text-muted-foreground">
           {invoice.periodStart && invoice.periodEnd
-            ? `${formatDate(invoice.periodStart, locale)} – ${formatDate(invoice.periodEnd, locale)}`
+            ? formatPeriod(invoice.periodStart, invoice.periodEnd, locale)
             : '—'}
         </span>
       ),

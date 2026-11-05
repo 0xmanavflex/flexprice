@@ -20,7 +20,7 @@ import { TotalRow, TotalsList } from '@ui/compositions/detail/DetailKit'
 import { provenance } from '@ui/provenance'
 import { Money } from '../shared/Money'
 import { toneColor } from '../shared/charts'
-import { formatDate, formatNumber } from './format'
+import { formatDate, formatNumber, formatPeriod } from './format'
 import { InvoiceStatusPill } from './parts'
 import type { Load } from './types'
 
@@ -147,9 +147,7 @@ function Details({
           {i.periodStart && i.periodEnd ? (
             <div className="text-right text-[13px]">
               <p className="text-muted-foreground text-xs">Billing period</p>
-              <p>
-                {formatDate(i.periodStart, locale)} – {formatDate(i.periodEnd, locale)}
-              </p>
+              <p>{formatPeriod(i.periodStart, i.periodEnd, locale)}</p>
             </div>
           ) : null}
         </div>

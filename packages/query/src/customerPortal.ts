@@ -1,5 +1,11 @@
 import { useRef } from 'react'
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   ApiError,
   type PortalAuth,
@@ -30,7 +36,8 @@ import {
   type PortalGateway,
   type PortalOpenCheckout,
   type PortalInvoice,
-  type PortalPaymentMethod,
+  type PortalCooldown,
+  type PortalSavedCards,
   type PortalQuota,
   type PortalSpend,
   type PortalSubscription,
@@ -46,7 +53,7 @@ import {
   toPortalGateways,
   toPortalInvoice,
   toPortalInvoices,
-  toPortalPaymentMethods,
+  toPortalSavedCards,
   toPortalQuotas,
   toPortalSpend,
   toPortalSubscriptions,
@@ -91,11 +98,14 @@ function usePortalQuery<T>(
   key: readonly unknown[],
   fetch: () => Promise<T>,
   enabled = true,
+  /** Keep showing the last answer while a new key loads (a longer list). */
+  keepPrevious = false,
 ): PortalQuery<T> {
   const query = useQuery({
     queryKey: queryKeys.customerPortal.part(auth.apiOrigin, auth.token, ...key),
     queryFn: fetch,
     enabled,
+    ...(keepPrevious ? { placeholderData: keepPreviousData } : {}),
     ...PORTAL_QUERY,
   })
   return {
@@ -285,7 +295,7 @@ export const usePortalWalletFlows = (
     wallet !== null && enabled,
   )
 
-/** Every credit added to a wallet, with what is left of it. */
+/** Every credit added to a wallet, with what is left of it; the newest `limit`. */
 export const usePortalTopUps = (
   auth: PortalAuth,
   wallet: PortalWallet | null,
@@ -303,14 +313,20 @@ export const usePortalTopUps = (
         }),
         wallet?.currency ?? 'USD',
       )
-      return { items: toPortalTopUps(page.items), total: page.total }
+      const items = toPortalTopUps(page.items)
+      // `total` counts checkouts still awaiting payment too, which are not top-ups yet:
+      // more remain only while the API has rows past this page.
+      return { items, total: page.items.length < page.total ? page.total : items.length }
     },
     wallet !== null,
+    // "Show more" asks for a longer list: the rows on screen stay while it loads.
+    true,
   )
 
-export const usePortalPaymentMethods = (auth: PortalAuth): PortalQuery<PortalPaymentMethod[]> =>
+/** Saved cards, and the gateways that could not list theirs (unknown, not none). */
+export const usePortalPaymentMethods = (auth: PortalAuth): PortalQuery<PortalSavedCards> =>
   usePortalQuery(auth, ['paymentMethods'], async () =>
-    toPortalPaymentMethods(await getPortalPaymentMethods(auth)),
+    toPortalSavedCards(await getPortalPaymentMethods(auth)),
   )
 
 export const usePortalQuotas = (auth: PortalAuth): PortalQuery<PortalQuota[]> =>
@@ -368,8 +384,10 @@ export interface PortalAction<A, R = string | null> {
  * or null when it is already done (a saved card was charged); either way the
  * portal's data is refreshed.
  *
- * One idempotency key per attempt: a retry after a failure sends the same
- * key, so the backend answers with what it may already have done.
+ * One idempotency key per request: retrying the same request after a failure
+ * sends the same key, so the backend answers with what it may already have
+ * done. A changed request (another amount, wallet, gateway or invoice) is a
+ * new one and gets a new key, never the old request's answer.
  */
 function usePortalAction<A, R = string | null>(
   auth: PortalAuth,
@@ -377,11 +395,14 @@ function usePortalAction<A, R = string | null>(
   read: (wire: unknown) => R = toPortalActionUrl as (wire: unknown) => R,
 ): PortalAction<A, R> {
   const queryClient = useQueryClient()
-  const key = useRef<string | null>(null)
+  const key = useRef<{ request: string; value: string } | null>(null)
   const mutation = useMutation({
     mutationFn: async (args: A) => {
-      key.current ??= crypto.randomUUID()
-      return read(await call(args, key.current))
+      const request = JSON.stringify(args)
+      if (key.current?.request !== request) {
+        key.current = { request, value: crypto.randomUUID() }
+      }
+      return read(await call(args, key.current.value))
     },
     onSuccess: () => {
       key.current = null
@@ -490,7 +511,8 @@ export function useUpdatePortalAutoTopup(auth: PortalAuth) {
     enabled: boolean
     threshold: string | null
     credits: string | null
-    cooldown: { value: number; unit: 'minute' | 'hour' | 'day' } | null
+    /** Null leaves the stored wait as it is; `{value: 0}` clears it. */
+    cooldown: PortalCooldown | null
   }>(auth, async ({ walletId, enabled, threshold, credits, cooldown }) => {
     await updatePortalAutoTopup(auth, walletId, {
       enabled,

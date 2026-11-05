@@ -57,6 +57,8 @@ export interface PortalCreditsProps {
   onAddCredits: () => void
   onAutoTopup: () => void
   onShowMore: () => void
+  /** Asks for older top-ups than the ones loaded. */
+  onShowMoreTopUps?: () => void
   locale: string | undefined
 }
 
@@ -130,7 +132,12 @@ function Wallet(props: PortalCreditsProps & { wallets: PortalWallet[]; wallet: P
           }
         >
           {view === 'topups' ? (
-            <TopUps topUps={data.topUps} wallet={wallet} locale={locale} />
+            <TopUps
+              topUps={data.topUps}
+              wallet={wallet}
+              locale={locale}
+              onShowMore={props.onShowMoreTopUps}
+            />
           ) : (
             <Transactions {...props} kind={kind} />
           )}
@@ -332,10 +339,12 @@ function TopUps({
   topUps,
   wallet,
   locale,
+  onShowMore,
 }: {
   topUps: CustomerPortalData['topUps']
   wallet: PortalWallet
   locale: string | undefined
+  onShowMore: (() => void) | undefined
 }) {
   const worth = (credits: string) => {
     const value = creditsCost(credits, wallet.creditPrice, wallet.currency)
@@ -449,7 +458,7 @@ function TopUps({
 
   return (
     <Loaded load={topUps} label="top-ups" rows={4}>
-      {({ items }) =>
+      {({ items, total }) =>
         items.length === 0 ? (
           <PortalEmpty
             icon={<WalletIcon />}
@@ -466,6 +475,18 @@ function TopUps({
               compact
               pageSize={50}
             />
+            {onShowMore && items.length < total ? (
+              <div className="border-t px-6 py-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground h-8 px-2"
+                  onClick={onShowMore}
+                >
+                  Load older top-ups
+                </Button>
+              </div>
+            ) : null}
             <p className="text-muted-foreground border-t px-6 py-3 text-[13px]">
               Usage draws on the top-up that expires soonest, among those it is allowed to use.
             </p>

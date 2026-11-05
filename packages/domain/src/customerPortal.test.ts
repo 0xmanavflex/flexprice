@@ -29,6 +29,9 @@ import {
   toPortalWalletTransactions,
   toPortalWallets,
   withPortalAutoTopup,
+  toPortalSavedCards,
+  chargeableCard,
+  toPortalWallet,
   walletFlows,
 } from './customerPortal'
 import { money } from './money'
@@ -339,6 +342,38 @@ describe('wallets', () => {
     })
   })
 
+  it('clears a saved wait when the save sends zero', () => {
+    const before = {
+      ...wallets[0]!,
+      autoTopup: {
+        enabled: true,
+        threshold: '500',
+        credits: '2000',
+        cooldown: { value: 2, unit: 'hour' as const },
+      },
+    }
+    const next = withPortalAutoTopup([before], 'w1', {
+      enabled: true,
+      threshold: '500',
+      credits: '2000',
+      cooldown: { value: 0, unit: 'hour' },
+    })
+    expect(next[0]!.autoTopup?.cooldown).toBeNull()
+  })
+
+  it('keeps a wait stored in seconds exactly', () => {
+    const wallet = toPortalWallet({
+      id: 'w9',
+      auto_topup: {
+        enabled: true,
+        threshold: '1',
+        amount: '2',
+        cooldown: { value: 30, unit: 'second' },
+      },
+    })
+    expect(wallet.autoTopup?.cooldown).toEqual({ value: 30, unit: 'second' })
+  })
+
   it('reads the API’s lowercase transaction types', () => {
     const { items } = toPortalWalletTransactions(
       {
@@ -625,6 +660,59 @@ describe('payment methods and gateways', () => {
       ['Elo', 'card'],
       ['Card', 'card'],
     ])
+  })
+
+  it('keeps a gateway that failed to list its cards apart from one with none', () => {
+    const saved = toPortalSavedCards({
+      providers: [
+        { provider: 'stripe', items: [], error: { message: 'Stripe is unreachable.' } },
+        {
+          provider: 'chargebee',
+          items: [{ id: 'pm_1', is_default: true, card: { brand: 'visa', last4: '1111' } }],
+        },
+      ],
+    })
+    expect(saved.cards.map((c) => c.id)).toEqual(['pm_1'])
+    expect(saved.unavailable).toEqual([
+      { provider: 'stripe', label: 'Stripe', message: 'Stripe is unreachable.' },
+    ])
+  })
+
+  it('charges the default card only when it can be charged, else another that can', () => {
+    const gateways = toPortalGateways({
+      payment_integrations: [{ provider: 'stripe', capabilities: [{ type: 'auto_charge' }] }],
+    })
+    const cards = toPortalPaymentMethods(
+      {
+        providers: [
+          {
+            provider: 'stripe',
+            items: [
+              {
+                id: 'inactive_default',
+                is_default: true,
+                status: 'INACTIVE',
+                card: { brand: 'visa', last4: '1', exp_month: 1, exp_year: 2030 },
+              },
+              {
+                id: 'no_mandate',
+                can_auto_charge: false,
+                card: { brand: 'visa', last4: '2', exp_month: 1, exp_year: 2030 },
+              },
+              {
+                id: 'usable',
+                status: 'ACTIVE',
+                can_auto_charge: true,
+                card: { brand: 'visa', last4: '3', exp_month: 1, exp_year: 2030 },
+              },
+            ],
+          },
+        ],
+      },
+      NOW,
+    )
+    expect(chargeableCard(cards, gateways)?.id).toBe('usable')
+    expect(chargeableCard(cards, [])).toBeNull()
   })
 
   it('reads gateway capabilities', () => {

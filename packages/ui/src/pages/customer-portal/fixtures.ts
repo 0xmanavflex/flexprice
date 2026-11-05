@@ -234,6 +234,7 @@ export const portalCards: PortalPaymentMethod[] = [
     expires: '08/28',
     expired: false,
     isDefault: true,
+    canAutoCharge: true,
   },
   {
     id: 'pm_mc',
@@ -244,6 +245,7 @@ export const portalCards: PortalPaymentMethod[] = [
     expires: '03/27',
     expired: false,
     isDefault: false,
+    canAutoCharge: true,
   },
   {
     id: 'pm_amex',
@@ -254,6 +256,7 @@ export const portalCards: PortalPaymentMethod[] = [
     expires: '06/26',
     expired: true,
     isDefault: false,
+    canAutoCharge: true,
   },
 ]
 

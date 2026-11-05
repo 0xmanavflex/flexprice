@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { toast, Toaster } from 'sonner'
 import {
   DEFAULT_PORTAL_CONFIG,
+  chargeableCard,
   type PortalInvoice,
   type PortalPaymentMethod,
   type PortalWallet,
@@ -64,14 +65,8 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
     null
   const gateways = data.gateways.status === 'ready' ? data.gateways.data : []
   const cards = data.paymentMethods.status === 'ready' ? data.paymentMethods.data : []
-  // A default card that has not expired, on a gateway that can charge it unattended.
-  const chargeable =
-    cards.find(
-      (c) =>
-        c.isDefault &&
-        !c.expired &&
-        gateways.some((g) => g.provider === c.provider && g.autoCharge),
-    ) ?? null
+  // The default card if it can be charged unattended, else another that can.
+  const chargeable = chargeableCard(cards, gateways)
   const defaultCard = cards.find((c) => c.isDefault) ?? null
   const customer = data.customer.status === 'ready' ? data.customer.data : null
   const periodStart =
@@ -158,6 +153,7 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
           onAddCredits={() => wallet && setTopUp(wallet)}
           onAutoTopup={() => wallet && setAutoTopupId(wallet.id)}
           onShowMore={actions.onShowMoreTransactions}
+          onShowMoreTopUps={actions.onShowMoreTopUps}
           locale={locale}
         />
       ) : null}

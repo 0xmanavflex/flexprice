@@ -113,7 +113,8 @@ export const updatePortalAutoTopup = (
     enabled: boolean
     threshold?: string
     amount?: string
-    cooldown?: { value: number; unit: 'minute' | 'hour' | 'day' }
+    /** `{value: 0}` clears a stored wait; leaving it out keeps it. */
+    cooldown?: { value: number; unit: 'second' | 'minute' | 'hour' | 'day' }
   },
 ) => put(auth, `/wallets/${id(walletId)}/auto-topup`, body)
 /** Buys credits: charged to a saved card, or a checkout to finish elsewhere. */

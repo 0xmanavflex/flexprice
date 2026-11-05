@@ -393,7 +393,7 @@ export function toPortalInvoice(wire: unknown, now: Date = new Date()): PortalIn
     total: amount(inv['total']),
     amountPaid: amount(inv['amount_paid']),
     amountDue: amount(inv['amount_remaining'] ?? inv['amount_due']),
-    // A line that charged nothing tells the customer nothing: left out.
+    // A line that charged nothing tells the customer nothing: left out (QA review R-07).
     lines: list(inv['line_items'])
       .filter((line) => chargedSomething(line['amount']))
       .map((line) => {
@@ -439,7 +439,7 @@ export interface PortalWallet {
   } | null
 }
 
-export type PortalCooldownUnit = 'minute' | 'hour' | 'day'
+export type PortalCooldownUnit = 'second' | 'minute' | 'hour' | 'day'
 
 export interface PortalCooldown {
   value: number
@@ -451,9 +451,10 @@ function cooldownOf(value: unknown): PortalCooldown | null {
   const amount = num(c['value'])
   const unit = text(c['unit']).toLowerCase()
   if (amount <= 0) return null
-  // Seconds are a backend unit the portal does not offer; show them as minutes, rounded up.
-  if (unit === 'second') return { value: Math.max(1, Math.ceil(amount / 60)), unit: 'minute' }
-  return unit === 'minute' || unit === 'hour' || unit === 'day' ? { value: amount, unit } : null
+  // Kept exactly as stored: a save that leaves the wait alone must not round it.
+  return unit === 'second' || unit === 'minute' || unit === 'hour' || unit === 'day'
+    ? { value: amount, unit }
+    : null
 }
 
 export function toPortalWallet(wire: unknown): PortalWallet {
@@ -508,7 +509,13 @@ export function withPortalAutoTopup(
             enabled: saved.enabled,
             threshold: saved.threshold ?? w.autoTopup?.threshold ?? null,
             credits: saved.credits ?? w.autoTopup?.credits ?? null,
-            cooldown: saved.cooldown ?? w.autoTopup?.cooldown ?? null,
+            // `{value: 0}` cleared the wait; null left it as it was.
+            cooldown:
+              saved.cooldown === null
+                ? (w.autoTopup?.cooldown ?? null)
+                : saved.cooldown.value > 0
+                  ? saved.cooldown
+                  : null,
           },
         }
       : w,
@@ -686,6 +693,20 @@ export interface PortalPaymentMethod {
   expires: string | null
   expired: boolean
   isDefault: boolean
+  /** The gateway can charge it with nobody present: active, and vaulted for that. */
+  canAutoCharge: boolean
+}
+
+/** A gateway whose saved cards could not be read: its cards are unknown, not absent. */
+export interface PortalCardProviderError {
+  provider: string
+  label: string
+  message: string
+}
+
+export interface PortalSavedCards {
+  cards: PortalPaymentMethod[]
+  unavailable: PortalCardProviderError[]
 }
 
 /**
@@ -739,10 +760,51 @@ export function toPortalPaymentMethods(
         // A card is good through the last day of its expiry month.
         expired: month && year ? new Date(fullYear, month, 1).getTime() <= now.getTime() : false,
         isDefault: item['is_default'] === true,
+        // An older API sends neither field: an active card it listed can be charged.
+        canAutoCharge:
+          (text(item['status']).toUpperCase() || 'ACTIVE') === 'ACTIVE' &&
+          item['can_auto_charge'] !== false,
       })
     }
   }
   return out.sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
+}
+
+/** `GET /payment-methods`: the cards, and each gateway that failed to list its own. */
+export function toPortalSavedCards(wire: unknown, now: Date = new Date()): PortalSavedCards {
+  return {
+    cards: toPortalPaymentMethods(wire, now),
+    unavailable: list(record(wire)['providers']).flatMap((group) => {
+      const error = record(group['error'])
+      if (Object.keys(error).length === 0) return []
+      const provider = text(group['provider'])
+      return [
+        {
+          provider,
+          label: gatewayLabel(provider),
+          message: text(error['message']) || 'Could not load these cards.',
+        },
+      ]
+    }),
+  }
+}
+
+/**
+ * The card a top-up or automatic charge would use: the default if it can be
+ * charged unattended, else any other that can (V1's fallback). Only cards on a
+ * gateway that charges unattended count.
+ */
+export function chargeableCard(
+  cards: readonly PortalPaymentMethod[],
+  gateways: readonly PortalGateway[],
+): PortalPaymentMethod | null {
+  const usable = cards.filter(
+    (c) =>
+      c.canAutoCharge &&
+      !c.expired &&
+      gateways.some((g) => g.provider === c.provider && g.autoCharge),
+  )
+  return usable.find((c) => c.isDefault) ?? usable[0] ?? null
 }
 
 export interface PortalGateway {

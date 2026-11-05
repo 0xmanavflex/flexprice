@@ -189,6 +189,7 @@ export const CardsAtTwoProviders: Story = {
             expires: '12/34',
             expired: false,
             isDefault: true,
+            canAutoCharge: true,
           },
         ],
       },
@@ -206,6 +207,40 @@ export const CardsAtTwoProviders: Story = {
 }
 
 /** Pay from the alert: the gateway's page opens, and its link stays in the dialog. */
+/** One gateway could not list its cards: said so, not shown as "no cards". */
+export const CardsProviderFailed: Story = {
+  args: {
+    data: {
+      ...portalData,
+      paymentMethods: { status: 'ready', data: [] },
+      cardProviderErrors: [
+        { provider: 'stripe', label: 'Stripe', message: 'Stripe did not answer.' },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Couldn’t load your Stripe cards')).toBeVisible()
+    await expect(canvas.queryByText('No saved cards')).toBeNull()
+  },
+}
+
+/** No gateway saves cards: the empty state does not invite saving one. */
+export const CardsNoGateway: Story = {
+  args: {
+    data: {
+      ...portalData,
+      paymentMethods: { status: 'ready', data: [] },
+      gateways: { status: 'ready', data: [] },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/Saving a card isn’t available/)).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Add card' })).toBeNull()
+  },
+}
+
 export const PayInvoice: Story = {
   play: async ({ canvasElement }) => {
     payInvoice.mockClear()
@@ -526,6 +561,40 @@ export const AutoTopup: Story = {
         credits: '5000',
         cooldown: null,
       }),
+    )
+  },
+}
+
+/** A saved wait, switched off: the save clears it with zero rather than leave it stored. */
+export const AutoTopupClearsWait: Story = {
+  render: () => (
+    <Portal
+      initialView="credits"
+      data={{
+        ...portalData,
+        wallets: {
+          status: 'ready',
+          data: portalWallets.map((w) =>
+            w.autoTopup
+              ? { ...w, autoTopup: { ...w.autoTopup, cooldown: { value: 30, unit: 'second' } } }
+              : w,
+          ),
+        },
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    saveAutoTopup.mockClear()
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /Auto top-up on/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Auto top-up' })
+    await expect(within(dialog).getByRole('textbox', { name: 'Wait duration' })).toHaveValue('30')
+    await userEvent.click(within(dialog).getByRole('switch', { name: /Wait between top-ups/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(() =>
+      expect(saveAutoTopup).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'wal_prepaid' }),
+        expect.objectContaining({ cooldown: { value: 0, unit: 'second' } }),
+      ),
     )
   },
 }
