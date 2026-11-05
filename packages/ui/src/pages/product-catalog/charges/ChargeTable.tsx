@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import {
   isOpenStart,
   BILLING_MODEL_LABEL,
+  PERCENTAGE_LABEL,
   BILLING_PERIOD_LABEL,
   BillingModel,
   type BillingPeriod,
@@ -203,6 +204,7 @@ function valueOf(charge: Charge): string {
 
 /** "Flat fee", "Volume tiered", "Slab tiered", "Package". */
 function modelLabel(charge: Charge): string {
+  if (charge.percentage) return PERCENTAGE_LABEL
   if (charge.billingModel === BillingModel.Tiered) {
     return charge.tierMode === TierMode.Slab ? 'Slab tiered' : 'Volume tiered'
   }

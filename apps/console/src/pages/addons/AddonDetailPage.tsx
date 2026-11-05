@@ -5,6 +5,7 @@ import { AddonSubscriptionsView, CatalogDetailFrame, CatalogStatusBadge, Pill } 
 import { ConfirmDialog, EditableCard, MetadataCard } from '@fp/ui/compositions'
 import { ArchiveIcon, PencilIcon, PuzzleIcon, RefreshCwIcon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
+import { toSubmitError } from './addonMessages'
 import {
   CatalogChargesSection,
   CatalogCreditGrantsSection,
@@ -166,11 +167,11 @@ export function AddonDetailPage({
           }
         }}
         title="Archive add-on"
-        description={`Archive ${data.name}? Subscriptions already using it keep it, but it can no longer be added.`}
+        description={`Archiving ${data.name} is refused while contracts still have it: remove it from them first. Once archived, the add-on is no longer offered for new contracts.`}
         confirmLabel="Archive add-on"
         destructive
         isPending={remove.isPending}
-        error={remove.isError ? 'Could not archive the add-on. Try again.' : null}
+        error={toSubmitError(remove.error, 'archive')}
         onConfirm={() =>
           remove.mutate(data.id, {
             onSuccess: () => {

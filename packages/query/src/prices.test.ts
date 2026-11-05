@@ -273,3 +273,82 @@ describe('usage windows', () => {
     expect(toCharge({ id: 'p1', type: 'USAGE' } as never).bucketSize).toBeNull()
   })
 })
+
+describe('percentage prices (V1 "Percentage fee")', () => {
+  const v1Percentage = {
+    id: 'price_pct',
+    type: 'USAGE',
+    billingModel: 'FLAT_FEE',
+    amount: '0.07125',
+    displayAmount: '$0.07125',
+    currency: 'usd',
+    meterId: 'meter_1',
+    metadata: { billing_model: 'percentage', source: 'v1' },
+  }
+
+  it('reads the marked flat fee as a rate, not a currency amount', () => {
+    const charge = toCharge(v1Percentage)
+    expect(charge.billingModel).toBe(BillingModel.FlatFee)
+    expect(charge.percentage).toBe(true)
+    expect(charge.amount).toBe('0.07125')
+    expect(charge.displayAmount).toBe('7.125%')
+  })
+
+  it('ignores a stale marker on a price that is no longer a flat fee', () => {
+    const charge = toCharge({ ...v1Percentage, billingModel: 'PACKAGE' })
+    expect(charge.percentage).toBeUndefined()
+    expect(charge.displayAmount).toBe('$0.07125')
+  })
+
+  it('opens for editing as the percent, and saves back the decimal with the marker', () => {
+    const draft = chargeToDraft(toCharge(v1Percentage))
+    expect(draft).toMatchObject({ billingModel: 'FLAT_FEE', amount: '7.125', percentage: true })
+    expect(toUpdatePriceRequest(draft)).toMatchObject({
+      billingModel: 'FLAT_FEE',
+      amount: '0.07125',
+      metadata: { billing_model: 'percentage', source: 'v1' },
+    })
+  })
+
+  it('drops only the marker when a percentage becomes a plain flat fee', () => {
+    const draft = { ...chargeToDraft(toCharge(v1Percentage)), percentage: false, amount: '2' }
+    expect(toUpdatePriceRequest(draft)).toMatchObject({
+      amount: '2',
+      metadata: { source: 'v1' },
+    })
+  })
+
+  it('creates a percentage as V1 does: FLAT_FEE, decimal amount, marker in metadata', () => {
+    const body = toChargeRequest(
+      {
+        type: PriceType.Usage,
+        billingModel: BillingModel.FlatFee,
+        amount: '1.1',
+        percentage: true,
+        currency: 'USD',
+        billingPeriod: BillingPeriod.Monthly,
+        invoiceCadence: 'ARREAR',
+        meterId: 'meter_1',
+      },
+      PriceEntityType.Plan,
+      'plan_1',
+    )
+    expect(body).toMatchObject({
+      billingModel: 'FLAT_FEE',
+      amount: '0.011',
+      metadata: { billing_model: 'percentage' },
+    })
+  })
+
+  it('leaves metadata alone on a plain flat fee', () => {
+    const body = toUpdatePriceRequest({
+      type: PriceType.Fixed,
+      billingModel: BillingModel.FlatFee,
+      amount: '5',
+      currency: 'USD',
+      billingPeriod: BillingPeriod.Monthly,
+      invoiceCadence: 'ADVANCE',
+    })
+    expect(body).not.toHaveProperty('metadata')
+  })
+})

@@ -396,6 +396,55 @@ export const CustomExpressionEditor: Story = {
 }
 
 /**
+ * Editing a metered feature: the API merges filters into the meter's, so a
+ * saved filter keeps its property and values (no remove controls) and the hint
+ * says so. A new filter can still be added, and removed before saving.
+ */
+export const EditKeepsSavedFilters: Story = {
+  args: {
+    mode: 'edit',
+    trail: [{ label: 'Features' }, { label: 'Edit feature' }],
+    feature: {
+      ...featureFixtures[0]!,
+      meterFilters: [{ key: 'qa_scope', values: ['sandbox', 'qa'] }],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByText(/Saved values can’t be removed; new values are added to them\./),
+    ).toBeInTheDocument()
+    await expect(canvas.getByLabelText(/^Filter 1 property/)).toHaveAttribute('readonly')
+    await expect(canvas.queryByRole('button', { name: 'Remove sandbox' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Remove filter 1' })).toBeNull()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }))
+    await expect(canvas.getByRole('button', { name: 'Remove filter 2' })).toBeInTheDocument()
+  },
+}
+
+/**
+ * A blank custom expression is named on the Expression row, the only input on
+ * screen, rather than on the hidden event field.
+ */
+export const BlankExpressionNamesTheExpressionRow: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'Weighted tokens')
+    await userEvent.type(await canvas.findByLabelText(/^Event name/), 'llm_completion')
+    await userEvent.click(await canvas.findByRole('tab', { name: 'Custom expression' }))
+
+    await submit(canvas)
+
+    await expect(await canvas.findByText('Enter an expression')).toBeInTheDocument()
+    await expect(
+      canvas.queryByText('This aggregation needs an event field or an expression'),
+    ).toBeNull()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+  },
+}
+
+/**
  * The aggregation inputs show a faint example where the label alone is not
  * enough; Count has no inputs at all.
  */

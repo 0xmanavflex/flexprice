@@ -158,8 +158,8 @@ export function useHasCostSheet(options: { enabled?: boolean } = {}) {
  *
  * `GET /costs/{id}` returns the record bare while the SDK's response schema
  * expects it wrapped under `costsheet` and strips everything else, so the SDK
- * hands back an empty object. Searching by id sidesteps that; a missing or
- * deleted record is reported as null.
+ * hands back an empty object. Searching by id sidesteps that; a missing record
+ * is reported as null, an archived (soft-deleted) one as `archived`.
  */
 export function useCostSheet(id: string) {
   const client = useFlexprice()
@@ -171,8 +171,12 @@ export function useCostSheet(id: string) {
         client.costs.queryCostsheet({ costsheetIDs: [id], queryFilter: { limit: 1 } } as never),
       )
       const items = (response.items ?? []) as CostSheetWire[]
-      const record = items.find((item) => item.id === id && item.status !== 'deleted')
-      return record ? toCostSheet(record) : null
+      const record = items.find((item) => item.id === id)
+      if (!record) return null
+      // Archiving soft-deletes a sheet (`status: "deleted"`) but keeps it and its
+      // prices readable, so the detail opens it as archived rather than "not found".
+      const sheet = toCostSheet(record)
+      return record.status === 'deleted' ? { ...sheet, status: CostSheetStatus.Archived } : sheet
     },
     enabled: id.length > 0,
   })

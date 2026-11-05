@@ -183,6 +183,67 @@ export const SavesAPrefilledDraft: CreateStory = {
   },
 }
 
+/**
+ * Each tax can be set inclusive or exclusive, given its own priority and auto-apply, as in V1:
+ * a 2% inclusive rate first, then a 5% exclusive one.
+ */
+export const SetsTaxOverrides: CreateStory = {
+  args: {
+    ...createArgs,
+    billTo,
+    defaultValue: prefilled,
+    customerTaxes: [
+      {
+        taxRateCode: 'LOCAL2',
+        name: 'Local',
+        percentage: '2',
+        taxBehavior: 'exclusive',
+        priority: 1,
+        autoApply: true,
+      },
+      {
+        taxRateCode: 'STATE5',
+        name: 'State',
+        percentage: '5',
+        taxBehavior: 'exclusive',
+        priority: 2,
+        autoApply: true,
+      },
+    ],
+  },
+  render: (args) => <InvoiceForm {...args} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('combobox', { name: 'Local tax behaviour' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Inclusive' }))
+    const priority = canvas.getByRole('spinbutton', { name: 'State priority' })
+    await userEvent.clear(priority)
+    await userEvent.type(priority, '75')
+    await userEvent.click(canvas.getByRole('switch', { name: 'Auto-apply for State' }))
+    await userEvent.click(canvas.getByRole('button', { name: /save draft/i }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          taxes: [
+            expect.objectContaining({
+              taxRateCode: 'LOCAL2',
+              taxBehavior: 'inclusive',
+              priority: 1,
+              autoApply: true,
+            }),
+            expect.objectContaining({
+              taxRateCode: 'STATE5',
+              taxBehavior: 'exclusive',
+              priority: 75,
+              autoApply: false,
+            }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
 /** A server refusal is shown above the summary. */
 export const WithServerError: CreateStory = {
   args: { ...createArgs, defaultValue: prefilled, submitError: 'Invoice number already exists.' },

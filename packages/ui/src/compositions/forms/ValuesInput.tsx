@@ -8,6 +8,9 @@ import { provenance } from '@ui/provenance'
  * event filter values. Enter or a comma adds what was typed, pasting a
  * comma-separated list adds each, Backspace in the empty field removes the last
  * chip, and leaving the field keeps a value still being typed.
+ *
+ * `fixed` values are shown without a remove control and survive Backspace: the
+ * ones a backend only adds to, such as a saved meter filter's.
  */
 export const ValuesInputProvenance = provenance({
   source: 'composition',
@@ -18,6 +21,8 @@ export const ValuesInputProvenance = provenance({
 export interface ValuesInputProps {
   value: readonly string[]
   onChange: (next: string[]) => void
+  /** Values that cannot be removed here; shown as chips without a remove control. */
+  fixed?: readonly string[]
   id?: string
   placeholder?: string
   disabled?: boolean
@@ -39,6 +44,7 @@ const split = (text: string) =>
 export function ValuesInput({
   value,
   onChange,
+  fixed = [],
   id,
   placeholder,
   disabled = false,
@@ -60,7 +66,8 @@ export function ValuesInput({
       event.preventDefault()
       add(draft)
     } else if (event.key === 'Backspace' && draft === '' && value.length > 0) {
-      onChange(value.slice(0, -1))
+      const last = value[value.length - 1]
+      if (last !== undefined && !fixed.includes(last)) onChange(value.slice(0, -1))
     }
   }
 
@@ -84,18 +91,23 @@ export function ValuesInput({
       {value.map((item) => (
         <span
           key={item}
-          className="bg-muted text-foreground inline-flex h-6 max-w-full items-center gap-1 rounded-md pr-1 pl-2 text-xs"
+          className={cn(
+            'bg-muted text-foreground inline-flex h-6 max-w-full items-center gap-1 rounded-md pl-2 text-xs',
+            fixed.includes(item) ? 'pr-2' : 'pr-1',
+          )}
         >
           <span className="truncate">{item}</span>
-          <button
-            type="button"
-            disabled={disabled}
-            aria-label={`Remove ${item}`}
-            onClick={() => onChange(value.filter((v) => v !== item))}
-            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex size-4 items-center justify-center rounded-sm outline-none focus-visible:ring-2"
-          >
-            <XIcon aria-hidden className="size-3" />
-          </button>
+          {fixed.includes(item) ? null : (
+            <button
+              type="button"
+              disabled={disabled}
+              aria-label={`Remove ${item}`}
+              onClick={() => onChange(value.filter((v) => v !== item))}
+              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex size-4 items-center justify-center rounded-sm outline-none focus-visible:ring-2"
+            >
+              <XIcon aria-hidden className="size-3" />
+            </button>
+          )}
         </span>
       ))}
       <input

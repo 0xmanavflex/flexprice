@@ -189,7 +189,7 @@ export function FeatureListPage({
           if (!open) closeDelete()
         }}
         title="Delete feature"
-        description={`Delete ${deleting?.name ?? 'this feature'}? Plans and entitlements that use it lose it.`}
+        description={`Archiving ${deleting?.name ?? 'this feature'} is refused while plans or contracts still grant it: remove those entitlements first. Once archived, the feature is no longer offered for new plans or contracts.`}
         confirmLabel="Delete feature"
         destructive
         isPending={remove.isPending}

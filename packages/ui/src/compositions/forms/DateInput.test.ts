@@ -106,6 +106,52 @@ describe('zoned time', () => {
     )
   })
 
+  /**
+   * QA #97. 1 Nov 2026 01:30 happens twice in New York: 05:30Z (EDT) and
+   * 06:30Z (EST). Editing the minutes of the second must keep it the second.
+   */
+  describe('the repeated hour when daylight saving ends', () => {
+    const second = new Date('2026-11-01T06:30:00.000Z')
+    const first = new Date('2026-11-01T05:30:00.000Z')
+    const zone = process.env.TZ
+    afterEach(() => {
+      if (zone === undefined) delete process.env.TZ
+      else process.env.TZ = zone
+    })
+
+    it('keeps the second occurrence when its minutes change (IANA zone)', () => {
+      expect(zonedParts(second, 'America/New_York')).toMatchObject({ hour: 1, minute: 30 })
+      expect(zonedInstant('America/New_York', 2026, 10, 1, 1, 31, second).toISOString()).toBe(
+        '2026-11-01T06:31:00.000Z',
+      )
+      expect(zonedInstant('America/New_York', 2026, 10, 1, 1, 31, first).toISOString()).toBe(
+        '2026-11-01T05:31:00.000Z',
+      )
+    })
+
+    it('keeps the second occurrence in the browser zone (Local)', () => {
+      process.env.TZ = 'America/New_York'
+      expect(zonedInstant('local', 2026, 10, 1, 1, 31, second).toISOString()).toBe(
+        '2026-11-01T06:31:00.000Z',
+      )
+    })
+
+    it('without a previous instant, or when its offset does not fit, takes the usual reading', () => {
+      // No hint: the first occurrence, as before.
+      expect(zonedInstant('America/New_York', 2026, 10, 1, 1, 31).toISOString()).toBe(
+        '2026-11-01T05:31:00.000Z',
+      )
+      // An EST hint on a summer day: EST does not read 12:00 there, so EDT wins.
+      expect(zonedInstant('America/New_York', 2026, 6, 1, 12, 0, second).toISOString()).toBe(
+        '2026-07-01T16:00:00.000Z',
+      )
+      // Moving the time out of the repeated hour lands on the one reading there is.
+      expect(zonedInstant('America/New_York', 2026, 10, 1, 3, 0, second).toISOString()).toBe(
+        '2026-11-01T08:00:00.000Z',
+      )
+    })
+  })
+
   it('treats UTC as UTC and anything unknown as not a named zone', () => {
     expect(zonedInstant('utc', 2026, 0, 1, 0, 0).toISOString()).toBe('2026-01-01T00:00:00.000Z')
     expect(isNamedZone('Asia/Kolkata')).toBe(true)

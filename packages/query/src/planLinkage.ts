@@ -49,6 +49,16 @@ interface EntitlementRow {
 interface CreditGrantRow {
   plan_id?: string | null
   scope?: string | null
+  status?: string | null
+}
+
+/**
+ * The bulk `plan_ids` read has no status filter and returns archived grants too;
+ * a plan's detail lists only live ones, so the list must count the same set.
+ */
+function isLiveGrant(row: CreditGrantRow): boolean {
+  const status = row.status?.toLowerCase()
+  return status !== 'archived' && status !== 'deleted'
 }
 
 /** How many grants and entitlements one page of plans could reasonably have. */
@@ -158,7 +168,7 @@ export function usePlanLinkage(planIds: readonly string[]): {
     const grantsByPlan = new Map<string, number>()
     for (const row of creditGrants.data ?? []) {
       const planId = row.plan_id
-      if (!planId || !wanted.has(planId)) continue
+      if (!planId || !wanted.has(planId) || !isLiveGrant(row)) continue
       grantsByPlan.set(planId, (grantsByPlan.get(planId) ?? 0) + 1)
     }
 

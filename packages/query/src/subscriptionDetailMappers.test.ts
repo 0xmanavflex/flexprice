@@ -689,6 +689,27 @@ describe('line item change', () => {
     })
     expect(preview.lines[0]).toMatchObject({ action: 'created', quantity: '5' })
     expect(preview.invoices[0]?.amountDue?.amount).toBe('60')
+    expect(preview.invoices[0]?.walletCredit).toBeNull()
+  })
+
+  it('reads a wallet credit from its wallet transaction, not an invoice', () => {
+    const preview = toLineChangePreview({
+      changedResources: {
+        invoices: [
+          {
+            action: 'wallet_credit',
+            status: 'completed',
+            walletTransaction: { amount: '1.65', currency: 'usd' },
+          },
+        ],
+      },
+    })
+    expect(preview.invoices[0]).toEqual({
+      action: 'wallet_credit',
+      status: 'completed',
+      amountDue: null,
+      walletCredit: { amount: '1.65', currency: 'USD' },
+    })
   })
 
   it('marks only flat-fee, non-custom fixed prices as editable', () => {

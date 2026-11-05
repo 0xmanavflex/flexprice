@@ -12,6 +12,7 @@ import {
   INVOICE_CADENCE_LABEL,
   OPEN_START_DATE,
   InvoiceCadence,
+  PERCENTAGE_LABEL,
   PRICE_TYPE_LABEL,
   PRICE_WINDOW_SIZE_LABEL,
   PriceType,
@@ -170,6 +171,14 @@ const BILLING_MODEL_DESCRIPTION: Record<BillingModel, string> = {
   [BillingModel.Tiered]: 'A different rate in each band.',
 }
 
+/**
+ * The form-only "Percentage" model: V1's percentage fee, saved as a flat fee
+ * with the decimal rate and the percentage marker. Offered on usage charges,
+ * as in V1.
+ */
+const PERCENTAGE_CHOICE = 'PERCENTAGE' as const
+type ModelChoice = BillingModel | typeof PERCENTAGE_CHOICE
+
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
 const DEFAULT_CURRENCIES = currencyCodes()
 const FIAT = 'FIAT'
@@ -231,6 +240,8 @@ export function ChargeForm({
 
   const type = form.watch('type')
   const billingModel = form.watch('billingModel')
+  const percentage =
+    billingModel === BillingModel.FlatFee && Boolean(form.watch('percentage' as never))
   const currency = form.watch('currency')
   const billingPeriod = form.watch('billingPeriod')
   const priceUnit = form.watch('priceUnit')
@@ -282,6 +293,7 @@ export function ChargeForm({
       ...(current.effectiveFrom ? { effectiveFrom: current.effectiveFrom } : {}),
       ...(current.groupId ? { groupId: current.groupId } : {}),
       ...(current.startDate ? { startDate: current.startDate } : {}),
+      ...(current.metadata ? { metadata: current.metadata } : {}),
       ...(nextType === PriceType.Fixed && current.minQuantity !== undefined
         ? { minQuantity: current.minQuantity }
         : {}),
@@ -316,8 +328,27 @@ export function ChargeForm({
   }
   const tierMessage = (rawTierErrors as { message?: string } | undefined)?.message
 
-  const amountField = (label: string) => (
-    <Field label={label} required error={messageOf(errors, 'amount')}>
+  // Percentage is a flat fee underneath: picking it re-seeds a flat fee and marks it.
+  const chooseModel = (next: ModelChoice) => {
+    if (next === PERCENTAGE_CHOICE) {
+      reseed(type, BillingModel.FlatFee)
+      form.setValue('percentage' as never, true as never, { shouldDirty: true })
+      return
+    }
+    reseed(type, next)
+  }
+  const modelChoice: ModelChoice = percentage ? PERCENTAGE_CHOICE : billingModel
+  const modelChoices: ModelChoice[] = [
+    ...ALL_BILLING_MODELS.filter(
+      (model) => (model === billingModel && !percentage) || billingModels.includes(model),
+    ),
+    ...((isUsage && billingModels.includes(BillingModel.FlatFee)) || percentage
+      ? [PERCENTAGE_CHOICE as ModelChoice]
+      : []),
+  ]
+
+  const amountField = (label: string, hint?: string) => (
+    <Field label={label} required error={messageOf(errors, 'amount')} {...(hint ? { hint } : {})}>
       {({ id, ...field }) => (
         <Input
           {...NOT_A_LOGIN}
@@ -621,26 +652,36 @@ export function ChargeForm({
 
       <fieldset disabled={isSubmitting} className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium">Billing model</legend>
-        <ChoiceCards
+        <ChoiceCards<ModelChoice>
           label="Billing model"
-          value={billingModel}
-          onChange={(next) => reseed(type, next)}
-          choices={ALL_BILLING_MODELS.filter(
-            (model) => model === billingModel || billingModels.includes(model),
-          ).map((model) => ({
-            value: model,
-            title: BILLING_MODEL_LABEL[model],
-            description: BILLING_MODEL_DESCRIPTION[model],
-          }))}
+          value={modelChoice}
+          onChange={chooseModel}
+          choices={modelChoices.map((model) =>
+            model === PERCENTAGE_CHOICE
+              ? {
+                  value: model,
+                  title: PERCENTAGE_LABEL,
+                  description: 'A percentage of the billable value.',
+                }
+              : {
+                  value: model,
+                  title: BILLING_MODEL_LABEL[model],
+                  description: BILLING_MODEL_DESCRIPTION[model],
+                },
+          )}
         />
       </fieldset>
 
-      {billingModel === BillingModel.FlatFee && isUsage
+      {percentage
+        ? amountField('Percentage (%)', 'Entered as a percent: 7.125 bills 7.125%.')
+        : null}
+
+      {billingModel === BillingModel.FlatFee && isUsage && !percentage
         ? // A usage flat fee is a rate per unit: a contract value per period does not apply.
           amountField(`Amount (${unitLabel})`)
         : null}
 
-      {billingModel === BillingModel.FlatFee && !isUsage ? (
+      {billingModel === BillingModel.FlatFee && !isUsage && !percentage ? (
         // The calculator sits at the field's bottom edge, beside its input.
         <div className="flex items-end gap-2">
           <div className="min-w-0 flex-1">{amountField(`Amount (${unitLabel})`)}</div>

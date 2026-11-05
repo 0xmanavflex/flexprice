@@ -245,7 +245,7 @@ const preview: Preview = {
               'Imports',
               ['Imports', 'Import table', 'Import detail sheet'],
               'Workflows',
-              ['Workflow table'],
+              ['Workflow table', 'Workflow run sheet'],
             ],
             'Integrations',
             ['Integrations'],

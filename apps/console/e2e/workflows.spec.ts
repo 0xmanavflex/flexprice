@@ -30,6 +30,25 @@ test.describe('workflows', () => {
     await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible()
   })
 
+  test('opens a failed run, shows why it failed, and keeps it open on reload', async ({ page }) => {
+    const runs = list(page)
+    // Whichever failed run the list shows first: no fixture id is pinned.
+    await page.goto('/workflows?status=failed')
+    const failed = runs.rows().filter({ hasText: 'Failed' }).first()
+    await expect(failed).toBeVisible()
+
+    await failed.click()
+    const sheet = page.getByRole('dialog')
+    await expect(sheet).toBeVisible()
+    // A failed run names its failure, in the alert, once the details load.
+    await expect(sheet.getByRole('alert')).not.toBeEmpty()
+    // The open run is in the address: a reload opens it again.
+    await expect(page).toHaveURL(/[?&]workflow=[^&]+.*[?&]run=[^&]+/)
+    await page.reload()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('dialog').getByRole('alert')).not.toBeEmpty()
+  })
+
   test('puts the search in the URL and survives a reload', async ({ page }) => {
     const runs = list(page)
     await page.goto('/workflows')

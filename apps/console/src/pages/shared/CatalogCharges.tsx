@@ -23,6 +23,8 @@ export interface CatalogChargesProps {
   noun: string
   title?: string
   emptyDescription: string
+  /** An archived record's charges are history: listed, but not added to, edited or ended. */
+  readOnly?: boolean
 }
 
 /**
@@ -36,6 +38,7 @@ export function CatalogCharges({
   noun,
   title,
   emptyDescription,
+  readOnly = false,
 }: CatalogChargesProps) {
   // Ended prices too, so an edited charge keeps its earlier price as history.
   const charges = usePriceHistory(entityType, entityId)
@@ -75,10 +78,14 @@ export function CatalogCharges({
         {...subTab(charges, 'charges')}
         {...(title ? { title } : {})}
         emptyDescription={emptyDescription}
-        onAdd={() => setForm('add')}
-        onEdit={(charge) => setForm(charge)}
-        onTerminate={(charge) => setTarget(charge)}
-        onDeleteUpcoming={(versionId) => terminate.mutateAsync({ id: versionId })}
+        {...(readOnly
+          ? { hideRowActions: true }
+          : {
+              onAdd: () => setForm('add'),
+              onEdit: (charge: Charge) => setForm(charge),
+              onTerminate: (charge: Charge) => setTarget(charge),
+              onDeleteUpcoming: (versionId: string) => terminate.mutateAsync({ id: versionId }),
+            })}
       />
       <AddChargeDialog
         open={form !== null}

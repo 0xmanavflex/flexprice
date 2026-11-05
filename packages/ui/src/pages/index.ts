@@ -471,6 +471,11 @@ export type { QuotaCardAction, QuotaCardProps } from './shared/QuotaCard'
    props were already exported above; this is the one new type the move added. */
 export { WorkflowGrid, WorkflowGridProvenance } from './developers/workflows/WorkflowGrid'
 export type { WorkflowGridProps } from './developers/workflows/WorkflowGrid'
+export {
+  WorkflowRunSheet,
+  WorkflowRunSheetProvenance,
+} from './developers/workflows/WorkflowRunSheet'
+export type { WorkflowRunSheetProps } from './developers/workflows/WorkflowRunSheet'
 export { UsageSyncGrid, UsageSyncGridProvenance } from './developers/usage-syncs/UsageSyncGrid'
 export type { UsageSyncGridProps } from './developers/usage-syncs/UsageSyncGrid'
 export {

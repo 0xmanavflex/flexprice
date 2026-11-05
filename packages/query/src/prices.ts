@@ -6,12 +6,17 @@ import {
   type Charge,
   type CreateCharge,
   InvoiceCadence,
+  PERCENTAGE_METADATA_KEY,
+  PERCENTAGE_METADATA_VALUE,
   type PriceEntityType,
   PriceType,
   PriceWindowSize,
   type RoundType,
   type Tier,
   TierMode,
+  formatPercentageAmount,
+  isPercentagePrice,
+  percentToDecimalAmount,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
@@ -68,6 +73,7 @@ export interface ChargeWire {
   sequence?: number | undefined
   parentPriceId?: string | undefined
   createdAt?: Date | undefined
+  metadata?: Record<string, string> | undefined
 }
 
 const PRICE_TYPES = new Set<string>(Object.values(PriceType))
@@ -150,6 +156,9 @@ export function toCharge(wire: ChargeWire): Charge {
         }
       : null
 
+  // V1's percentage fee: a flat fee tagged in metadata, its amount the decimal rate.
+  const percentage = isPercentagePrice(billingModel, wire.metadata)
+
   const customUnit =
     wire.priceUnitType === 'CUSTOM'
       ? wire.priceUnit || wire.priceUnitConfig?.priceUnit || undefined
@@ -160,7 +169,10 @@ export function toCharge(wire: ChargeWire): Charge {
     type,
     billingModel,
     amount: wire.amount ?? '',
-    displayAmount: wire.displayAmount ?? wire.amount ?? '',
+    // A percentage reads as its rate ("7.125%"), never as a currency amount ("$0.07125").
+    displayAmount: percentage
+      ? formatPercentageAmount(wire.amount ?? '0')
+      : (wire.displayAmount ?? wire.amount ?? ''),
     currency: wire.currency ?? '',
     billingPeriod,
     billingPeriodCount: wire.billingPeriodCount ?? 1,
@@ -199,7 +211,14 @@ export function toCharge(wire: ChargeWire): Charge {
     sequence: typeof wire.sequence === 'number' ? wire.sequence : null,
     ...(wire.parentPriceId ? { parentPriceId: wire.parentPriceId } : {}),
     createdAt: wire.createdAt ?? null,
+    ...(percentage ? { percentage: true } : {}),
+    ...(wire.metadata && Object.keys(wire.metadata).length > 0 ? { metadata: wire.metadata } : {}),
   }
+}
+
+/** The metadata that marks a price as a percentage, added to what it already had. */
+function withPercentageMarker(metadata: Record<string, string> | undefined) {
+  return { ...metadata, [PERCENTAGE_METADATA_KEY]: PERCENTAGE_METADATA_VALUE }
 }
 
 /**
@@ -228,7 +247,9 @@ export function toChargeRequest(
   entityType: PriceEntityType,
   entityId: string,
 ): Record<string, unknown> {
-  const custom = draft.priceUnit ? draft.priceUnit : null
+  const percentage = draft.billingModel === BillingModel.FlatFee && Boolean(draft.percentage)
+  // A percentage is a rate on the billable value, never in a custom unit.
+  const custom = draft.priceUnit && !percentage ? draft.priceUnit : null
   const common: Record<string, unknown> = {
     type: draft.type,
     billingModel: draft.billingModel,
@@ -260,6 +281,14 @@ export function toChargeRequest(
   }
   switch (draft.billingModel) {
     case BillingModel.FlatFee:
+      // As V1: a FLAT_FEE whose amount is the decimal rate, marked as a percentage.
+      if (percentage) {
+        return {
+          ...common,
+          amount: percentToDecimalAmount(draft.amount),
+          metadata: withPercentageMarker(draft.metadata),
+        }
+      }
       return custom
         ? { ...common, priceUnitConfig: { priceUnit: custom, amount: draft.amount } }
         : { ...common, amount: draft.amount }
@@ -300,7 +329,21 @@ const BUCKET_SIZE_NONE = 'none'
  * price keeps billing until that date rather than being rewritten in place.
  */
 export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknown> {
-  const custom = Boolean(draft.priceUnit)
+  const percentage = draft.billingModel === BillingModel.FlatFee && Boolean(draft.percentage)
+  const custom = Boolean(draft.priceUnit) && !percentage
+  /*
+   * The percentage marker, stated only when it has to change: added for a
+   * percentage, removed from a price that had it and no longer is one. The API
+   * replaces metadata wholesale, so the price's other keys go back with it.
+   */
+  const wasPercentage = draft.metadata?.[PERCENTAGE_METADATA_KEY] === PERCENTAGE_METADATA_VALUE
+  const metadata = percentage
+    ? withPercentageMarker(draft.metadata)
+    : wasPercentage
+      ? Object.fromEntries(
+          Object.entries(draft.metadata ?? {}).filter(([key]) => key !== PERCENTAGE_METADATA_KEY),
+        )
+      : undefined
   const common: Record<string, unknown> = {
     billingModel: draft.billingModel,
     ...(draft.displayName ? { displayName: draft.displayName } : {}),
@@ -316,10 +359,12 @@ export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknow
      * refuses the field there at all.
      */
     ...(draft.type === PriceType.Usage ? { bucketSize: draft.bucketSize ?? BUCKET_SIZE_NONE } : {}),
+    ...(metadata ? { metadata } : {}),
   }
 
   switch (draft.billingModel) {
     case BillingModel.FlatFee:
+      if (percentage) return { ...common, amount: percentToDecimalAmount(draft.amount) }
       return {
         ...common,
         ...(custom ? { priceUnitAmount: draft.amount } : { amount: draft.amount }),

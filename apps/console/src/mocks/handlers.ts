@@ -3633,6 +3633,14 @@ export const handlers = [
     return response
   }),
   http.delete(`${BASE}/payments/:id`, ({ params }) => {
+    // As the API: only a payment that never moved money (INITIATED or FAILED) can be deleted.
+    const stored = paymentStore.find((row) => readString(row, 'id') === String(params['id']))
+    const status = stored ? readString(stored, 'payment_status') : ''
+    if (stored && status !== 'INITIATED' && status !== 'FAILED') {
+      return fxRefusal(
+        `A payment in status ${status} cannot be deleted. Void or refund it instead.`,
+      )
+    }
     removeRow(paymentStore, String(params['id']))
     return HttpResponse.json({ message: 'Payment deleted' })
   }),
@@ -4595,6 +4603,60 @@ export const handlers = [
     return HttpResponse.json({
       items: matches.slice(offset, offset + limit),
       pagination: { total: matches.length, limit, offset },
+    })
+  }),
+
+  /*
+   * `GET /workflows/:workflow_id/:run_id`: one run with its activities, as the
+   * backend reads them from the Temporal history. A failed run's last activity
+   * failed after three attempts, so the detail sheet has a reason to show.
+   */
+  http.get(`${BASE}/workflows/:workflowId/:runId`, ({ params }) => {
+    const run = workflowRuns.find(
+      (item) =>
+        item['workflow_id'] === String(params['workflowId']) &&
+        item['run_id'] === String(params['runId']),
+    )
+    if (!run)
+      return HttpResponse.json({ error: { message: 'workflow not found' } }, { status: 404 })
+    const start = Date.parse(String(run['start_time']))
+    const status = String(run['status'])
+    const at = (ms: number) => new Date(start + ms).toISOString()
+    const last: Record<string, string> = {
+      Completed: 'COMPLETED',
+      Failed: 'FAILED',
+      Running: 'STARTED',
+      TimedOut: 'TIMED_OUT',
+      Canceled: 'CANCELED',
+    }
+    const lastStatus = last[status] ?? 'COMPLETED'
+    const errors: Record<string, { message: string; type: string }> = {
+      FAILED: { message: 'recalculation produced no invoice', type: 'ActivityError' },
+      TIMED_OUT: { message: 'activity StartToClose timeout', type: 'TimeoutError' },
+    }
+    return HttpResponse.json({
+      ...run,
+      history_size: 24,
+      activities: [
+        {
+          activity_id: '5',
+          activity_type: 'LoadInvoiceActivity',
+          status: 'COMPLETED',
+          start_time: at(0),
+          close_time: at(400),
+          duration_ms: 400,
+          retry_attempt: 1,
+        },
+        {
+          activity_id: '11',
+          activity_type: 'RecalculateInvoiceActivity',
+          status: lastStatus,
+          start_time: at(500),
+          ...(lastStatus === 'STARTED' ? {} : { close_time: at(700), duration_ms: 200 }),
+          retry_attempt: lastStatus === 'FAILED' ? 3 : 1,
+          ...(errors[lastStatus] ? { error: errors[lastStatus] } : {}),
+        },
+      ],
     })
   }),
 

@@ -108,7 +108,12 @@ export const PreviewShowsPriceAndQuantity: Story = {
         },
       ],
       invoices: [
-        { action: 'created', status: 'preview', amountDue: { amount: '21.77', currency: 'USD' } },
+        {
+          action: 'created',
+          status: 'preview',
+          amountDue: { amount: '21.77', currency: 'USD' },
+          walletCredit: null,
+        },
       ],
     })),
   },
@@ -137,5 +142,41 @@ export const PreviewShowsPriceAndQuantity: Story = {
     await expect(started.getByText('$25.00')).toBeVisible()
     await expect(started.getByText(/Ongoing/)).toBeVisible()
     await expect(dialog.getByText('$21.77')).toBeVisible()
+  },
+}
+
+/** A cut credits the wallet: the preview names it as a wallet credit, with its amount, not as an invoice. */
+export const PreviewShowsWalletCredit: Story = {
+  args: {
+    onPreview: fn(async () => ({
+      lines: [
+        {
+          id: 'li_seats',
+          action: 'ended',
+          quantity: '5',
+          startDate: new Date('2026-09-30T00:00:00Z'),
+          endDate: new Date('2026-10-27T00:00:00Z'),
+        },
+      ],
+      invoices: [
+        {
+          action: 'wallet_credit',
+          status: 'completed',
+          amountDue: null,
+          walletCredit: { amount: '1.65', currency: 'USD' },
+        },
+      ],
+    })),
+  },
+  play: async () => {
+    const dialog = within(await screen.findByRole('dialog'))
+    const quantity = dialog.getByRole('textbox', { name: 'Quantity' })
+    await userEvent.clear(quantity)
+    await userEvent.type(quantity, '0')
+    await userEvent.click(dialog.getByRole('button', { name: 'Preview change' }))
+
+    const credit = await dialog.findByText('Credit to wallet')
+    await expect(within(credit.closest('li')!).getByText('$1.65')).toBeVisible()
+    await expect(dialog.queryByText(/Credit to wallet invoice/)).toBeNull()
   },
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   BILLING_MODEL_LABEL,
+  PERCENTAGE_LABEL,
   BILLING_PERIOD_LABEL,
   BillingModel,
   type BillingPeriod,
@@ -115,6 +116,7 @@ export interface ChargeSheetProps {
 }
 
 function modelLabel(charge: Charge): string {
+  if (charge.percentage) return PERCENTAGE_LABEL
   if (charge.billingModel === BillingModel.Tiered) {
     return charge.tierMode === TierMode.Slab ? 'Slab tiered' : 'Volume tiered'
   }

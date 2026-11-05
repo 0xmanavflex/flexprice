@@ -5,6 +5,7 @@ import { AddonGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
+import { toSubmitError } from './addonMessages'
 
 export interface AddonListPageProps {
   query: AddonQuery
@@ -83,11 +84,11 @@ export function AddonListPage({
           }
         }}
         title={`Archive ${archiving?.name ?? 'this add-on'}?`}
-        description="The add-on stops being offered. Contracts that already have it keep it."
+        description="Archiving is refused while contracts still have this add-on: remove it from them first. Once archived, the add-on is no longer offered for new contracts."
         confirmLabel="Archive add-on"
         destructive
         isPending={archive.isPending}
-        error={archive.isError ? 'Could not archive the add-on. Try again.' : null}
+        error={toSubmitError(archive.error, 'archive')}
         onConfirm={() => {
           if (archiving) archive.mutate(archiving.id, { onSuccess: () => setArchiving(null) })
         }}

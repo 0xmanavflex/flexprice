@@ -386,14 +386,24 @@ function PreviewSummary({
 
       {preview.invoices.length ? (
         <ul className="space-y-1.5 rounded-md border p-3 text-sm">
-          {preview.invoices.map((item, index) => (
-            <li key={index} className="flex flex-wrap justify-between gap-2">
-              <span>{ACTION_LABEL[item.action] ?? item.action} invoice</span>
-              <span className="font-medium tabular-nums">
-                {item.amountDue ? formatMoney(item.amountDue) : '—'}
-              </span>
-            </li>
-          ))}
+          {preview.invoices.map((item, index) => {
+            // A wallet credit is money back to the customer's wallet, not an invoice: it is
+            // named as such and shows the credited amount from its wallet transaction.
+            const credit = item.action === 'wallet_credit' || item.walletCredit !== null
+            const amount = credit ? item.walletCredit : item.amountDue
+            return (
+              <li key={index} className="flex flex-wrap justify-between gap-2">
+                <span>
+                  {credit
+                    ? ACTION_LABEL['wallet_credit']
+                    : `${ACTION_LABEL[item.action] ?? item.action} invoice`}
+                </span>
+                <span className="font-medium tabular-nums">
+                  {amount ? formatMoney(amount) : '—'}
+                </span>
+              </li>
+            )
+          })}
         </ul>
       ) : null}
     </div>

@@ -209,8 +209,9 @@ function Portal({
     wallets.data?.find((w) => w.active) ??
     wallets.data?.[0] ??
     null
-  // The history from the billing period's start (everything, with no period), a page at a time.
-  const transactions = usePortalWalletTransactionPages(auth, wallet, PAGE, periodStart)
+  // The whole history, a page at a time: the list promises every credit added and used, so it
+  // is not cut off at the billing period (only the "since" totals below are).
+  const transactions = usePortalWalletTransactionPages(auth, wallet, PAGE)
   // "Added since" and "Used since": over the whole window, not just the loaded pages.
   // Only the Credits view shows them, and a long ledger takes many requests.
   const flows = usePortalWalletFlows(auth, wallet, periodStart, location.view === 'credits')

@@ -131,6 +131,25 @@ describe('toFeature', () => {
     })
   })
 
+  it('carries the multiplier and group-by the Information tab shows', () => {
+    const feature = toFeature({
+      ...wire,
+      meter: {
+        eventName: 'llm_completion',
+        aggregation: { type: 'SUM_WITH_MULTIPLIER', field: 'tokens', multiplier: '2.5' },
+      },
+    })
+    expect(feature.aggregationMultiplier).toBe('2.5')
+    expect(feature.aggregationGroupBy).toBeNull()
+    expect(toFeature(wire).aggregationMultiplier).toBeNull()
+    expect(
+      toFeature({
+        ...wire,
+        meter: { eventName: 'x', aggregation: { type: 'MAX', field: 'v', groupBy: 'region' } },
+      }).aggregationGroupBy,
+    ).toBe('region')
+  })
+
   it('reports no meter for a non-metered feature', () => {
     expect(toFeature({ id: 'f', name: 'Seats', type: 'boolean' })).toMatchObject({
       eventName: null,

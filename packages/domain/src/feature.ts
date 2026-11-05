@@ -346,6 +346,8 @@ export interface Feature {
   /** A CEL expression used instead of `aggregationField`, when the meter has one. */
   aggregationExpression?: string | null
   aggregationGroupBy?: string | null
+  /** The SUM_WITH_MULTIPLIER factor, as the decimal text the API sends. */
+  aggregationMultiplier?: string | null
   /** Free-form key/value fields, as the API returns them. */
   metadata?: Readonly<Record<string, string>>
   createdAt: Date | null

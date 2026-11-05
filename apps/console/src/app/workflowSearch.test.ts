@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_WORKFLOW_QUERY, WorkflowStatus } from '@fp/domain'
-import { parseWorkflowSearch } from './workflowSearch'
+import { parseOpenWorkflowRun, parseWorkflowSearch } from './workflowSearch'
 
 describe('parseWorkflowSearch', () => {
   it('returns the defaults for an empty URL', () => {
@@ -40,5 +40,16 @@ describe('parseWorkflowSearch', () => {
       page: 1,
       sortDirection: 'desc',
     })
+  })
+})
+
+describe('parseOpenWorkflowRun', () => {
+  it('reads a run only when both ids are present', () => {
+    expect(parseOpenWorkflowRun({ workflow: 'wf_1', run: 'run_1' })).toEqual({
+      workflowId: 'wf_1',
+      runId: 'run_1',
+    })
+    expect(parseOpenWorkflowRun({ workflow: 'wf_1' })).toBeNull()
+    expect(parseOpenWorkflowRun({})).toBeNull()
   })
 })

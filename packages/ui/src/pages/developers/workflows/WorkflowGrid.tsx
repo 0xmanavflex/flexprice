@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, DownloadIcon, RefreshCwIcon } from '@ui/icons'
+import { BookOpenIcon, CopyIcon, DownloadIcon, EyeIcon, RefreshCwIcon } from '@ui/icons'
 import {
   DOCS,
   DEFAULT_WORKFLOW_QUERY,
@@ -51,7 +51,7 @@ const GUIDES: EntityGuide[] = [
 
 const SORT_OPTIONS = [{ value: 'start_time', label: 'Start time' }]
 
-function formatDateTime(value: Date, locale?: string): string {
+export function formatDateTime(value: Date, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'medium' }).format(value)
 }
 
@@ -81,6 +81,8 @@ export interface WorkflowGridProps {
   /** Re-runs the search; the page shows a refresh control because runs change under you. */
   onRefresh?: () => void
   onClearFilters?: () => void
+  /** Opens the run's details. Wired to a row click and the row's "View details" action. */
+  onRunClick?: (run: WorkflowRun) => void
   locale?: string
 }
 
@@ -94,6 +96,7 @@ export function WorkflowGrid({
   onRetry,
   onRefresh,
   onClearFilters,
+  onRunClick,
   locale,
 }: WorkflowGridProps) {
   const columns = useMemo<EntityColumn<WorkflowRun>[]>(
@@ -132,6 +135,16 @@ export function WorkflowGrid({
   )
 
   const rowActions = (run: WorkflowRun): EntityRowAction[] => [
+    ...(onRunClick
+      ? [
+          {
+            label: 'View details',
+            readOnly: true,
+            icon: <EyeIcon aria-hidden className="size-4" />,
+            onSelect: () => onRunClick(run),
+          },
+        ]
+      : []),
     {
       label: 'Copy workflow ID',
       readOnly: true,
@@ -174,6 +187,7 @@ export function WorkflowGrid({
         onChange: (_field, sortDirection) => onQueryChange({ ...query, sortDirection, page: 1 }),
       }}
       rowActions={rowActions}
+      {...(onRunClick ? { onRowClick: onRunClick } : {})}
       exportFileName="workflows"
       {...(onRefresh
         ? {

@@ -104,7 +104,7 @@ export function CouponDetailPage({
           <Pill>{cadenceText(record)}</Pill>
         </>
       }
-      id={record.code || record.id}
+      id={record.id}
       menuLabel="Coupon actions"
       // An archived coupon is read-only, so it offers neither edit nor archive.
       menu={

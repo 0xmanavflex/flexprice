@@ -159,7 +159,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
           if (!open) closeDelete()
         }}
         title="Archive feature"
-        description={`Archive ${data.name}? Plans and entitlements that use it lose it.`}
+        description={`Archiving ${data.name} is refused while plans or contracts still grant it: remove those entitlements first. Once archived, the feature is no longer offered for new plans or contracts.`}
         confirmLabel="Archive feature"
         destructive
         isPending={remove.isPending}

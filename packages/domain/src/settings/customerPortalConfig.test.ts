@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   type CustomerPortalConfig,
+  customerPortalConfigSchema,
   orderedSections,
   orderedTabs,
   portalTabLabel,
@@ -231,4 +232,29 @@ describe('withUsageProperties', () => {
       hiddenKeys: ['secret'],
     })
   })
+})
+
+describe('theme colours', () => {
+  const withSecondary = (secondaryColor: string) => ({
+    ...config(),
+    theme: { ...config().theme, secondaryColor },
+  })
+
+  it.each(['', '#0f172a', '#0F172A', '#abc', '#ABC'])('accepts %j', (colour) => {
+    expect(customerPortalConfigSchema.safeParse(withSecondary(colour)).success).toBe(true)
+  })
+
+  it.each(['invalid', '0f172a', '#0f17', '#0f172a0', 'red', '#ggg', ' #abc'])(
+    'refuses %j, on the field, with a hex example',
+    (colour) => {
+      const result = customerPortalConfigSchema.safeParse(withSecondary(colour))
+      expect(result.success).toBe(false)
+      expect(result.error?.issues).toEqual([
+        expect.objectContaining({
+          path: ['theme', 'secondaryColor'],
+          message: 'Enter a hex code such as #0f172a, or leave it blank.',
+        }),
+      ])
+    },
+  )
 })

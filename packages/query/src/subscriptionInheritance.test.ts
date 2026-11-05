@@ -5,7 +5,11 @@ import {
   INHERITANCE_WITH_THRESHOLD,
   InheritanceBlock,
 } from '@fp/domain'
-import { explainContractHierarchyError, toInheritanceBlocks } from './subscriptions'
+import {
+  explainContractCreateError,
+  explainContractHierarchyError,
+  toInheritanceBlocks,
+} from './subscriptions'
 
 const contract = (
   id: string,
@@ -125,5 +129,34 @@ describe('explainContractHierarchyError', () => {
     expect(explainContractHierarchyError(server('Plan not found'))).toBeNull()
     expect(explainContractHierarchyError(new Error('boom'))).toBeNull()
     expect(explainContractHierarchyError(null)).toBeNull()
+  })
+})
+
+describe('explainContractCreateError', () => {
+  const server = (message: string, details?: Record<string, string>) =>
+    new ApiError(ErrorKind.Invalid, message, {
+      status: 400,
+      fromServer: true,
+      ...(details ? { details } : {}),
+    })
+
+  it('names why a charge commitment was refused, not only that it was', () => {
+    const error = server('Line item commitment validation failed', {
+      price_id: 'price_gpu',
+      error: 'bucket price entity_type must be SUBSCRIPTION',
+    })
+    expect(explainContractCreateError(error)).toBe(
+      'Line item commitment validation failed: bucket price entity_type must be SUBSCRIPTION',
+    )
+  })
+
+  it('still rewords a hierarchy refusal', () => {
+    const error = server('A customer can only be inherited under one parent')
+    expect(explainContractCreateError(error)).toMatch(/already inherits/)
+  })
+
+  it('leaves an error with no further reason to the caller', () => {
+    expect(explainContractCreateError(server('Plan not found'))).toBeNull()
+    expect(explainContractCreateError(new Error('boom'))).toBeNull()
   })
 })

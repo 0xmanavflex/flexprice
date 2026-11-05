@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PriceEntityType } from '@fp/domain'
+import { CostSheetStatus, PriceEntityType } from '@fp/domain'
 import { useCostSheet, useDeleteCostSheet, usePrices, useUpdateCostSheet } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, CostMarginCard, Pill } from '@fp/ui/pages'
 import { ConfirmDialog, EditableCard, MetadataCard } from '@fp/ui/compositions'
@@ -54,6 +54,7 @@ export function CostSheetDetailPage({
   }
 
   const data = costSheet.data
+  const archived = data.status === CostSheetStatus.Archived
   const charges = prices.data ?? null
 
   const count = charges?.length ?? data.priceCount
@@ -74,22 +75,26 @@ export function CostSheetDetailPage({
       }
       id={data.id}
       menuLabel="Cost sheet actions"
-      menu={[
-        {
-          id: 'edit-details',
-          label: 'Edit details',
-          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
-          onSelect: () => setTab('information'),
-        },
-        {
-          id: 'archive',
-          label: 'Archive',
-          icon: <ArchiveIcon aria-hidden />,
-          destructive: true,
-          disabled: data.status === 'archived',
-          onSelect: () => setArchiving(true),
-        },
-      ]}
+      // An archived sheet is kept for its price history and is read-only.
+      menu={
+        archived
+          ? []
+          : [
+              {
+                id: 'edit-details',
+                label: 'Edit details',
+                icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+                onSelect: () => setTab('information'),
+              },
+              {
+                id: 'archive',
+                label: 'Archive',
+                icon: <ArchiveIcon aria-hidden />,
+                destructive: true,
+                onSelect: () => setArchiving(true),
+              },
+            ]
+      }
       tab={tab}
       onTabChange={(next) => setTab(next as CostSheetTab)}
       tabs={[
@@ -103,6 +108,7 @@ export function CostSheetDetailPage({
                 entityType={PriceEntityType.CostSheet}
                 entityId={costSheetId}
                 noun="cost sheet"
+                readOnly={archived}
                 title="Costs"
                 emptyDescription="Costs added to this cost sheet appear here. None have been added yet."
               />
@@ -119,7 +125,7 @@ export function CostSheetDetailPage({
               <EditableCard
                 className="xl:col-span-2"
                 title="Cost sheet details"
-                locked={data.status === 'archived'}
+                locked={archived}
                 fields={[
                   { key: 'name', label: 'Name', value: data.name, required: true },
                   {
@@ -168,7 +174,7 @@ export function CostSheetDetailPage({
               />
               <MetadataCard
                 metadata={data.metadata ?? {}}
-                {...(data.status === 'archived'
+                {...(archived
                   ? {}
                   : {
                       onSave: (metadata: Record<string, string>) =>

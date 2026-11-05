@@ -236,7 +236,7 @@ const UsageSyncListPage = lazy(() =>
 )
 import { parseUsageSyncSearch } from './usageSyncSearch'
 import { DEFAULT_USAGE_SYNC_QUERY, type UsageSyncQuery } from '@fp/domain'
-import { parseWorkflowSearch } from './workflowSearch'
+import { parseOpenWorkflowRun, parseWorkflowSearch } from './workflowSearch'
 import { DEFAULT_WORKFLOW_QUERY, type WorkflowQuery } from '@fp/domain'
 import { parseCreditNoteSearch } from './creditNoteSearch'
 import { type CreditNoteQuery, DEFAULT_CREDIT_NOTE_QUERY } from '@fp/domain'
@@ -2159,19 +2159,44 @@ function UsageSyncsRouteComponent() {
 const workflowsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/workflows',
-  validateSearch: (search: Record<string, unknown>): WorkflowQuery => parseWorkflowSearch(search),
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): WorkflowQuery & { workflow?: string; run?: string } => {
+    const open = parseOpenWorkflowRun(search)
+    return {
+      ...parseWorkflowSearch(search),
+      ...(open ? { workflow: open.workflowId, run: open.runId } : {}),
+    }
+  },
   search: { middlewares: [stripSearchParams(DEFAULT_WORKFLOW_QUERY)] },
   component: WorkflowsRouteComponent,
 })
 
 function WorkflowsRouteComponent() {
-  const query = useSearch({ from: workflowsRoute.id })
+  const { workflow, run, ...query } = useSearch({ from: workflowsRoute.id })
   const navigate = useNavigate()
+  const openRun = workflow && run ? { workflowId: workflow, runId: run } : null
 
   return (
     <WorkflowListPage
       query={query}
-      onQueryChange={(next) => void navigate({ to: '/workflows', search: next, replace: true })}
+      // Changing the list keeps whatever run is open; the list itself replaces history.
+      onQueryChange={(next) =>
+        void navigate({
+          to: '/workflows',
+          search: { ...next, ...(openRun ? { workflow, run } : {}) },
+          replace: true,
+        })
+      }
+      openRun={openRun}
+      // Opening a run is a new history entry, so Back closes it.
+      onOpenRunChange={(next) =>
+        void navigate({
+          to: '/workflows',
+          search: next ? { ...query, workflow: next.workflowId, run: next.runId } : query,
+          replace: next === null,
+        })
+      }
     />
   )
 }

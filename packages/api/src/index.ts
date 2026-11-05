@@ -142,6 +142,8 @@ export { listActivity } from './activity'
 export type { ListActivityParams } from './activity'
 
 export { fetchEventDebug } from './eventDebug'
+/** `GET /workflows/{workflow_id}/{run_id}`, live but absent from the SDK. See `workflowDetails.ts`. */
+export { fetchWorkflowDetails } from './workflowDetails'
 export type { EventDebugParams } from './eventDebug'
 
 export { getHostedInvoice, getHostedInvoiceDownload, payHostedInvoice } from './hostedInvoice'

@@ -126,6 +126,13 @@ export {
   versionStatus,
   type VersionStatus,
   type ChargeLineage,
+  PERCENTAGE_LABEL,
+  PERCENTAGE_METADATA_KEY,
+  PERCENTAGE_METADATA_VALUE,
+  isPercentagePrice,
+  percentToDecimalAmount,
+  decimalAmountToPercent,
+  formatPercentageAmount,
 } from './price'
 export type { Charge, CreateCharge, PriceTier, Tier } from './price'
 export { ChargeSection, chargeFlags, isChargeCustomised } from './chargeFlags'
@@ -471,6 +478,7 @@ export {
   emptyPayment,
   recordPaymentSchema,
   toPaymentStatus,
+  isPaymentDeletable,
 } from './payment'
 export type { Payment, PaymentDetail, PaymentQuery, RecordPayment } from './payment'
 
@@ -727,10 +735,12 @@ export type { CreateEnvironment, Environment } from './environment'
 export {
   DEFAULT_WORKFLOW_QUERY,
   WORKFLOW_STATUS_LABEL,
+  WORKFLOW_ACTIVITY_STATUS_LABEL,
   WORKFLOW_STATUS_WIRE,
+  WorkflowActivityStatus,
   WorkflowStatus,
 } from './workflowRun'
-export type { WorkflowQuery, WorkflowRun } from './workflowRun'
+export type { WorkflowActivity, WorkflowQuery, WorkflowRun, WorkflowRunDetail } from './workflowRun'
 export { DEFAULT_USAGE_SYNC_QUERY, USAGE_SYNC_STATE, USAGE_SYNC_STATE_LABEL } from './usageSync'
 export type { UsageSync, UsageSyncEntry, UsageSyncQuery, UsageSyncState } from './usageSync'
 export {

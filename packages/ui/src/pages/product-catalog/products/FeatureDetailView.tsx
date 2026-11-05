@@ -1,6 +1,7 @@
 import { toast } from 'sonner'
 import {
   AGGREGATION_LABEL,
+  AggregationType,
   type Charge,
   type Entitlement,
   FEATURE_STATUS_LABEL,
@@ -607,6 +608,33 @@ function InformationTab({
                   },
                 ]
               : []),
+            ...(feature.aggregationType === AggregationType.SumWithMultiplier
+              ? [
+                  {
+                    key: 'multiplier',
+                    label: 'Multiplier',
+                    value: feature.aggregationMultiplier ?? '',
+                    ...(feature.aggregationMultiplier
+                      ? { display: mono(feature.aggregationMultiplier) }
+                      : {}),
+                    placeholder: 'None',
+                    hint: 'Each event’s value is multiplied by this before summing.',
+                    readOnly: true,
+                  },
+                ]
+              : []),
+            ...(feature.aggregationGroupBy?.trim()
+              ? [
+                  {
+                    key: 'groupBy',
+                    label: 'Group by',
+                    value: feature.aggregationGroupBy,
+                    display: mono(feature.aggregationGroupBy),
+                    hint: 'Usage is aggregated per distinct value of this property.',
+                    readOnly: true,
+                  },
+                ]
+              : []),
             {
               key: 'unit',
               label: 'Unit name',
@@ -615,6 +643,25 @@ function InformationTab({
               hint: 'Shown after a quantity of one, for example call.',
               readOnly: true,
             },
+            ...(feature.reportingUnit
+              ? [
+                  {
+                    key: 'reportingUnit',
+                    label: 'Reporting unit',
+                    value: `${feature.reportingUnit.unitSingular} / ${feature.reportingUnit.unitPlural}`,
+                    hint: 'The unit usage is reported in.',
+                    readOnly: true,
+                  },
+                  {
+                    key: 'conversionRate',
+                    label: 'Conversion rate',
+                    value: feature.reportingUnit.conversionRate,
+                    display: mono(feature.reportingUnit.conversionRate),
+                    hint: `Reported value = usage × this rate, in ${feature.reportingUnit.unitPlural}.`,
+                    readOnly: true,
+                  },
+                ]
+              : []),
           ]}
         />
       ) : null}

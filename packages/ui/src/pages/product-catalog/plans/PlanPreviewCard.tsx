@@ -152,6 +152,8 @@ export function pricingSummary(
   const per = `per ${unit || 'unit'}`
   switch (charge.billingModel) {
     case BillingModel.FlatFee: {
+      // A percentage draft holds the rate as typed: it reads "7.125% of the billable value".
+      if (charge.percentage) return `${charge.amount || '0'}% of the billable value`
       const amount = Number(charge.amount || 0)
       return charge.type === PriceType.Fixed
         ? money(amount, currency, locale)

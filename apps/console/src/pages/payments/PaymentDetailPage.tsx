@@ -120,13 +120,19 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
               },
             ]
           : []),
-        {
-          id: 'delete',
-          label: 'Delete payment',
-          icon: <Trash2Icon aria-hidden />,
-          destructive: true,
-          onSelect: () => setDialog('delete'),
-        },
+        // Only a payment that never moved money (initiated or failed) can be deleted; the API
+        // rejects the rest with "void or refund it instead", so the menu does not offer it.
+        ...(data.deletable
+          ? [
+              {
+                id: 'delete',
+                label: 'Delete payment',
+                icon: <Trash2Icon aria-hidden />,
+                destructive: true,
+                onSelect: () => setDialog('delete'),
+              },
+            ]
+          : []),
       ]}
       tabs={[
         {

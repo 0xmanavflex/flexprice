@@ -122,6 +122,73 @@ export const BILLING_MODEL_LABEL: Record<BillingModel, string> = {
   [BillingModel.Tiered]: 'Tiered',
 }
 
+/**
+ * A percentage price, as V1 stores it.
+ *
+ * The API has no percentage billing model. V1's "Percentage fee" saves 7.125%
+ * as a `FLAT_FEE` whose amount is the decimal (`0.07125`), tagged
+ * `metadata.billing_model: "percentage"` so it reads back as a rate. Billing is
+ * unchanged by the tag; only how the amount is shown and entered is.
+ */
+export const PERCENTAGE_METADATA_KEY = 'billing_model'
+export const PERCENTAGE_METADATA_VALUE = 'percentage'
+
+/** The label a percentage price carries where a billing model is named. */
+export const PERCENTAGE_LABEL = 'Percentage'
+
+/**
+ * Whether a price is a percentage: the marker is set and the price really is
+ * the flat fee it claims to be (a stale marker on a since-tiered price must not
+ * turn its bands into rates).
+ */
+export function isPercentagePrice(
+  billingModel: string | undefined,
+  metadata: Record<string, string> | null | undefined,
+): boolean {
+  return (
+    metadata?.[PERCENTAGE_METADATA_KEY] === PERCENTAGE_METADATA_VALUE &&
+    (billingModel === undefined || billingModel === BillingModel.FlatFee)
+  )
+}
+
+/**
+ * Moves a decimal string's point `places` to the right (left when negative).
+ * String-based, not `Number(x) / 100`: `1.1 / 100` is `0.011000000000000001`,
+ * and the result is saved as the price. Anything not a plain decimal comes
+ * back as it was.
+ */
+function shiftDecimal(value: string, places: number): string {
+  const raw = value.trim()
+  if (!/^\d*\.?\d*$/.test(raw) || raw === '' || raw === '.') return value
+  const [whole = '', fraction = ''] = raw.split('.')
+  let digits = `${whole}${fraction}`
+  let point = whole.length + places
+  if (point < 0) {
+    digits = `${'0'.repeat(-point)}${digits}`
+    point = 0
+  } else if (point > digits.length) {
+    digits = `${digits}${'0'.repeat(point - digits.length)}`
+  }
+  const head = digits.slice(0, point).replace(/^0+(?=\d)/, '') || '0'
+  const tail = digits.slice(point).replace(/0+$/, '')
+  return tail ? `${head}.${tail}` : head
+}
+
+/** A percentage as the amount the API stores: `"7.125"` → `"0.07125"`. */
+export function percentToDecimalAmount(percent: string): string {
+  return shiftDecimal(percent, -2)
+}
+
+/** A stored amount as the percentage it stands for: `"0.07125"` → `"7.125"`. */
+export function decimalAmountToPercent(amount: string): string {
+  return shiftDecimal(amount, 2)
+}
+
+/** A stored amount as a rate to show: `"0.07125"` → `"7.125%"`. */
+export function formatPercentageAmount(amount: string): string {
+  return `${decimalAmountToPercent(amount || '0')}%`
+}
+
 export const TierMode = {
   /** One rate for everything, chosen by the total. */
   Volume: 'VOLUME',
@@ -429,6 +496,14 @@ export interface Charge {
    */
   parentPriceId?: string | null
   createdAt: Date | null
+  /**
+   * A percentage price (V1's "Percentage fee"): a flat fee whose `amount` is
+   * the decimal rate (`0.07125` for 7.125%). `displayAmount` already reads as
+   * the rate. Absent on every other price.
+   */
+  percentage?: boolean
+  /** The price's own metadata, kept so an edit can change the percentage marker without dropping the rest. */
+  metadata?: Record<string, string>
 }
 
 /**
@@ -468,6 +543,11 @@ const chargeBase = {
   /** Create only: the ISO date (`YYYY-MM-DD`) the price starts; absent means now. */
   startDate: z.string().trim().optional(),
   /**
+   * Edit only: the saved price's metadata. The API replaces metadata wholesale,
+   * so adding or removing the percentage marker has to send the other keys back.
+   */
+  metadata: z.record(z.string(), z.string()).optional(),
+  /**
    * Usage charges only: the window the meter is aggregated over before pricing.
    *
    * Absent means no windowing: the meter aggregates across the whole billing
@@ -500,7 +580,14 @@ export const createChargeSchema = z
     z.object({
       ...chargeBase,
       billingModel: z.literal(BillingModel.FlatFee),
+      /** With `percentage`, the rate in percent as typed (`"7.125"`), not the stored decimal. */
       amount: nonNegativeAmount,
+      /**
+       * A percentage of the billable value, as V1's "Percentage fee": still a
+       * flat fee on the wire, with the amount sent as a decimal and the
+       * percentage marker in metadata.
+       */
+      percentage: z.boolean().optional(),
     }),
     z.object({
       ...chargeBase,
@@ -594,6 +681,19 @@ export function chargeToDraft(charge: Charge): CreateCharge {
     ...(charge.type === PriceType.Usage && charge.bucketSize
       ? { bucketSize: charge.bucketSize }
       : {}),
+    ...(charge.metadata && Object.keys(charge.metadata).length > 0
+      ? { metadata: charge.metadata }
+      : {}),
+  }
+
+  // A percentage is edited as the rate (7.125), not the stored decimal (0.07125).
+  if (charge.percentage && charge.billingModel === BillingModel.FlatFee) {
+    return {
+      ...base,
+      billingModel: BillingModel.FlatFee,
+      amount: decimalAmountToPercent(charge.amount || '0'),
+      percentage: true,
+    }
   }
 
   // A custom-unit charge is edited in its unit (2.4 QAU), not the currency it converts to.

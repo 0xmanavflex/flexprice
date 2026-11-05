@@ -450,7 +450,11 @@ describe('toCreateSubscriptionRequest: V1 contract fields', () => {
             commitment_type: 'amount',
             commitment_value: '200',
             true_up_enabled: false,
+            // The API only accepts a subscription-scoped bucket price, and names the
+            // subscription itself: never the plan charge's PLAN scope and plan id.
             price: expect.objectContaining({
+              entity_type: 'SUBSCRIPTION',
+              entity_id: '',
               type: 'USAGE',
               billing_model: 'PACKAGE',
               amount: '2',

@@ -38,3 +38,15 @@ export function parseWorkflowSearch(raw: Record<string, unknown>): WorkflowQuery
     sortDirection: direction === 'asc' ? 'asc' : DEFAULT_WORKFLOW_QUERY.sortDirection,
   }
 }
+
+/** The run opened over the list, as `?workflow=…&run=…`: both or neither. */
+export interface OpenWorkflowRun {
+  workflowId: string
+  runId: string
+}
+
+export function parseOpenWorkflowRun(raw: Record<string, unknown>): OpenWorkflowRun | null {
+  const workflowId = String(raw['workflow'] ?? '').trim()
+  const runId = String(raw['run'] ?? '').trim()
+  return workflowId && runId ? { workflowId, runId } : null
+}

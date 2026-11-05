@@ -53,7 +53,7 @@ export function TaxRateDetailPage({ taxRateId, onNavigateToList, onEdit }: TaxRa
           <Pill>{value}</Pill>
         </>
       }
-      id={data.code || data.id}
+      id={data.id}
       menuLabel="Tax rate actions"
       menu={[
         {
