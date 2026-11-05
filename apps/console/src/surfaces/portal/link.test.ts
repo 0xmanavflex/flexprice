@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { parsePortalLocation, portalHref, returnUrl } from './link'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  parsePortalLocation,
+  portalHref,
+  rememberForReturn,
+  returnUrl,
+  tokenForReturn,
+} from './link'
 
 const urls = { us: 'https://us.api.flexprice.io', in: 'https://api.cloud.flexprice.io' }
 
@@ -144,5 +150,27 @@ describe('returnUrl', () => {
     expect(returnUrl('https://portal.flexprice.io/us/invoices?token=secret&invoice=inv_1')).toBe(
       'https://portal.flexprice.io/us/invoices?invoice=inv_1&returned=1',
     )
+  })
+})
+
+describe('the session kept for a gateway return', () => {
+  it('drops the token and any gateway parameters from the return address', () => {
+    expect(
+      returnUrl('https://portal.flexprice.io/us/credits?token=tok&invoice=inv_1&id=pay_1&state=x'),
+    ).toBe('https://portal.flexprice.io/us/credits?invoice=inv_1&returned=1')
+  })
+
+  it('opens the returned tab with the kept session for an hour, then forgets it', () => {
+    const store = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+      removeItem: (key: string) => store.delete(key),
+    })
+    rememberForReturn('tok', 1_000)
+    expect(tokenForReturn(1_000 + 59 * 60_000)).toBe('tok')
+    expect(tokenForReturn(1_000 + 61 * 60_000)).toBeNull()
+    expect(tokenForReturn(1_000)).toBeNull()
+    vi.unstubAllGlobals()
   })
 })

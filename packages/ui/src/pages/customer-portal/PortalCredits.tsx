@@ -211,12 +211,18 @@ function WalletPanel({
         {wallet.active ? (
           <div className="flex items-center gap-2">
             {parts.autoTopup ? (
-              <Button variant="outline" className="h-8 px-3" onClick={onAutoTopup}>
+              // The dot says whether it is on; the name says it to a screen reader.
+              <Button
+                variant="outline"
+                className="h-8 px-3"
+                aria-label={`Auto top-up, ${on ? 'on' : 'off'}`}
+                onClick={onAutoTopup}
+              >
                 <span
                   className={cn('size-1.5 rounded-full', on ? 'bg-success' : 'bg-muted-foreground')}
                   aria-hidden="true"
                 />
-                Auto top-up {on ? 'on' : 'off'}
+                Auto top-up
               </Button>
             ) : null}
             <Button className="h-8 px-3.5" onClick={onAddCredits}>
@@ -548,7 +554,11 @@ function Transactions({
                   detail={[
                     t.detail,
                     t.expiresAt ? `expires ${formatDate(t.expiresAt, locale)}` : null,
-                    t.pending ? 'pending' : null,
+                    t.failed
+                      ? 'payment failed, no credits added'
+                      : t.pending
+                        ? 'awaiting payment'
+                        : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -556,6 +566,7 @@ function Transactions({
                   incoming={t.direction === 'in'}
                   amount={<Money value={t.amount} {...(locale ? { locale } : {})} />}
                   credits={formatNumber(t.credits, locale)}
+                  failed={t.failed}
                 />
               ))}
             </ul>

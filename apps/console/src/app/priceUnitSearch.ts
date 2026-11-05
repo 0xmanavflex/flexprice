@@ -50,9 +50,7 @@ export function parsePriceUnitSearch(raw: Record<string, unknown>): PriceUnitQue
       ? (String(param(raw, 'sort', 'sortBy')) as PriceUnitSortField)
       : DEFAULT_PRICE_UNIT_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'asc'
-        ? 'asc'
-        : DEFAULT_PRICE_UNIT_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_PRICE_UNIT_QUERY.sortDirection,
     view:
       param(raw, 'view', 'view') === PriceUnitView.Cards
         ? PriceUnitView.Cards

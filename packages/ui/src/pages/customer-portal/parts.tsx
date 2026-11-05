@@ -280,7 +280,7 @@ export function CheckoutLinkPanel({
         <div className="flex flex-col gap-1 text-[13px]">
           <p className="text-sm font-medium">
             {card ? (
-              'Enter your card details in the new tab'
+              'Enter your card details on the secure card form'
             ) : confirm ? (
               <>Your bank asks you to confirm{amount ? <> {amount}</> : null}</>
             ) : (
@@ -289,7 +289,7 @@ export function CheckoutLinkPanel({
           </p>
           <p className="text-muted-foreground">
             {card
-              ? 'We opened a secure page in a new tab. If it didn’t open, use the link below. Nothing is charged now; your card shows here once it is saved.'
+              ? 'If the secure card form didn’t open, use the link below. Nothing is charged now; your card shows here once it is saved.'
               : confirm
                 ? 'Open the confirmation page to approve the charge on your card. Your credits are added once the bank approves it.'
                 : 'We opened the payment page in a new tab. If it didn’t open, use the link below. This page updates by itself once the payment goes through.'}
@@ -313,7 +313,7 @@ export function CheckoutLinkPanel({
           render={<a href={url} target="_blank" rel="noopener noreferrer" role="link" />}
         >
           <ExternalLinkIcon aria-hidden="true" />
-          {card ? 'Open card page' : confirm ? 'Open confirmation page' : 'Open payment page'}
+          {card ? 'Open card form' : confirm ? 'Open confirmation page' : 'Open payment page'}
         </Button>
         <Button className="h-8 px-3" onClick={onDone}>
           <CheckIcon aria-hidden="true" />
@@ -332,6 +332,7 @@ export function LedgerRow({
   incoming,
   amount,
   credits,
+  failed = false,
 }: {
   reason: string
   detail: string
@@ -339,10 +340,14 @@ export function LedgerRow({
   incoming: boolean
   amount: ReactNode
   credits: string
+  /** Nothing came of it (payment failed, checkout cancelled): struck through and muted. */
+  failed?: boolean
 }) {
-  const tone = incoming
-    ? 'text-success-foreground dark:text-success'
-    : 'text-destructive-foreground dark:text-destructive'
+  const tone = failed
+    ? 'text-muted-foreground'
+    : incoming
+      ? 'text-success-foreground dark:text-success'
+      : 'text-destructive-foreground dark:text-destructive'
   return (
     <li className="flex items-center gap-4 px-6 py-4">
       <IconTile size="default" variant="soft" className={tone} aria-hidden="true">
@@ -354,11 +359,11 @@ export function LedgerRow({
       </div>
       <span className="text-muted-foreground hidden w-28 text-xs sm:block">{date}</span>
       <div className="w-32 space-y-0.5 text-right">
-        <p className={cn('text-[15px] font-medium tabular-nums', tone)}>
+        <p className={cn('text-[15px] font-medium tabular-nums', tone, failed && 'line-through')}>
           {incoming ? '+ ' : '− '}
           {amount}
         </p>
-        <p className="text-muted-foreground text-xs tabular-nums">
+        <p className={cn('text-muted-foreground text-xs tabular-nums', failed && 'line-through')}>
           {incoming ? '+' : '−'}
           {credits} credits
         </p>

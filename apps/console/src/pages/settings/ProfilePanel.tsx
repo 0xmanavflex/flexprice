@@ -1,10 +1,5 @@
 import { useId } from 'react'
-import {
-  type Tenant,
-  type UpdateTenant,
-  toUpdateTenantDraft,
-  updateTenantSchema,
-} from '@fp/domain'
+import { type Tenant, type UpdateTenant, toUpdateTenantDraft, updateTenantSchema } from '@fp/domain'
 import { useTenant, useUpdateTenant, useUserInfo } from '@fp/query'
 import {
   AddressPicker,

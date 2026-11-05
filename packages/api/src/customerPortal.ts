@@ -51,6 +51,7 @@ export const getPortalUsageAnalytics = (
   auth: PortalAuth,
   window: { start: Date; end: Date; windowSize: 'HOUR' | 'DAY' },
   groupBy?: string,
+  filters: PortalUsageFilters = {},
 ) =>
   post(auth, '/analytics/revenue', {
     start_time: window.start.toISOString(),
@@ -58,7 +59,45 @@ export const getPortalUsageAnalytics = (
     window_size: window.windowSize,
     expand: ['price', 'feature'],
     ...(groupBy ? { group_by: [`properties.${groupBy}`] } : {}),
+    ...usageFilterBody(filters),
   })
+
+/** What a usage read is narrowed to: some features, and events whose property has one of some values. */
+export interface PortalUsageFilters {
+  featureIds?: readonly string[]
+  /** Property key → the values to keep, e.g. `{ region: ['us-east-1'] }`. */
+  properties?: Readonly<Record<string, readonly string[]>>
+}
+
+function usageFilterBody({ featureIds, properties }: PortalUsageFilters) {
+  const kept = Object.entries(properties ?? {}).filter(([, values]) => values.length > 0)
+  return {
+    ...(featureIds?.length ? { feature_ids: [...featureIds] } : {}),
+    ...(kept.length ? { property_filters: Object.fromEntries(kept) } : {}),
+  }
+}
+
+/**
+ * The values one event property takes in this customer's usage —
+ * `POST /analytics/properties/values`. Feeds the property filter's choices.
+ */
+export const getPortalPropertyValues = (
+  auth: PortalAuth,
+  window: { start: Date; end: Date },
+  key: string,
+  featureIds?: readonly string[],
+) =>
+  post(auth, '/analytics/properties/values', {
+    start_time: window.start.toISOString(),
+    end_time: window.end.toISOString(),
+    key,
+    limit: 200,
+    ...(featureIds?.length ? { feature_ids: [...featureIds] } : {}),
+  })
+
+/** Where a checkout stands — `GET /checkout-sessions/{id}`: pending, completed, failed or expired. */
+export const getPortalCheckoutSession = (auth: PortalAuth, sessionId: string) =>
+  get(auth, `/checkout-sessions/${id(sessionId)}`)
 /**
  * The event property keys this customer may group usage by —
  * `POST /analytics/properties`. Empty unless the merchant switched grouping on.

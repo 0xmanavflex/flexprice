@@ -387,8 +387,8 @@ export function AddCreditsDialog({
   const submit = (replace: boolean) => {
     if (!wallet || !credits || !method) return
     const payVia: PayVia =
-      method === 'saved'
-        ? { kind: 'saved' }
+      method === 'saved' && defaultCard
+        ? { kind: 'saved', provider: defaultCard.provider }
         : { kind: 'checkout', provider: method, ...(replace ? { replace: true } : {}) }
     void run(() => onAdd(wallet, credits, payVia, note)).then((result) => {
       if (result === undefined) return
@@ -590,12 +590,12 @@ export function AutoTopupDialog({
       description={
         a?.enabled && a.threshold && a.credits ? (
           <>
-            On. When your balance falls below {formatNumber(a.threshold, locale)} credits (
+            When your balance falls below {formatNumber(a.threshold, locale)} credits (
             {money(a.threshold)}), we add {formatNumber(a.credits, locale)} credits (
             {money(a.credits)}){cardLabel ? ` using ${cardLabel}` : ''}.
           </>
         ) : (
-          'Off. Turn it on to refill your balance automatically, so usage never pauses.'
+          'Turn it on to refill your balance automatically, so usage never pauses.'
         )
       }
       isPending={pending}
@@ -788,94 +788,44 @@ function AutoTopupForm({
 
 /* ---- Cards --------------------------------------------------------------- */
 
-/** `POST /payment-methods`: the gateway's page to save a card securely. */
-export function AddCardDialog({
-  open,
-  gateways,
+/**
+ * After "Add card": the gateway's secure card form was opened in a new tab on
+ * the click itself (V1's flow, no step before it). This keeps its link on
+ * screen in case the tab was blocked, and "I've added it" refreshes the cards.
+ */
+export function CardLinkDialog({
+  url,
   onClose,
-  onAdd,
-  onPaid,
+  onAdded,
   onCopied,
 }: {
-  open: boolean
-  gateways: PortalGateway[]
+  url: string | null
   onClose: () => void
-  onAdd: (provider: string) => Promise<string | null>
-  onPaid: () => void
+  onAdded: () => void
   onCopied: () => void
 }) {
-  const options = gateways.filter((g) => g.savesCards)
-  const [provider, setProvider] = useState('')
-  const [link, setLink] = useState<string | null>(null)
-  const chosen = options.find((g) => g.provider === provider) ?? options[0] ?? null
-  const { pending, error, run } = useRun()
-  const close = () => {
-    setLink(null)
-    onClose()
-  }
   return (
     <FormDialog
-      open={open}
-      onOpenChange={(next) => !next && close()}
-      title={link ? 'Finish adding your card' : 'Add a card'}
-      description={
-        link ? undefined : 'Card details are entered on the payment provider’s page, never here.'
-      }
+      open={url !== null}
+      onOpenChange={(next) => !next && onClose()}
+      title="Add your card"
       size="sm"
-      isPending={pending}
     >
-      {link ? (
+      {url ? (
         <CheckoutLinkPanel
-          url={link}
+          url={url}
           amount={null}
           purpose="card"
-          onCopy={() => copy(link, onCopied)}
+          onCopy={() => copy(url, onCopied)}
           onDone={() => {
-            onPaid()
-            close()
+            onAdded()
+            onClose()
           }}
         />
-      ) : (
-        <Composer
-          submitLabel="Continue"
-          onCancel={close}
-          submitting={pending}
-          disabled={!chosen}
-          onSubmit={() => {
-            if (!chosen) return
-            void run(() => onAdd(chosen.provider)).then((url) => {
-              if (url) setLink(url)
-            })
-          }}
-        >
-          {options.length === 1 && options[0] ? (
-            <OnlyMethod
-              media={<GatewayMark provider={options[0].provider} label={options[0].label} />}
-              label={options[0].label}
-              description={cardUse(options[0])}
-            />
-          ) : (
-            <RadioRows
-              label="Provider"
-              value={chosen?.provider ?? ''}
-              onChange={setProvider}
-              options={options.map((g) => ({
-                value: g.provider,
-                media: <GatewayMark provider={g.provider} label={g.label} />,
-                label: g.label,
-                description: cardUse(g),
-              }))}
-            />
-          )}
-          {error ? <FieldError>{error}</FieldError> : null}
-        </Composer>
-      )}
+      ) : null}
     </FormDialog>
   )
 }
-
-const cardUse = (g: PortalGateway) =>
-  g.autoCharge ? 'Can pay invoices and top-ups automatically' : 'Used at checkout only'
 
 export function RemoveCardDialog({
   card,

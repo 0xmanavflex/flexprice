@@ -111,12 +111,53 @@ export const RETURNED_PARAM = 'returned'
 /**
  * Where a gateway sends the customer back: this page, without the token. The
  * token is the portal's only credential, and a gateway keeps its return
- * address; the payment opens in a tab of its own, so the portal itself stays
- * open where the customer left it, and the returned tab says so.
+ * address. The gateway's own parameters from an earlier trip (Razorpay's `id`,
+ * `state`) are dropped, so they do not pile up.
  */
 export function returnUrl(href: string): string {
   const url = new URL(href)
   url.searchParams.delete('token')
+  for (const key of [...url.searchParams.keys()])
+    if (!PORTAL_PARAMS.has(key)) url.searchParams.delete(key)
   url.searchParams.set(RETURNED_PARAM, '1')
   return url.toString()
+}
+
+/** The query parameters the portal itself reads; anything else a gateway added. */
+const PORTAL_PARAMS = new Set(['invoice', 'range', 'from', 'to'])
+
+/**
+ * The session a gateway's return lands back in. The return address carries no
+ * token (above), and the gateway's page was opened in its own tab, which does
+ * not share this tab's session storage, so the token is kept briefly in local
+ * storage while the customer is away: the tab they come back to opens the
+ * portal instead of a dead end. V1 did the same.
+ */
+const RETURN_KEY = 'flexprice.portal.return'
+/** Long enough to fill in a card or a bank's check, not long enough to linger. */
+const RETURN_TTL_MS = 60 * 60_000
+
+export function rememberForReturn(token: string, now = Date.now()) {
+  try {
+    localStorage.setItem(RETURN_KEY, JSON.stringify({ token, at: now }))
+  } catch {
+    // Storage blocked: the returned tab asks the customer to go back instead.
+  }
+}
+
+export function tokenForReturn(now = Date.now()): string | null {
+  try {
+    const saved = JSON.parse(localStorage.getItem(RETURN_KEY) ?? 'null') as {
+      token?: unknown
+      at?: unknown
+    } | null
+    if (typeof saved?.token !== 'string' || typeof saved.at !== 'number') return null
+    if (now - saved.at > RETURN_TTL_MS) {
+      localStorage.removeItem(RETURN_KEY)
+      return null
+    }
+    return saved.token
+  } catch {
+    return null
+  }
 }

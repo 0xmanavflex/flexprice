@@ -31,8 +31,11 @@ import {
   withPortalAutoTopup,
   toPortalSavedCards,
   chargeableCard,
+  preferGateway,
   toPortalWallet,
   walletFlows,
+  toPortalCheckoutResult,
+  toPortalCheckoutSessionId,
 } from './customerPortal'
 import { money } from './money'
 
@@ -918,5 +921,62 @@ describe('usage', () => {
     expect(byName['Calls']?.unitCost?.amount).toBe('0.0002')
     expect(byName['Calls']?.unitCostIsAverage).toBe(false)
     expect(byName['Idle']?.unitCost).toBeNull()
+  })
+})
+
+describe('preferGateway', () => {
+  it('puts the gateway the card is saved at first, keeping the rest in order', () => {
+    const list = [{ provider: 'razorpay' }, { provider: 'stripe' }, { provider: 'nomod' }]
+    expect(preferGateway(list, 'stripe').map((g) => g.provider)).toEqual([
+      'stripe',
+      'razorpay',
+      'nomod',
+    ])
+    expect(preferGateway(list, undefined)).toEqual(list)
+  })
+})
+
+describe('a failed top-up', () => {
+  it('stays in the ledger, marked, and counts in neither the totals nor the top-ups', () => {
+    const { items } = toPortalWalletTransactions(
+      {
+        items: [
+          {
+            id: 'ok',
+            type: 'credit',
+            transaction_reason: 'PURCHASED_CREDIT_INVOICED',
+            transaction_status: 'completed',
+            amount: '10',
+            credit_amount: '100',
+          },
+          {
+            id: 'failed',
+            type: 'credit',
+            transaction_reason: 'PURCHASED_CREDIT_INVOICED',
+            transaction_status: 'failed',
+            amount: '50',
+            credit_amount: '500',
+          },
+        ],
+      },
+      'USD',
+    )
+    expect(items.map((t) => [t.id, t.failed, t.pending])).toEqual([
+      ['ok', false, false],
+      ['failed', true, false],
+    ])
+    expect(walletFlows(items, 'USD').in.credits).toBe('100')
+    expect(toPortalTopUps(items).map((t) => t.id)).toEqual(['ok'])
+  })
+})
+
+describe('toPortalCheckoutResult', () => {
+  it('reads the settled states and treats anything else as still pending', () => {
+    expect(toPortalCheckoutResult({ checkout_status: 'completed' }).status).toBe('completed')
+    expect(
+      toPortalCheckoutResult({ checkout_status: 'failed', failure_reason: 'Card declined' }),
+    ).toEqual({ status: 'failed', failureReason: 'Card declined' })
+    expect(toPortalCheckoutResult({ checkout_status: 'initiated' }).status).toBe('pending')
+    expect(toPortalCheckoutSessionId({ checkout_session: { id: 'cs_1' } })).toBe('cs_1')
   })
 })

@@ -168,22 +168,15 @@
       "story": "./src/compositions/detail/ActivityLog.stories.tsx"
     },
     "AddCardDialog": {
-      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "file": "src/pages/customers/AddCardDialog.tsx",
       "layer": "surface",
       "composes": [
-        "CardLogo",
-        "CheckoutLinkPanel",
         "Composer",
-        "ConfirmDialog",
         "Field",
         "FormDialog",
-        "IntegrationMark",
-        "Money",
-        "RadioRows"
+        "OptionSelect"
       ],
-      "usedBy": [
-        "CustomerPortalView"
-      ],
+      "usedBy": [],
       "story": "./src/pages/customers/AddCardDialog.stories.tsx"
     },
     "AddChargeDialog": {
@@ -1075,14 +1068,33 @@
       ],
       "story": null
     },
+    "CardLinkDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "IntegrationMark",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
     "CardLogo": {
       "file": "src/pages/customer-portal/CardLogo.tsx",
       "layer": "surface",
       "composes": [],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "DownloadDialog",
         "PayInvoiceDialog",
         "PortalOverview",
@@ -1389,9 +1401,9 @@
         "Pill"
       ],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "DownloadDialog",
         "PayInvoiceDialog",
         "RemoveCardDialog"
@@ -1640,6 +1652,7 @@
         "AddCreditsDialog",
         "AddonChargesDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "ChargeAlertForm",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
@@ -1673,10 +1686,10 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AddonChargesDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "ChargeSheet",
         "ConnectionExports",
         "ContractBenefitsEditor",
@@ -2518,9 +2531,9 @@
       "file": "src/pages/customer-portal/CustomerPortalView.tsx",
       "layer": "surface",
       "composes": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "DownloadDialog",
         "PayInvoiceDialog",
         "PortalCredits",
@@ -3875,6 +3888,7 @@
         "AddonChargesDialog",
         "AutoTopupDialog",
         "BillingEntityField",
+        "CardLinkDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChargeForm",
@@ -4003,7 +4017,8 @@
       "usedBy": [
         "CustomerDetail",
         "DetailTable",
-        "EntityList"
+        "EntityList",
+        "PortalUsage"
       ],
       "story": "./src/compositions/tables/FilterBar.stories.tsx"
     },
@@ -4287,6 +4302,7 @@
         "AddCreditsDialog",
         "AddonChargesDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ContractBenefitsEditor",
@@ -4867,9 +4883,9 @@
       "layer": "surface",
       "composes": [],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "ContractIntegrations",
         "CustomerDetail",
         "DownloadDialog",
@@ -5682,10 +5698,10 @@
       "layer": "surface",
       "composes": [],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "ApiCard",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "CustomerDetail",
         "DashboardHome",
         "DownloadDialog",
@@ -5851,6 +5867,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "AddCardDialog",
         "AddonChargesDialog",
         "BillingEntityField",
         "BonusSlabTable",
@@ -6702,6 +6719,7 @@
       "composes": [
         "Calendar",
         "CalendarIcon",
+        "FilterBar",
         "Loaded",
         "MeterTrack",
         "Money",
@@ -6941,9 +6959,9 @@
         "Pill"
       ],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "DownloadDialog",
         "PayInvoiceDialog",
         "RemoveCardDialog"

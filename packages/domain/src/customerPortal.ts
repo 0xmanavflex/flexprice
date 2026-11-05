@@ -532,7 +532,13 @@ export interface PortalWalletTransaction {
   at: Date | null
   amount: Money
   credits: string
+  /** Waiting on its payment (a checkout not finished yet). */
   pending: boolean
+  /**
+   * Its payment failed, or its checkout was cancelled or expired: no credits
+   * came of it. It stays in the ledger, marked, and counts nowhere.
+   */
+  failed: boolean
   /** For credits added: how many are still unused (`credits_available`). */
   remaining: string | null
   /** When credits added expire; null when they never do. */
@@ -576,6 +582,7 @@ export function toPortalWalletTransactions(
       amount: moneyOf(t['amount'], text(t['currency']) || currency),
       credits: decimalText(t['credit_amount']) || '0',
       pending: status === 'PENDING',
+      failed: status === 'FAILED',
       remaining: decimalText(t['credits_available']) || null,
       expiresAt: date(t['expiry_date']),
     }
@@ -607,7 +614,7 @@ export function walletFlows(
   currency: string,
 ): PortalWalletFlows {
   const sum = (direction: PortalTransactionDirection) => {
-    const rows = transactions.filter((t) => t.direction === direction && !t.pending)
+    const rows = transactions.filter((t) => t.direction === direction && !t.pending && !t.failed)
     return {
       amount: money(decimalSum(rows.map((t) => t.amount.amount)), currency),
       credits: decimalSum(rows.map((t) => t.credits)),
@@ -647,7 +654,7 @@ export function toPortalTopUps(
   now: Date = new Date(),
 ): PortalTopUp[] {
   return transactions
-    .filter((t) => t.direction === 'in' && !t.pending)
+    .filter((t) => t.direction === 'in' && !t.pending && !t.failed)
     .map((t) => {
       const granted = Number(t.credits)
       const remaining = t.remaining ?? t.credits
@@ -807,6 +814,18 @@ export function chargeableCard(
   return usable.find((c) => c.isDefault) ?? usable[0] ?? null
 }
 
+/** The gateways with `provider`'s first, the rest in the API's order. */
+export function preferGateway<T extends { provider: string }>(
+  gateways: readonly T[],
+  provider: string | undefined,
+): T[] {
+  if (!provider) return [...gateways]
+  return [
+    ...gateways.filter((g) => g.provider === provider),
+    ...gateways.filter((g) => g.provider !== provider),
+  ]
+}
+
 export interface PortalGateway {
   provider: string
   label: string
@@ -870,6 +889,29 @@ export interface PortalOpenCheckout {
   provider: string
   label: string
   expiresAt: Date | null
+}
+
+/** The checkout session a top-up or payment started, by id, so its outcome can be followed. */
+export function toPortalCheckoutSessionId(wire: unknown): string | null {
+  return text(record(record(wire)['checkout_session'])['id']) || null
+}
+
+/** Where a checkout stands. `pending` covers the API's `initiated` too. */
+export type PortalCheckoutStatus = 'pending' | 'completed' | 'failed' | 'expired'
+
+export interface PortalCheckoutResult {
+  status: PortalCheckoutStatus
+  /** The gateway's reason, when it failed and said why. */
+  failureReason: string | null
+}
+
+/** `GET /checkout-sessions/{id}`. A cancelled checkout reads as failed. */
+export function toPortalCheckoutResult(wire: unknown): PortalCheckoutResult {
+  const body = record(wire)
+  const raw = text(body['checkout_status']).toLowerCase()
+  const status: PortalCheckoutStatus =
+    raw === 'completed' || raw === 'failed' || raw === 'expired' ? raw : 'pending'
+  return { status, failureReason: text(body['failure_reason']) || null }
 }
 
 /** The open checkout a top-up ran into instead of creating one, or null. */
@@ -1050,6 +1092,26 @@ export const NO_PROPERTY_VALUE = 'No value'
 export function toPortalPropertyKeys(wire: unknown): string[] {
   const keys = record(wire)['keys']
   return Array.isArray(keys) ? [...new Set(keys.map(text).filter(Boolean))] : []
+}
+
+/** `POST /analytics/properties/values`: one key's values, most seen first. */
+export function toPortalPropertyValues(wire: unknown): string[] {
+  const values = record(wire)['values']
+  return Array.isArray(values) ? [...new Set(values.map(text).filter(Boolean))] : []
+}
+
+/** What the usage view is narrowed to: some features, and property values per key. */
+export interface PortalUsageFilter {
+  featureIds: string[]
+  properties: Record<string, string[]>
+}
+
+export const NO_USAGE_FILTER: PortalUsageFilter = { featureIds: [], properties: {} }
+
+export function isUsageFiltered(filter: PortalUsageFilter): boolean {
+  return (
+    filter.featureIds.length > 0 || Object.values(filter.properties).some((v) => v.length > 0)
+  )
 }
 
 /** Cost over usage, to eight places: a tiered price's effective rate. Null with no usage. */

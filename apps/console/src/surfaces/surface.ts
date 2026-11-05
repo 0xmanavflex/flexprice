@@ -100,3 +100,19 @@ export function parseSurfaceHosts(raw: string | undefined): SurfaceHosts {
   }
   return out
 }
+
+/**
+ * The portal domain this deployment names explicitly in `VITE_SURFACE_HOSTS`
+ * (its first `portal` host), or null. Only an explicit entry counts: the
+ * built-in defaults are production's, and a dev or preview console must not
+ * send its customers' tokens there.
+ */
+export function configuredPortalHost(raw: string | undefined): string | null {
+  try {
+    const parsed = JSON.parse(raw?.trim() || 'null') as { portal?: unknown } | null
+    const first = Array.isArray(parsed?.portal) ? parsed.portal[0] : undefined
+    return typeof first === 'string' && first.trim() ? first.trim().toLowerCase() : null
+  } catch {
+    return null
+  }
+}

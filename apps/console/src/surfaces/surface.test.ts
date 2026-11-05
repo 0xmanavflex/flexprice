@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SURFACE_HOSTS, parseSurfaceHosts, surfaceFor, surfacePath } from './surface'
+import {
+  DEFAULT_SURFACE_HOSTS,
+  parseSurfaceHosts,
+  surfaceFor,
+  surfacePath,
+  configuredPortalHost,
+} from './surface'
 
 const at = (url: string) => {
   const { hostname, pathname } = new URL(url)
@@ -63,5 +69,16 @@ describe('parseSurfaceHosts', () => {
     expect(parseSurfaceHosts('{')).toBe(DEFAULT_SURFACE_HOSTS)
     expect(parseSurfaceHosts('"x"')).toBe(DEFAULT_SURFACE_HOSTS)
     expect(parseSurfaceHosts('{"portal":"one.host"}')).toEqual(DEFAULT_SURFACE_HOSTS)
+  })
+})
+
+describe('configuredPortalHost', () => {
+  it('is the first portal host named explicitly, and nothing otherwise', () => {
+    expect(configuredPortalHost('{"portal":["Portal-Dev.flexprice.io"]}')).toBe(
+      'portal-dev.flexprice.io',
+    )
+    expect(configuredPortalHost('{"invoice":["invoice-dev.flexprice.io"]}')).toBeNull()
+    expect(configuredPortalHost(undefined)).toBeNull()
+    expect(configuredPortalHost('not json')).toBeNull()
   })
 })

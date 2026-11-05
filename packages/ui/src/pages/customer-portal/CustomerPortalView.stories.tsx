@@ -42,6 +42,7 @@ function Portal({
   initialRange = '30d',
   allowCustomRange,
   groupKeys,
+  propertyValues,
 }: {
   data?: CustomerPortalData
   initialView?: PortalView
@@ -54,6 +55,7 @@ function Portal({
   initialRange?: PortalRange
   allowCustomRange?: boolean
   groupKeys?: string[]
+  propertyValues?: Record<string, string[]>
 }) {
   const [view, setView] = useState<PortalView>(initialView)
   const [range, setRange] = useState<PortalRange>(initialRange)
@@ -72,6 +74,7 @@ function Portal({
       {...(ranges ? { ranges } : {})}
       {...(allowCustomRange !== undefined ? { allowCustomRange } : {})}
       {...(groupKeys ? { groupKeys } : {})}
+      {...(propertyValues ? { propertyValues } : {})}
       groupBy={groupBy}
       view={view}
       range={range}
@@ -221,7 +224,7 @@ export const CardsProviderFailed: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Couldn’t load your Stripe cards')).toBeVisible()
-    await expect(canvas.queryByText('No saved cards')).toBeNull()
+    await expect(canvas.queryByText('No payment methods')).toBeNull()
   },
 }
 
@@ -236,7 +239,7 @@ export const CardsNoGateway: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText(/Saving a card isn’t available/)).toBeVisible()
+    await expect(canvas.getByText('Payment methods are not available')).toBeVisible()
     await expect(canvas.queryByRole('button', { name: 'Add card' })).toBeNull()
   },
 }
@@ -277,7 +280,7 @@ export const AddCredits: Story = {
       expect(addCredits).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'wal_prepaid' }),
         '2500',
-        { kind: 'saved' },
+        { kind: 'saved', provider: 'stripe' },
         '',
       ),
     )
@@ -381,23 +384,46 @@ export const AddCreditsCheckoutAlreadyOpen: Story = {
   },
 }
 
-/** Adding a card goes to the gateway; only gateways that save cards are offered. */
+/**
+ * V1's flow: with one gateway that saves cards, "Add card" opens its secure card form straight
+ * away (no picker), then keeps the link on screen in case the tab was blocked.
+ */
 export const AddCard: Story = {
   play: async ({ canvasElement }) => {
     addCard.mockClear()
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Add card' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Add a card' })
-    await expect(within(dialog).queryByText('Razorpay')).toBeNull()
-    // One provider saves cards: it is shown, with its logo, but there is nothing to choose.
-    await expect(within(dialog).queryByRole('radio')).toBeNull()
-    await expect(within(dialog).getByText('Stripe', { selector: 'p' })).toBeVisible()
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(addCard).toHaveBeenCalledWith('stripe'))
-    const handoff = within(await screen.findByRole('dialog', { name: 'Finish adding your card' }))
+    const handoff = within(await screen.findByRole('dialog', { name: 'Add your card' }))
     // Saving a card charges nothing: the words are about the card, not a payment.
-    await expect(handoff.getByText('Enter your card details in the new tab')).toBeVisible()
+    await expect(handoff.getByText('Enter your card details on the secure card form')).toBeVisible()
     await expect(handoff.queryByText(/paying/)).toBeNull()
+    await expect(handoff.getByRole('link', { name: /Open card form/ })).toHaveAttribute(
+      'href',
+      CHECKOUT,
+    )
     await expect(handoff.getByRole('button', { name: 'I’ve added it' })).toBeVisible()
+  },
+}
+
+/** Two gateways save cards: "Add card" lists them, each opening its own card form. */
+export const AddCardChoosesGateway: Story = {
+  args: {
+    data: {
+      ...portalData,
+      gateways: {
+        status: 'ready',
+        data:
+          portalData.gateways.status === 'ready'
+            ? portalData.gateways.data.map((g) => ({ ...g, savesCards: true }))
+            : [],
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    addCard.mockClear()
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Add card' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Add card (Razorpay)' }))
+    await waitFor(() => expect(addCard).toHaveBeenCalledWith('razorpay'))
   },
 }
 
@@ -412,6 +438,36 @@ export const Usage: Story = {
     await expect(canvas.getByText('$0.20 per 1K calls')).toBeVisible()
     // A tiered price has a unit cost too: its effective rate, marked as an average.
     await expect(canvas.getByText('avg. $0.01999 per minute')).toBeVisible()
+  },
+}
+
+/** By feature, the breakdown is one row per feature, as V1 lists it: no group rows, no "Other". */
+export const UsageByFeatureIsFlat: Story = {
+  args: { initialView: 'usage' },
+  play: async ({ canvasElement }) => {
+    const breakdown = within(
+      within(canvasElement).getByRole('heading', { name: 'Usage breakdown' }).closest('section')!,
+    )
+    await expect(breakdown.queryByRole('button', { expanded: true })).toBeNull()
+    await expect(breakdown.queryByText('Platform')).toBeNull()
+    await expect(breakdown.queryByText('Other')).toBeNull()
+  },
+}
+
+/** The usage filter offers the features used and each groupable property's values. */
+export const UsageFilters: Story = {
+  args: {
+    initialView: 'usage',
+    groupKeys: ['region'],
+    propertyValues: { region: ['us-east-1', 'eu-west-1'] },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Filter' }))
+    await expect(await screen.findByRole('option', { name: /Feature/ })).toBeVisible()
+    await expect(await screen.findByRole('option', { name: /region/ })).toBeVisible()
+    // Closed again: the open picker is the vendored filter's, checked in its own stories.
+    await userEvent.keyboard('{Escape}')
   },
 }
 
@@ -462,7 +518,7 @@ export const Credits: Story = {
   args: { initialView: 'credits' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('button', { name: /Auto top-up on/ })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: /Auto top-up, on/ })).toBeVisible()
     await expect(canvas.getByText('Plan credits')).toBeVisible()
     await expect(canvas.getByText('in 7 days')).toBeVisible()
     await userEvent.click(canvas.getByRole('tab', { name: 'All transactions' }))
@@ -570,7 +626,7 @@ export const AutoTopup: Story = {
   args: { initialView: 'credits' },
   play: async ({ canvasElement }) => {
     saveAutoTopup.mockClear()
-    await userEvent.click(within(canvasElement).getByRole('button', { name: /Auto top-up on/ }))
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /Auto top-up, on/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Auto top-up' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
     await waitFor(() =>
@@ -604,7 +660,7 @@ export const AutoTopupClearsWait: Story = {
   ),
   play: async ({ canvasElement }) => {
     saveAutoTopup.mockClear()
-    await userEvent.click(within(canvasElement).getByRole('button', { name: /Auto top-up on/ }))
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /Auto top-up, on/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Auto top-up' })
     await expect(within(dialog).getByRole('textbox', { name: 'Wait duration' })).toHaveValue('30')
     await userEvent.click(within(dialog).getByRole('switch', { name: /Wait between top-ups/ }))
@@ -646,7 +702,7 @@ export const AutoTopupLoadsOn: Story = {
   render: () => <LateWallets first={{ status: 'loading' }} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: /Auto top-up on/ }))
+    await userEvent.click(await canvas.findByRole('button', { name: /Auto top-up, on/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Auto top-up' })
     await expect(within(dialog).getByRole('switch', { name: /Enable auto top-up/ })).toBeChecked()
   },
@@ -660,14 +716,14 @@ export const AutoTopupFollowsLoadedWallet: Story = {
   render: () => <LateWallets first={{ status: 'ready', data: staleWallets }} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /Auto top-up off/ }))
+    await userEvent.click(canvas.getByRole('button', { name: /Auto top-up, off/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Auto top-up' })
     await waitFor(() =>
       expect(within(dialog).getByRole('switch', { name: /Enable auto top-up/ })).toBeChecked(),
     )
     // Behind the modal (hidden from the accessibility tree), the button reads on too.
     await expect(
-      canvas.getByRole('button', { name: /Auto top-up on/, hidden: true }),
+      canvas.getByRole('button', { name: /Auto top-up, on/, hidden: true }),
     ).toBeInTheDocument()
   },
 }
@@ -694,7 +750,7 @@ export const Empty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Nothing due')).toBeVisible()
-    await expect(canvas.getByText('No saved cards')).toBeVisible()
+    await expect(canvas.getByText('No payment methods')).toBeVisible()
     await expect(canvas.getByText('No active plan', { selector: 'p' })).toBeVisible()
   },
 }

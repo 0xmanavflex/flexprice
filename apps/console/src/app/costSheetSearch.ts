@@ -50,9 +50,7 @@ export function parseCostSheetSearch(raw: Record<string, unknown>): CostSheetQue
       ? (String(param(raw, 'sort', 'sortBy')) as CostSheetSortField)
       : DEFAULT_COST_SHEET_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'asc'
-        ? 'asc'
-        : DEFAULT_COST_SHEET_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_COST_SHEET_QUERY.sortDirection,
     view:
       param(raw, 'view', 'view') === CostSheetView.Cards
         ? CostSheetView.Cards

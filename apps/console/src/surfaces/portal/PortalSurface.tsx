@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  NO_USAGE_FILTER,
+  isUsageFiltered,
+  type PortalUsageFilter,
   type PortalOpenCheckout,
   type PortalRange,
   type PortalView,
@@ -11,6 +14,7 @@ import {
   type PortalQuery,
   useAddPortalPaymentMethod,
   usePayPortalInvoice,
+  usePortalCheckoutFollower,
   usePortalConfig,
   usePortalCustomer,
   usePortalGateways,
@@ -19,6 +23,7 @@ import {
   usePortalInvoices,
   usePortalPaymentMethods,
   usePortalPropertyKeys,
+  usePortalPropertyValues,
   usePortalQuotas,
   usePortalSpend,
   usePortalSubscriptions,
@@ -38,6 +43,7 @@ import {
   CustomerPortalView,
   type Load,
   PortalNotice,
+  toast,
 } from '@fp/ui/pages'
 import { isSafeNavigationUrl } from '../safeUrl'
 import type { ApiUrls } from '../publicApi'
@@ -46,7 +52,9 @@ import {
   type PortalLocation,
   parsePortalLocation,
   portalHref,
+  rememberForReturn,
   returnUrl as gatewayReturnUrl,
+  tokenForReturn,
 } from './link'
 
 const GENERIC_ERROR = 'Something went wrong. Please try again.'
@@ -79,8 +87,19 @@ export function PortalSurface({
     parsePortalLocation(pathname, window.location.search, apiUrls, ownApiOrigin),
   )
   // The token stays in the address bar, as the merchant's link has it; every
-  // address the portal moves to carries it (see `navigate`).
-  const [token] = useState(() => location?.token ?? null)
+  // address the portal moves to carries it (see `navigate`). Back from a
+  // gateway, the address has none: the session kept for the return opens it.
+  const [token] = useState(
+    () =>
+      location?.token ??
+      (new URLSearchParams(window.location.search).has(RETURNED_PARAM) ? tokenForReturn() : null),
+  )
+  useEffect(() => {
+    if (!token || !location || location.token) return
+    // Put the token back in the address, without the return marker, so reload and links work.
+    window.history.replaceState(null, '', portalHref({ ...location, token }, basePath))
+    setLocation({ ...location, token })
+  }, [token, location, basePath])
 
   useEffect(() => {
     const onPop = () => {
@@ -150,6 +169,7 @@ function Portal({
 }) {
   const [walletId, setWalletId] = useState<string | null>(null)
   const [groupBy, setGroupBy] = useState<string | null>(null)
+  const [usageFilter, setUsageFilter] = useState<PortalUsageFilter>(NO_USAGE_FILTER)
   const [topUpLimit, setTopUpLimit] = useState(TOP_UPS)
 
   const customer = usePortalCustomer(auth)
@@ -178,11 +198,19 @@ function Portal({
         : portalRangeWindow(range, new Date(today)),
     [range, customStart, customEnd, today],
   )
-  const spend = usePortalSpend(auth, span.start, span.end)
-  // Only the Usage view groups, and only by keys the merchant lets customers see (the server filters).
+  // Only the Usage view groups and filters, and only by keys the merchant lets customers see
+  // (the server filters them). Overview's figures are never filtered.
   const onUsage = location.view === 'usage'
+  const filtered = onUsage && isUsageFiltered(usageFilter)
+  const filter = filtered
+    ? { featureIds: usageFilter.featureIds, properties: usageFilter.properties }
+    : {}
+  const spend = usePortalSpend(auth, span.start, span.end, true, null, filter)
+  // The feature filter offers every feature used in the window, not only the ones it kept.
+  const allSpend = usePortalSpend(auth, span.start, span.end, filtered)
   const propertyKeys = usePortalPropertyKeys(auth, span.start, span.end, onUsage)
   const groupKeys = propertyKeys.data ?? []
+  const propertyValues = usePortalPropertyValues(auth, span.start, span.end, groupKeys, onUsage)
   // A key that is not in this window's usage would put everything under "No value".
   const effectiveGroupBy = groupBy && groupKeys.includes(groupBy) ? groupBy : null
   const groupedSpend = usePortalSpend(
@@ -191,13 +219,14 @@ function Portal({
     span.end,
     onUsage && effectiveGroupBy !== null,
     effectiveGroupBy,
+    filter,
   )
   // The same length of time just before, for "↑ 12% vs the 30 days before".
   const previousStart = useMemo(
     () => new Date(span.start.getTime() - (span.end.getTime() - span.start.getTime())),
     [span],
   )
-  const previousSpend = usePortalSpend(auth, previousStart, span.start)
+  const previousSpend = usePortalSpend(auth, previousStart, span.start, true, null, filter)
   // The current billing period so far, for "About $407 by Oct 12 at this pace".
   const period = subscriptions.data?.find(
     (s) => s.status === 'active' && s.periodStart && s.periodEnd,
@@ -224,8 +253,24 @@ function Portal({
   const topUps = usePortalTopUps(auth, wallet, topUpLimit)
   const invoiceDetail = usePortalInvoice(auth, location.invoiceId)
 
-  const pay = usePayPortalInvoice(auth)
-  const topUp = useTopUpPortalWallet(auth)
+  // Every trip to a gateway keeps the session for the tab the customer comes back to.
+  const returnHere = () => {
+    rememberForReturn(auth.token)
+    return gatewayReturnUrl(window.location.href)
+  }
+  // A payment page opened in another tab: say here how it went once the gateway has.
+  const checkout = usePortalCheckoutFollower(auth, (result) => {
+    if (result.status === 'completed') toast.success('Payment received')
+    else if (result.status === 'expired')
+      toast.error('The payment page expired', { description: 'Nothing was charged.' })
+    else
+      toast.error('The payment did not go through', {
+        description:
+          result.failureReason ?? 'Nothing was charged. Try again or use another method.',
+      })
+  })
+  const pay = usePayPortalInvoice(auth, checkout.follow)
+  const topUp = useTopUpPortalWallet(auth, checkout.follow)
   const addCard = useAddPortalPaymentMethod(auth)
   const removeCard = useRemovePortalPaymentMethod(auth)
   const makeDefault = useSetDefaultPortalPaymentMethod(auth)
@@ -250,6 +295,7 @@ function Portal({
     onCustomRange: (start, end) =>
       navigate({ ...location, customRange: { start, end } }, 'replace'),
     onGroupByChange: setGroupBy,
+    onUsageFilterChange: setUsageFilter,
     onWalletChange: (id) => {
       setWalletId(id)
       setTopUpLimit(TOP_UPS)
@@ -267,7 +313,7 @@ function Portal({
         pay.run({
           invoiceId: invoice.id,
           provider,
-          returnUrl: gatewayReturnUrl(window.location.href),
+          returnUrl: returnHere(),
         }),
       ),
     addCredits: async (target, credits, via, note) => {
@@ -275,7 +321,7 @@ function Portal({
         walletId: target.id,
         credits,
         note,
-        returnUrl: gatewayReturnUrl(window.location.href),
+        returnUrl: returnHere(),
       }
       if (via.kind === 'saved') {
         // Charged at once, unless the card's bank asks the customer to confirm. That page
@@ -283,7 +329,7 @@ function Portal({
         // the request, has lost the click and pop-up blockers stop it. Reserving a tab up
         // front instead would flash an empty one on the usual, immediate charge.
         const next = await topUp
-          .run({ ...request, provider: null })
+          .run({ ...request, provider: via.provider, savedCard: true })
           .then((outcome) => outcome.url)
           .catch((cause: unknown) => {
             throw new Error(messageOf(cause), { cause })
@@ -306,7 +352,7 @@ function Portal({
       return alreadyOpen ? { alreadyOpen } : url
     },
     addCard: (provider) =>
-      inNewTab(() => addCard.run({ provider, returnUrl: gatewayReturnUrl(window.location.href) }), {
+      inNewTab(() => addCard.run({ provider, returnUrl: returnHere() }), {
         required: true,
       }),
     removeCard: async (card) => {
@@ -346,6 +392,12 @@ function Portal({
         : {})}
       groupKeys={groupKeys}
       groupBy={effectiveGroupBy}
+      usageFilter={usageFilter}
+      propertyValues={propertyValues.data ?? {}}
+      usageFeatures={(filtered ? allSpend.data : spend.data)?.items.map((item) => ({
+        id: item.featureId,
+        name: item.name,
+      }))}
       view={view}
       range={range}
       customRange={customRange}

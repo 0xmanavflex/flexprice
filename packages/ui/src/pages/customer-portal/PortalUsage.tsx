@@ -4,6 +4,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import {
   PORTAL_RANGES,
   type PortalParts,
+  type PortalUsageFilter,
   type PortalQuota,
   type PortalRange,
   type PortalSpend,
@@ -43,6 +44,12 @@ import { Skeleton } from '@ui/components/primitives/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
 import { IconTile } from '@ui/components/reui/icon-tile'
 import { Section } from '@ui/compositions/layout/Section'
+import {
+  FilterBar,
+  emptyFilterQuery,
+  readSelectFilter,
+  selectFilterField,
+} from '@ui/compositions/tables/FilterBar'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Money } from '../shared/Money'
@@ -74,6 +81,7 @@ export const PortalUsageProvenance = provenance({
     'primitives/select',
     'reui/icon-tile',
     'compositions/layout/Section',
+    'compositions/tables/FilterBar',
     'shared/SegmentMeter',
     'shared/Money',
   ],
@@ -94,6 +102,14 @@ export interface PortalUsageProps {
   groupKeys: readonly string[]
   groupBy: string | null
   onGroupByChange: (key: string | null) => void
+  /**
+   * What the page is narrowed to (V1's usage filters): some features, and
+   * events whose properties hold some values. Every figure on the page follows it.
+   */
+  filter: PortalUsageFilter
+  onFilterChange: (filter: PortalUsageFilter) => void
+  /** The choices: the features in this window's usage, and each groupable key's values. */
+  filterChoices: { features: { id: string; name: string }[]; properties: Record<string, string[]> }
   range: PortalRange
   customRange: { start: Date; end: Date } | null
   onRangeChange: (range: PortalRange) => void
@@ -157,6 +173,7 @@ function DateControls({
   now,
   locale,
   period,
+  ...rest
 }: PortalUsageProps & { period: { start: Date; end: Date } }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<DateRange | undefined>(undefined)
@@ -167,20 +184,23 @@ function DateControls({
     : `${formatDate(period.start, locale)} – ${formatDate(last, locale)}`
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <Tabs
-        value={customRange ? '' : range}
-        onValueChange={(value) => {
-          if (value) onRangeChange(value as PortalRange)
-        }}
-      >
-        <TabsList aria-label="Period" className="bg-muted/60 h-9 rounded-lg p-1">
-          {PORTAL_RANGES.filter((r) => ranges.includes(r.id)).map((r) => (
-            <TabsTrigger key={r.id} value={r.id} className="h-7 px-3 text-[13px] font-normal">
-              {r.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-wrap items-center gap-3">
+        <Tabs
+          value={customRange ? '' : range}
+          onValueChange={(value) => {
+            if (value) onRangeChange(value as PortalRange)
+          }}
+        >
+          <TabsList aria-label="Period" className="bg-muted/60 h-9 rounded-lg p-1">
+            {PORTAL_RANGES.filter((r) => ranges.includes(r.id)).map((r) => (
+              <TabsTrigger key={r.id} value={r.id} className="h-7 px-3 text-[13px] font-normal">
+                {r.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <UsageFilters {...rest} />
+      </div>
       {allowCustomRange ? (
         <Popover
           open={open}
@@ -238,6 +258,72 @@ function DateControls({
         <span className="text-muted-foreground text-[13px] tabular-nums">{span}</span>
       )}
     </div>
+  )
+}
+
+/* ---- Usage filters ------------------------------------------------------- */
+
+const FEATURE_FIELD = 'feature'
+const propertyField = (key: string) => `property:${key}`
+
+/**
+ * Filter by feature and by event property value: the kit's filter bar, one
+ * field for features and one per property key the merchant lets customers
+ * see. Nothing to filter by (no features, no keys): no control.
+ */
+function UsageFilters({
+  filterChoices,
+  onFilterChange,
+}: Pick<PortalUsageProps, 'filterChoices' | 'onFilterChange'>) {
+  const [query, setQuery] = useState(emptyFilterQuery)
+  const keys = Object.keys(filterChoices.properties)
+  const fields = [
+    ...(filterChoices.features.length > 0
+      ? [
+          selectFilterField(
+            FEATURE_FIELD,
+            'Feature',
+            filterChoices.features.map((f) => ({ value: f.id, label: f.name })),
+          ),
+        ]
+      : []),
+    ...keys
+      .filter((key) => (filterChoices.properties[key] ?? []).length > 0)
+      .map((key) =>
+        selectFilterField(
+          propertyField(key),
+          key,
+          (filterChoices.properties[key] ?? []).map((value) => ({ value, label: value })),
+        ),
+      ),
+  ]
+  if (fields.length === 0) return null
+  return (
+    <FilterBar
+      fields={fields}
+      query={query}
+      flat
+      onQueryChange={(next, flat) => {
+        setQuery(next)
+        onFilterChange({
+          featureIds: readSelectFilter(
+            flat,
+            FEATURE_FIELD,
+            new Set(filterChoices.features.map((f) => f.id)),
+          ),
+          properties: Object.fromEntries(
+            keys.map((key) => [
+              key,
+              readSelectFilter(
+                flat,
+                propertyField(key),
+                new Set(filterChoices.properties[key] ?? []),
+              ),
+            ]),
+          ),
+        })
+      }}
+    />
   )
 }
 
@@ -689,7 +775,11 @@ interface Group {
   cost: number
 }
 
-/** Features in their groups, the costliest group first; ungrouped features as "Other". */
+/**
+ * Rows grouped by the chosen property's value, the costliest group first. By
+ * feature there are no groups: V1 lists one row per feature, and a catch-all
+ * "Other" group only hid the features in it.
+ */
 function groupItems(items: PortalSpendItem[]): Group[] {
   const by = new Map<string, PortalSpendItem[]>()
   for (const item of items) {
@@ -782,6 +872,37 @@ function Breakdown({
           const money = (value: PortalSpendItem['cost']) => (
             <Money value={value} {...(locale ? { locale } : {})} />
           )
+          const row = (item: PortalSpendItem, groupName: string, nested: boolean) => {
+            const price = item.unitCost ? unitPriceLabel(item.unitCost, item.unit) : null
+            return (
+              <tr key={`${groupName}:${item.featureId}`} className="border-border/40 h-12 border-b">
+                <td className={nested ? 'pl-12' : 'pl-6'}>{item.name}</td>
+                <td className="text-muted-foreground px-4 whitespace-nowrap tabular-nums">
+                  {formatNumber(item.usage, locale)} {item.unit}
+                </td>
+                <td className="text-muted-foreground px-4 whitespace-nowrap tabular-nums">
+                  {/* A tiered or mixed price has no one rate: its average, said so. */}
+                  {price
+                    ? `${item.unitCostIsAverage ? 'avg. ' : ''}${formatUnitPrice(price.amount.amount, price.amount.currency, locale)} per ${price.per}`
+                    : '—'}
+                </td>
+                <td className="px-4 tabular-nums">{money(item.cost)}</td>
+                <td className="pr-6 pl-4">
+                  <span className="flex items-center gap-3">
+                    <MeterTrack
+                      filled={filledSegments(item.share, 1, 20)}
+                      segments={20}
+                      fill="bg-primary"
+                      className="h-4 w-32"
+                    />
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      {formatPercent(item.share, locale)}
+                    </span>
+                  </span>
+                </td>
+              </tr>
+            )
+          }
           return (
             <div className="[scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden">
               <table className="w-full text-sm">
@@ -805,85 +926,53 @@ function Breakdown({
                   </tr>
                 </thead>
                 <tbody>
-                  {groupItems(data.items).flatMap((group) => {
-                    const open = !closed.has(group.name)
-                    const rows = [
-                      <tr
-                        key={`group:${group.name}`}
-                        className="border-border/40 hover:bg-muted/30 h-12 border-b"
-                      >
-                        <td className="pl-4">
-                          <button
-                            type="button"
-                            className="flex items-center gap-1.5"
-                            aria-expanded={open}
-                            onClick={() => toggle(group.name)}
-                          >
-                            <ChevronRightIcon
-                              className={cn(
-                                'text-muted-foreground size-4 transition-transform',
-                                open && 'rotate-90',
-                              )}
-                              aria-hidden="true"
-                            />
-                            <span className="font-medium">{group.name}</span>
-                            <span className="text-muted-foreground text-xs">
-                              {group.items.length}
-                            </span>
-                          </button>
-                        </td>
-                        <td className="px-4" />
-                        <td className="px-4" />
-                        <td className="px-4 font-medium tabular-nums">
-                          {new Intl.NumberFormat(moneyFormatLocale(data.currency), {
-                            style: 'currency',
-                            currency: data.currency,
-                          }).format(group.cost)}
-                        </td>
-                        <td className="pr-6 pl-4" />
-                      </tr>,
-                    ]
-                    if (!open) return rows
-                    return [
-                      ...rows,
-                      ...group.items.map((item) => {
-                        const price = item.unitCost
-                          ? unitPriceLabel(item.unitCost, item.unit)
-                          : null
-                        return (
+                  {groupBy
+                    ? groupItems(data.items).flatMap((group) => {
+                        const open = !closed.has(group.name)
+                        const head = (
                           <tr
-                            key={`${group.name}:${item.featureId}`}
-                            className="border-border/40 h-12 border-b"
+                            key={`group:${group.name}`}
+                            className="border-border/40 hover:bg-muted/30 h-12 border-b"
                           >
-                            <td className="pl-12">{item.name}</td>
-                            <td className="text-muted-foreground px-4 whitespace-nowrap tabular-nums">
-                              {formatNumber(item.usage, locale)} {item.unit}
-                            </td>
-                            <td className="text-muted-foreground px-4 whitespace-nowrap tabular-nums">
-                              {/* A tiered or mixed price has no one rate: its average, said so. */}
-                              {price
-                                ? `${item.unitCostIsAverage ? 'avg. ' : ''}${formatUnitPrice(price.amount.amount, price.amount.currency, locale)} per ${price.per}`
-                                : '—'}
-                            </td>
-                            <td className="px-4 tabular-nums">{money(item.cost)}</td>
-                            <td className="pr-6 pl-4">
-                              <span className="flex items-center gap-3">
-                                <MeterTrack
-                                  filled={filledSegments(item.share, 1, 20)}
-                                  segments={20}
-                                  fill="bg-primary"
-                                  className="h-4 w-32"
+                            <td className="pl-4">
+                              <button
+                                type="button"
+                                className="flex items-center gap-1.5"
+                                aria-expanded={open}
+                                onClick={() => toggle(group.name)}
+                              >
+                                <ChevronRightIcon
+                                  className={cn(
+                                    'text-muted-foreground size-4 transition-transform',
+                                    open && 'rotate-90',
+                                  )}
+                                  aria-hidden="true"
                                 />
-                                <span className="text-muted-foreground text-xs tabular-nums">
-                                  {formatPercent(item.share, locale)}
+                                <span className="font-medium">{group.name}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  {group.items.length}
                                 </span>
-                              </span>
+                              </button>
                             </td>
+                            <td className="px-4" />
+                            <td className="px-4" />
+                            <td className="px-4 font-medium tabular-nums">
+                              {new Intl.NumberFormat(moneyFormatLocale(data.currency), {
+                                style: 'currency',
+                                currency: data.currency,
+                              }).format(group.cost)}
+                            </td>
+                            <td className="pr-6 pl-4" />
                           </tr>
                         )
-                      }),
-                    ]
-                  })}
+                        return open
+                          ? [head, ...group.items.map((item) => row(item, group.name, true))]
+                          : [head]
+                      })
+                    : // By feature: one row per feature, costliest first, as V1 lists it.
+                      [...data.items]
+                        .sort((x, y) => Number(y.cost.amount) - Number(x.cost.amount))
+                        .map((item) => row(item, '', false))}
                 </tbody>
               </table>
             </div>

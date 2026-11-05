@@ -1,4 +1,5 @@
 import type {
+  PortalUsageFilter,
   PortalParts,
   PortalCardProviderError,
   PortalCustomer,
@@ -24,7 +25,8 @@ export type Load<T> =
 
 /** How a top-up is paid: the saved default card now, or a gateway's checkout page. */
 export type PayVia =
-  | { kind: 'saved' }
+  /** The saved card's own gateway: with two connected, the API cannot guess which card. */
+  | { kind: 'saved'; provider: string }
   /** `replace`: cancel the checkout already open for this wallet and start this one. */
   | { kind: 'checkout'; provider: string; replace?: boolean }
 
@@ -73,6 +75,8 @@ export interface CustomerPortalActions {
   onCustomRange: (start: Date, end: Date) => void
   /** Group the usage breakdown by an event property key, or by feature (null). */
   onGroupByChange?: (key: string | null) => void
+  /** Narrow the usage view to some features and property values. */
+  onUsageFilterChange?: (filter: PortalUsageFilter) => void
   onWalletChange: (walletId: string) => void
   onShowMoreTransactions: () => void
   onShowMoreTopUps: () => void
@@ -121,6 +125,12 @@ export interface CustomerPortalViewProps {
   groupKeys?: readonly string[]
   /** The key the breakdown is grouped by, or null for by feature. */
   groupBy?: string | null
+  /** What the usage view is narrowed to; nothing when absent. */
+  usageFilter?: PortalUsageFilter
+  /** Every feature used in the window, unfiltered: the feature filter's choices. */
+  usageFeatures?: { id: string; name: string }[] | undefined
+  /** The usage filter's choices: each groupable key's values in the window. */
+  propertyValues?: Record<string, string[]>
   range: PortalRange
   /** A calendar range, which replaces `range` when set. */
   customRange: { start: Date; end: Date } | null

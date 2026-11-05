@@ -78,7 +78,8 @@ export interface PortalOverviewProps {
   onPay: (invoice: PortalInvoice) => void
   onViewInvoice: (invoice: PortalInvoice) => void
   onAddCredits: () => void
-  onAddCard: () => void
+  /** Opens `provider`'s secure card form (in a new tab, on the click itself). */
+  onAddCard: (provider: string) => void
   onRemoveCard: (card: PortalPaymentMethod) => void
   onMakeDefault: (card: PortalPaymentMethod) => void
 }
@@ -313,20 +314,48 @@ function AccountSummary({
 /** Saved cards: default, remove, add. */
 function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: PortalOverviewProps) {
   const gateways: PortalGateway[] = data.gateways.status === 'ready' ? data.gateways.data : []
-  const canAdd = gateways.some((g) => g.savesCards)
+  const savers = gateways.filter((g) => g.savesCards)
+  const canAdd = savers.length > 0
   const unavailable = data.cardProviderErrors ?? []
   const managed = (card: PortalPaymentMethod) =>
     gateways.some((g) => g.provider === card.provider && g.savesCards)
   return (
     <Section
       title="Payment methods"
+      description="Cards saved for invoices and automatic top-ups."
       flush
       action={
-        canAdd ? (
-          <Button variant="outline" size="sm" className="h-8 px-3" onClick={onAddCard}>
+        // V1's flow: one gateway that saves cards opens its card form straight away;
+        // with more, "Add card" lists them.
+        savers.length === 1 && savers[0] ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3"
+            onClick={() => onAddCard(savers[0]!.provider)}
+          >
             <PlusIcon aria-hidden="true" />
             Add card
           </Button>
+        ) : savers.length > 1 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="sm" className="h-8 px-3">
+                  <PlusIcon aria-hidden="true" />
+                  Add card
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              {savers.map((g) => (
+                <DropdownMenuItem key={g.provider} onClick={() => onAddCard(g.provider)}>
+                  <CreditCardIcon aria-hidden="true" />
+                  Add card ({g.label})
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : undefined
       }
     >
@@ -347,14 +376,14 @@ function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: Portal
             unavailable.length > 0 ? null : canAdd ? (
               <PortalEmpty
                 icon={<CreditCardIcon />}
-                title="No saved cards"
-                description="Save a card to pay invoices in one click and turn on automatic top-ups."
+                title="No payment methods"
+                description="Add a card to pay invoices and enable automatic top-ups."
               />
             ) : (
               <PortalEmpty
                 icon={<CreditCardIcon />}
-                title="No saved cards"
-                description="Saving a card isn’t available on this account. You can still pay each invoice from its page."
+                title="Payment methods are not available"
+                description="This account has no payment provider that supports saved cards. You can still pay each invoice from its page."
               />
             )
           ) : (
