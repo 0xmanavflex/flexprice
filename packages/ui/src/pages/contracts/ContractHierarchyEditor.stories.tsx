@@ -77,3 +77,51 @@ export const AddsAnInheritedCustomer: Story = {
     await expect(args.onInherit).toHaveBeenCalledWith('add', ['external-child'])
   },
 }
+
+/** The lists to pick from are asked for when a dialog opens, and the dialog waits on them. */
+export const LoadsChoicesOnOpen: Story = {
+  args: { onLoadOptions: fn(), optionsLoading: true, customers: [], parents: [] },
+  play: async ({ args, canvasElement }) => {
+    await expect(args.onLoadOptions).not.toHaveBeenCalled()
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Change parent' }))
+    await expect(args.onLoadOptions).toHaveBeenCalledTimes(1)
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(dialog.getByRole('status')).toHaveTextContent('Loading choices…')
+    await expect(dialog.getByRole('button', { name: 'Save parent' })).toBeDisabled()
+  },
+}
+
+/** An inherited contract's own customer id is enough to remove it: no customer list needed. */
+export const RemovesWithoutTheCustomerList: Story = {
+  args: {
+    customers: [],
+    subscription: { ...SUBSCRIPTION, subscriptionType: 'parent' },
+    inherited: [
+      {
+        id: 'subs_child',
+        customerId: 'cust_child',
+        customerName: 'Child company',
+        customerExternalId: 'external-child',
+        planId: 'plan_scale',
+        planName: 'Scale',
+        status: SubscriptionStatus.Active,
+        currency: 'USD',
+        billingPeriodLabel: 'Monthly',
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        startDate: null,
+        createdAt: null,
+      },
+    ],
+  },
+  play: async ({ args, canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /Child company/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Remove inheritance/ }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', {
+        name: 'Remove inheritance',
+      }),
+    )
+    await expect(args.onInherit).toHaveBeenCalledWith('remove', ['external-child'])
+  },
+}

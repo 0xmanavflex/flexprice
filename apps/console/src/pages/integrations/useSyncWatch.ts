@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from '@fp/ui/pages'
 import { WorkflowStatus, type EntitySyncRun } from '@fp/domain'
-import { runsSince, syncWatchDone, useEntitySyncRuns, type SyncedEntityType } from '@fp/query'
+import {
+  runsSince,
+  syncWatchDone,
+  useEntitySyncRuns,
+  type SyncedEntityType,
+  type SyncWatch,
+} from '@fp/query'
 
 const FAILED: ReadonlySet<string> = new Set([
   WorkflowStatus.Failed,
@@ -18,15 +24,15 @@ const names = (runs: readonly EntitySyncRun[]) => runs.map((run) => run.provider
  * the outcome is toasted and `onFinished` refreshes what the sync changed.
  */
 export function useSyncWatch(type: SyncedEntityType, id: string, onFinished: () => void) {
-  const [since, setSince] = useState<number | null>(null)
-  const runs = useEntitySyncRuns(type, id, since)
+  const [watch, setWatch] = useState<SyncWatch | null>(null)
+  const runs = useEntitySyncRuns(type, id, watch)
   const finished = useRef(onFinished)
   finished.current = onFinished
 
   useEffect(() => {
-    if (since === null || !runs.data || !syncWatchDone(runs.data, since)) return
-    const started = runsSince(runs.data, since)
-    setSince(null)
+    if (watch === null || !runs.data || !syncWatchDone(runs.data, watch)) return
+    const started = runsSince(runs.data, watch.since)
+    setWatch(null)
     finished.current()
     const failed = started.filter((run) => run.status !== null && FAILED.has(run.status))
     const synced = started.filter((run) => run.status === WorkflowStatus.Completed)
@@ -40,11 +46,12 @@ export function useSyncWatch(type: SyncedEntityType, id: string, onFinished: () 
       toast(`Still syncing to ${names(running)}`, {
         description: 'This is taking longer than usual. Its status updates when you reload.',
       })
-  }, [runs.data, runs.dataUpdatedAt, since])
+  }, [runs.data, runs.dataUpdatedAt, watch])
 
   return {
     runs: runs.data ?? [],
-    watching: since !== null,
-    watch: () => setSince(Date.now()),
+    watching: watch !== null,
+    /** Follow a push just sent to `providers` (the names the push action showed). */
+    watch: (providers: readonly string[]) => setWatch({ since: Date.now(), expected: providers }),
   }
 }

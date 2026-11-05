@@ -176,7 +176,7 @@ export function InvoiceDetailPage({
                       onPush: () =>
                         mappings.push.mutate(undefined, {
                           onSuccess: () => {
-                            syncWatch.watch()
+                            syncWatch.watch(mappings.pushProviders)
                             toast(`Pushing invoice to ${mappings.pushProviders.join(', ')}`, {
                               description: 'You are told here when each provider has it.',
                             })

@@ -260,12 +260,17 @@ export function CheckoutLinkPanel({
   url: string
   /** "$500.00", or null when it is not known here. Unused when saving a card. */
   amount: ReactNode
-  /** `card`: the page saves a card and charges nothing, so the words say so. */
-  purpose?: 'pay' | 'card'
+  /**
+   * `card`: the page saves a card and charges nothing, so the words say so.
+   * `confirm`: a saved card's bank asks the customer to approve the charge. No
+   * tab was opened for it (it would have been blocked), so the words ask them to open it.
+   */
+  purpose?: 'pay' | 'card' | 'confirm'
   onCopy: () => void
   onDone: () => void
 }) {
   const card = purpose === 'card'
+  const confirm = purpose === 'confirm'
   return (
     <div className="flex flex-col gap-5">
       <div className="bg-muted/40 flex items-start gap-3 rounded-lg border p-4">
@@ -276,6 +281,8 @@ export function CheckoutLinkPanel({
           <p className="text-sm font-medium">
             {card ? (
               'Enter your card details in the new tab'
+            ) : confirm ? (
+              <>Your bank asks you to confirm{amount ? <> {amount}</> : null}</>
             ) : (
               <>Finish paying{amount ? <> {amount}</> : null} in the new tab</>
             )}
@@ -283,7 +290,9 @@ export function CheckoutLinkPanel({
           <p className="text-muted-foreground">
             {card
               ? 'We opened a secure page in a new tab. If it didn’t open, use the link below. Nothing is charged now; your card shows here once it is saved.'
-              : 'We opened the payment page in a new tab. If it didn’t open, use the link below. This page updates by itself once the payment goes through.'}
+              : confirm
+                ? 'Open the confirmation page to approve the charge on your card. Your credits are added once the bank approves it.'
+                : 'We opened the payment page in a new tab. If it didn’t open, use the link below. This page updates by itself once the payment goes through.'}
           </p>
         </div>
       </div>
@@ -304,7 +313,7 @@ export function CheckoutLinkPanel({
           render={<a href={url} target="_blank" rel="noopener noreferrer" role="link" />}
         >
           <ExternalLinkIcon aria-hidden="true" />
-          {card ? 'Open card page' : 'Open payment page'}
+          {card ? 'Open card page' : confirm ? 'Open confirmation page' : 'Open payment page'}
         </Button>
         <Button className="h-8 px-3" onClick={onDone}>
           <CheckIcon aria-hidden="true" />

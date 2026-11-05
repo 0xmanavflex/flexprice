@@ -284,6 +284,25 @@ export const AddCredits: Story = {
   },
 }
 
+/**
+ * The saved card's bank asks to approve the charge: the dialog says so and offers the page as a
+ * link the customer clicks (a tab opened after the request would be blocked).
+ */
+export const AddCreditsBankConfirms: Story = {
+  play: async ({ canvasElement }) => {
+    addCredits.mockClear()
+    addCredits.mockResolvedValueOnce(CHECKOUT)
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Add credits' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Add credits' })
+    await userEvent.click(within(dialog).getByRole('button', { name: /^Pay / }))
+    const handoff = await screen.findByRole('dialog', { name: 'Complete your payment' })
+    await expect(within(handoff).getByText(/Your bank asks you to confirm/)).toBeVisible()
+    await expect(
+      within(handoff).getByRole('link', { name: /Open confirmation page/ }),
+    ).toHaveAttribute('href', CHECKOUT)
+  },
+}
+
 /** No saved card and one checkout gateway: the one way to pay is shown, with no choice to make. */
 export const AddCreditsOneWayToPay: Story = {
   args: {

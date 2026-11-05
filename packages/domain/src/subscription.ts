@@ -65,6 +65,8 @@ export interface Subscription {
   customerId: string
   /** Display name, already resolved. The UI never joins data. */
   customerName: string
+  /** The customer's id in the tenant's own system, when the read expanded the customer. */
+  customerExternalId?: string | undefined
   planId: string
   planName: string
   status: SubscriptionStatus

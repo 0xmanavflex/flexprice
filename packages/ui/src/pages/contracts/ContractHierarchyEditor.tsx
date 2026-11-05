@@ -31,9 +31,21 @@ export interface ContractHierarchyEditorProps {
   customers: { id: string; name: string; externalId: string }[]
   parents: { id: string; customerId: string; customerName: string; planName: string }[]
   blockedCustomerIds?: Readonly<Record<string, unknown>> | undefined
+  /** The inherited contracts are loading: the section waits. */
   loading?: boolean
   error?: string | null
   onRetry?: () => void
+  /** The current parent as the section names it ("Acme · Pro"); its id stands in until known. */
+  parentLabel?: string | null | undefined
+  /**
+   * Asked for when a dialog opens: the customers and parent contracts to pick
+   * from are only read then, not on every visit to the contract.
+   */
+  onLoadOptions?: (() => void) | undefined
+  /** The picker lists are loading or failed; only the dialog waits on them. */
+  optionsLoading?: boolean | undefined
+  optionsError?: string | null | undefined
+  onRetryOptions?: (() => void) | undefined
   onParent: (parentId: string) => Promise<unknown>
   onInherit: (action: 'add' | 'remove', externalIds: string[]) => Promise<unknown>
 }
@@ -47,6 +59,11 @@ export function ContractHierarchyEditor({
   loading,
   error,
   onRetry,
+  parentLabel,
+  onLoadOptions,
+  optionsLoading = false,
+  optionsError = null,
+  onRetryOptions,
   onParent,
   onInherit,
 }: ContractHierarchyEditorProps) {
@@ -113,6 +130,7 @@ export function ContractHierarchyEditor({
                 onClick={() => {
                   setParent(subscription.parentSubscriptionId ?? '')
                   setProblem(null)
+                  onLoadOptions?.()
                   setMode('parent')
                 }}
               >
@@ -129,6 +147,7 @@ export function ContractHierarchyEditor({
                   onClick={() => {
                     setCustomer('')
                     setProblem(null)
+                    onLoadOptions?.()
                     setMode('inherit')
                   }}
                 >
@@ -158,7 +177,7 @@ export function ContractHierarchyEditor({
           <>
             <p className="text-muted-foreground text-sm">
               {subscription.parentSubscriptionId
-                ? `Parent: ${parentOptions.find((row) => row.value === subscription.parentSubscriptionId)?.label ?? subscription.parentSubscriptionId}`
+                ? `Parent: ${parentLabel || parentOptions.find((row) => row.value === subscription.parentSubscriptionId)?.label || subscription.parentSubscriptionId}`
                 : 'No parent contract'}
             </p>
             {inherited.length ? (
@@ -174,14 +193,18 @@ export function ContractHierarchyEditor({
                     key: 'actions',
                     header: '',
                     cell: (row) => {
-                      const found = customers.find((customer) => customer.id === row.customerId)
-                      return !readOnly && found?.externalId ? (
+                      // The inherited contract carries its customer's external id; the
+                      // customer list (read only for the dialogs) is the fallback.
+                      const externalId =
+                        row.customerExternalId ??
+                        customers.find((customer) => customer.id === row.customerId)?.externalId
+                      return !readOnly && externalId ? (
                         <RowActionsMenu
                           label={row.customerName}
                           removeLabel="Remove inheritance"
                           onRemove={() => {
                             setProblem(null)
-                            setRemove({ name: row.customerName, externalId: found.externalId })
+                            setRemove({ name: row.customerName, externalId })
                           }}
                         />
                       ) : null
@@ -205,13 +228,27 @@ export function ContractHierarchyEditor({
           submitLabel={mode === 'parent' ? 'Save parent' : 'Add inherited customer'}
           submitting={pending}
           onCancel={() => setMode(null)}
-          disabled={mode === 'inherit' && !customer}
+          disabled={optionsLoading || Boolean(optionsError) || (mode === 'inherit' && !customer)}
           onSubmit={() => {
             if (mode === 'parent') void run(() => onParent(parent))
             else if (customer) void run(() => onInherit('add', [customer]))
           }}
         >
-          {mode === 'parent' ? (
+          {optionsError ? (
+            <SectionEmpty
+              title="Choices could not be loaded"
+              description={optionsError}
+              action={
+                <Button variant="outline" onClick={onRetryOptions}>
+                  Try again
+                </Button>
+              }
+            />
+          ) : optionsLoading ? (
+            <p role="status" className="text-muted-foreground text-sm">
+              Loading choices…
+            </p>
+          ) : mode === 'parent' ? (
             <Field label="Parent contract" hint="Choose No parent to detach this contract.">
               {({ id }) => (
                 <OptionCombobox

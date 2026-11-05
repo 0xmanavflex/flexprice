@@ -52,30 +52,53 @@ describe('toEntitySyncRuns', () => {
 
 describe('syncWatchDone', () => {
   const since = Date.parse('2026-11-06T12:00:00Z')
-  const run = (status: WorkflowStatus, start = since + 1_000) => ({
-    providerId: 'stripe',
-    provider: 'Stripe',
+  const run = (provider: string, status: WorkflowStatus, start = since + 1_000) => ({
+    providerId: provider.toLowerCase(),
+    provider,
     status,
     startTime: new Date(start),
     closeTime: null,
     workflowId: 'w',
-    runId: 'r',
+    runId: `r_${provider}`,
+  })
+  const watch = { since, expected: ['Stripe', 'HubSpot'] }
+
+  it('waits while a run the push started is still going', () => {
+    expect(syncWatchDone([run('Stripe', WorkflowStatus.Running)], watch, since + 5_000)).toBe(false)
   })
 
-  it('waits while a run the push started is still going, and stops once all finished', () => {
-    expect(syncWatchDone([run(WorkflowStatus.Running)], since, since + 5_000)).toBe(false)
-    expect(syncWatchDone([run(WorkflowStatus.Failed)], since, since + 5_000)).toBe(true)
+  it('keeps waiting for a provider whose run has not appeared yet, though the others finished', () => {
+    expect(syncWatchDone([run('Stripe', WorkflowStatus.Completed)], watch, since + 5_000)).toBe(
+      false,
+    )
+    expect(
+      syncWatchDone(
+        [run('Stripe', WorkflowStatus.Completed), run('HubSpot', WorkflowStatus.Failed)],
+        watch,
+        since + 5_000,
+      ),
+    ).toBe(true)
+  })
+
+  it('stops waiting for a provider that never started once a minute has passed', () => {
+    expect(
+      syncWatchDone(
+        [run('Stripe', WorkflowStatus.Completed)],
+        watch,
+        since + SYNC_FIRST_RUN_MS + 1,
+      ),
+    ).toBe(true)
+    expect(syncWatchDone([], watch, since + SYNC_FIRST_RUN_MS + 1)).toBe(true)
   })
 
   it('ignores runs from before the push', () => {
-    const old = run(WorkflowStatus.Completed, since - 60 * 60_000)
-    expect(syncWatchDone([old], since, since + 5_000)).toBe(false)
+    const old = run('Stripe', WorkflowStatus.Completed, since - 60 * 60_000)
+    expect(syncWatchDone([old], { since, expected: ['Stripe'] }, since + 5_000)).toBe(false)
   })
 
-  it('gives up when no run appears, or when one runs too long', () => {
-    expect(syncWatchDone([], since, since + SYNC_FIRST_RUN_MS + 1)).toBe(true)
-    expect(syncWatchDone([run(WorkflowStatus.Running)], since, since + SYNC_WATCH_MAX_MS + 1)).toBe(
-      true,
-    )
+  it('gives up on a run that goes on too long', () => {
+    expect(
+      syncWatchDone([run('Stripe', WorkflowStatus.Running)], watch, since + SYNC_WATCH_MAX_MS + 1),
+    ).toBe(true)
   })
 })

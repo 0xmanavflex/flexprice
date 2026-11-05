@@ -248,6 +248,7 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
     customerId: wire.customerId ?? '',
     // Resolved here so no cell has to fall back, and no grid joins data.
     customerName: customerNameOf(wire) || wire.customerId || 'Unknown',
+    ...(wire.customer?.externalId ? { customerExternalId: wire.customer.externalId } : {}),
     planId: wire.planId ?? '',
     planName: wire.plan?.name || wire.planId || '—',
     status,
@@ -1102,7 +1103,11 @@ export function toInheritanceBlocks(
  *: one `POST /subscriptions/search` narrowed by `customer_ids`, paged like the
  * contract counts. A customer missing from the result can inherit.
  */
-export function useInheritanceBlocks(parentCustomerId: string, customerIds: readonly string[]) {
+export function useInheritanceBlocks(
+  parentCustomerId: string,
+  customerIds: readonly string[],
+  enabled = true,
+) {
   const client = useFlexprice()
   const ids = [...new Set(customerIds.filter((id) => id && id !== parentCustomerId))].sort()
 
@@ -1132,7 +1137,7 @@ export function useInheritanceBlocks(parentCustomerId: string, customerIds: read
       }
       return toInheritanceBlocks(parentCustomerId, contracts)
     },
-    enabled: Boolean(parentCustomerId) && ids.length > 0,
+    enabled: enabled && Boolean(parentCustomerId) && ids.length > 0,
     staleTime: 30_000,
   })
 }

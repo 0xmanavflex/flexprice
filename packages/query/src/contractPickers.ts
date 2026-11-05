@@ -26,7 +26,8 @@ export async function collectPickerPages<T>(
   }
 }
 
-export function useContractPickerCustomers() {
+/** Every customer, page by page. `enabled`: false until the picker is actually needed. */
+export function useContractPickerCustomers(enabled = true) {
   const auth = useFlexpriceAuth()
   const serverURL = useFlexpriceServerURL()
   return useQuery({
@@ -42,6 +43,7 @@ export function useContractPickerCustomers() {
         return { items: result.customers, total: result.total }
       }),
     }),
+    enabled,
   })
 }
 

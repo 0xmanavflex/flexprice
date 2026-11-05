@@ -422,6 +422,8 @@ export function AddCreditsDialog({
       {link ? (
         <CheckoutLinkPanel
           url={link}
+          // A saved card's link is its bank's approval page; a checkout's is the gateway's.
+          purpose={method === 'saved' ? 'confirm' : 'pay'}
           amount={continued ? null : cost ? money(cost) : null}
           onCopy={() => copy(link, onCopied)}
           onDone={() => {

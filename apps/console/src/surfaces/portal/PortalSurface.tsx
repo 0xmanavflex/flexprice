@@ -278,8 +278,10 @@ function Portal({
         returnUrl: gatewayReturnUrl(window.location.href),
       }
       if (via.kind === 'saved') {
-        // Charged at once, unless the card's bank asks the customer to confirm: that page
-        // opens in a new tab (and stays in the dialog), as a checkout's would.
+        // Charged at once, unless the card's bank asks the customer to confirm. That page
+        // is handed to the dialog as a link the customer clicks: a tab opened here, after
+        // the request, has lost the click and pop-up blockers stop it. Reserving a tab up
+        // front instead would flash an empty one on the usual, immediate charge.
         const next = await topUp
           .run({ ...request, provider: null })
           .then((outcome) => outcome.url)
@@ -288,7 +290,6 @@ function Portal({
           })
         if (next === null) return null
         if (!isSafeNavigationUrl(next)) throw new Error(GENERIC_ERROR)
-        window.open(next, '_blank', 'noopener,noreferrer')
         return next
       }
       // Another checkout already open: no new tab, the dialog asks what to do.

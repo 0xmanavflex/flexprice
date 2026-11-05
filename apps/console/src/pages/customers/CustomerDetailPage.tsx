@@ -249,7 +249,7 @@ export function CustomerDetailPage({
                       onPush: () =>
                         pushCustomer.mutate(undefined, {
                           onSuccess: () => {
-                            syncWatch.watch()
+                            syncWatch.watch(pushTargets)
                             toast(`Pushing customer to ${pushTargets.join(', ')}`, {
                               description: 'You are told here when each provider has it.',
                             })

@@ -166,13 +166,18 @@ export function SubscriptionDetailPage({
   const editBenefit = useEditContractEntitlement(subscriptionId)
   const resetBenefit = useResetContractEntitlement(subscriptionId)
   const createAllowance = useCreateSpendingAllowance(subscriptionId)
-  const hierarchyCustomers = useContractPickerCustomers()
-  const parentCandidates = useParentContractCandidates()
+  // Every customer and every parent candidate is a large read: it waits until
+  // the hierarchy editor opens a dialog that picks from them.
+  const [hierarchyOptions, setHierarchyOptions] = useState(false)
+  const hierarchyCustomers = useContractPickerCustomers(hierarchyOptions)
+  const parentCandidates = useParentContractCandidates(hierarchyOptions)
+  const parentContract = useSubscription(subscription.data?.parentSubscriptionId ?? '')
   const updateParent = useUpdateContractParent(subscriptionId)
   const changeInheritance = useChangeInheritedCustomers(subscriptionId)
   const inheritanceBlocks = useInheritanceBlocks(
     subscription.data?.customerId ?? '',
     (hierarchyCustomers.data?.customers ?? []).map((customer) => customer.id),
+    hierarchyOptions,
   )
   const creditGrants = useSubscriptionCreditGrants(subscriptionId)
   const usage = useSubscriptionUsage(subscriptionId)
@@ -376,22 +381,32 @@ export function SubscriptionDetailPage({
               customers={hierarchyCustomers.data?.customers ?? []}
               parents={parentCandidates.data ?? []}
               blockedCustomerIds={inheritanceBlocks.data}
-              loading={
-                hierarchyCustomers.isPending ||
-                parentCandidates.isPending ||
-                (data.subscriptionType === 'parent' && inheritedContracts.isPending)
-              }
+              loading={data.subscriptionType === 'parent' && inheritedContracts.isPending}
               error={
-                hierarchyCustomers.isError ||
-                parentCandidates.isError ||
-                (data.subscriptionType === 'parent' && inheritedContracts.isError)
+                data.subscriptionType === 'parent' && inheritedContracts.isError
                   ? 'Reload the contract hierarchy and try again.'
                   : null
               }
               onRetry={() => {
+                void inheritedContracts.refetch()
+              }}
+              parentLabel={
+                parentContract.data
+                  ? `${parentContract.data.customerName} · ${parentContract.data.planName}`
+                  : null
+              }
+              onLoadOptions={() => setHierarchyOptions(true)}
+              optionsLoading={
+                hierarchyOptions && (hierarchyCustomers.isPending || parentCandidates.isPending)
+              }
+              optionsError={
+                hierarchyCustomers.isError || parentCandidates.isError
+                  ? 'Reload the customers and contracts to choose from, and try again.'
+                  : null
+              }
+              onRetryOptions={() => {
                 void hierarchyCustomers.refetch()
                 void parentCandidates.refetch()
-                void inheritedContracts.refetch()
               }}
               onParent={(parentId) => updateParent.mutateAsync(parentId)}
               onInherit={(action, externalIds) =>

@@ -89,24 +89,41 @@ export function runsSince(runs: readonly EntitySyncRun[], since: number): Entity
   return runs.filter((run) => (run.startTime?.getTime() ?? 0) >= since - CLOCK_SLACK_MS)
 }
 
-/** Whether a push watched since `since` is over: every run it started finished, or it is too old to wait on. */
-export function syncWatchDone(
-  runs: readonly EntitySyncRun[] | undefined,
-  since: number,
-  now = Date.now(),
-): boolean {
-  const started = runsSince(runs ?? [], since)
-  if (started.length > 0 && started.every((run) => isFinishedWorkflow(run))) return true
-  if (started.length === 0 && now - since > SYNC_FIRST_RUN_MS) return true
-  return now - since > SYNC_WATCH_MAX_MS
+/** A push being followed: when it was sent and the providers it went to (catalogue names). */
+export interface SyncWatch {
+  since: number
+  expected: readonly string[]
 }
 
 /**
- * The latest sync per provider for one invoice or customer. With `watchSince`
- * (the moment a push was sent) it is read every two seconds until every run
- * that push started has finished, or until it stops being worth waiting.
+ * Whether a push is over. Runs appear in the search one by one, so the
+ * visible runs are not the whole push: it is over when every provider it went
+ * to has a finished run. A provider whose run has not appeared a minute in
+ * stops being waited for (a customer push skips a provider it is already
+ * linked to). Past {@link SYNC_WATCH_MAX_MS} it is over regardless.
  */
-export function useEntitySyncRuns(type: SyncedEntityType, id: string, watchSince: number | null) {
+export function syncWatchDone(
+  runs: readonly EntitySyncRun[] | undefined,
+  watch: SyncWatch,
+  now = Date.now(),
+): boolean {
+  const elapsed = now - watch.since
+  if (elapsed > SYNC_WATCH_MAX_MS) return true
+  const started = runsSince(runs ?? [], watch.since)
+  if (!started.every((run) => isFinishedWorkflow(run))) return false
+  const missing = watch.expected.filter(
+    (provider) => !started.some((run) => run.provider === provider),
+  )
+  if (started.length > 0 && missing.length === 0) return true
+  return elapsed > SYNC_FIRST_RUN_MS
+}
+
+/**
+ * The latest sync per provider for one invoice or customer. With a `watch`
+ * (a push just sent) it is read every two seconds until that push is over:
+ * see {@link syncWatchDone}.
+ */
+export function useEntitySyncRuns(type: SyncedEntityType, id: string, watch: SyncWatch | null) {
   const client = useFlexprice()
   return useQuery({
     queryKey: queryKeys.workflowRuns.forEntity(type, id),
@@ -115,9 +132,9 @@ export function useEntitySyncRuns(type: SyncedEntityType, id: string, watchSince
     retry: false,
     throwOnError: false,
     refetchInterval: (query) =>
-      watchSince === null || query.state.status === 'error'
+      watch === null || query.state.status === 'error'
         ? false
-        : syncWatchDone(query.state.data, watchSince)
+        : syncWatchDone(query.state.data, watch)
           ? false
           : SYNC_POLL_MS,
   })

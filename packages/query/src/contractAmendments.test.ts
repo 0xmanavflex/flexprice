@@ -5,6 +5,7 @@ import {
   UpdateSubscriptionLineItemRequest$outboundSchema,
   CreateEntitlementRequest$outboundSchema,
   DeleteCreditGrantRequest$outboundSchema,
+  UpdateSubscriptionRequest$outboundSchema,
 } from '@flexprice/sdk/sdk/models'
 import {
   BillingModel,
@@ -268,4 +269,12 @@ it('sends the selected credit-grant cancellation day rather than now', () => {
   expect(
     DeleteCreditGrantRequest$outboundSchema.parse(toCancelCreditGrantRequest('2027-01-15')),
   ).toEqual({ effective_date: '2027-01-15T00:00:00.000Z' })
+})
+
+// The API reads `parent_subscription_id: ""` as "clear the parent" and an omitted one as
+// "leave it" (dto.UpdateSubscriptionRequest), so No parent must reach the wire as "".
+it('sends an empty parent id to detach the contract from its parent', () => {
+  expect(UpdateSubscriptionRequest$outboundSchema.parse({ parentSubscriptionId: '' })).toEqual({
+    parent_subscription_id: '',
+  })
 })

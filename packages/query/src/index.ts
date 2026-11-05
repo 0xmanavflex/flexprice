@@ -843,7 +843,7 @@ export {
   SYNC_FIRST_RUN_MS,
   SYNC_WATCH_MAX_MS,
 } from './entitySyncRuns'
-export type { SyncedEntityType } from './entitySyncRuns'
+export type { SyncedEntityType, SyncWatch } from './entitySyncRuns'
 
 export {
   collectPickerPages,
