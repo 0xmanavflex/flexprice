@@ -75,7 +75,7 @@ export function PriceUnitDetailPage({
           </Pill>
         </>
       }
-      id={data.code || data.id}
+      id={data.id}
       menuLabel="Price unit actions"
       menu={[
         {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { type Plan, type PlanQuery, RBAC_ENTITY, isPlanQueryFiltered } from '@fp/domain'
-import { useArchivePlan, usePlanLinkage, usePlans } from '@fp/query'
+import { serverReason, useArchivePlan, usePlanLinkage, usePlans } from '@fp/query'
 import { DuplicatePlanDialog } from './DuplicatePlanDialog'
 import { CreateWithAiButton, PlanGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody, useWriteAccess } from '@fp/ui/compositions'
@@ -109,11 +109,15 @@ export function PlanListPage({
           }
         }}
         title={`Archive ${archiving?.name ?? 'this plan'}?`}
-        description="Archiving retires the plan from the catalogue. Existing contracts keep billing; the plan can no longer be added to new ones."
+        description="Archiving is refused while active contracts are on this plan: end or change them first. Once archived, the plan is no longer offered for new contracts."
         confirmLabel="Archive plan"
         destructive
         isPending={archive.isPending}
-        error={archive.isError ? 'Could not archive the plan. Try again.' : null}
+        error={
+          archive.isError
+            ? (serverReason(archive.error) ?? 'Could not archive the plan. Try again.')
+            : null
+        }
         onConfirm={() => {
           if (archiving) archive.mutate(archiving.id, { onSuccess: () => setArchiving(null) })
         }}

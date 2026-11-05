@@ -64,3 +64,19 @@ export const AddsAndRemoves: Story = {
     await expect(canvas.queryByText('resr')).toBeNull()
   },
 }
+
+/** `fixed` values have no remove control and survive Backspace; new ones can still go. */
+export const FixedValuesStay: Story = {
+  args: { value: ['us-east'], fixed: ['us-east'] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const input = canvas.getByRole('textbox', { name: 'Filter values' })
+    await expect(canvas.queryByRole('button', { name: 'Remove us-east' })).toBeNull()
+    await userEvent.type(input, 'eu-west{Enter}')
+    await expect(canvas.getByRole('button', { name: 'Remove eu-west' })).toBeInTheDocument()
+    await userEvent.type(input, '{Backspace}')
+    await expect(canvas.queryByText('eu-west')).toBeNull()
+    await userEvent.type(input, '{Backspace}')
+    await expect(canvas.getByText('us-east')).toBeInTheDocument()
+  },
+}

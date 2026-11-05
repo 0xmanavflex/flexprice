@@ -14,6 +14,7 @@ import {
   PlanKind,
 } from '@fp/domain'
 import {
+  serverReason,
   useArchivePlan,
   useCreditGrants,
   useEntitlements,
@@ -312,11 +313,15 @@ export function PlanDetailPage({
         open={archiving}
         onOpenChange={setArchiving}
         title="Archive this plan?"
-        description="Archiving retires the plan from the catalogue. Existing contracts keep billing; the plan can no longer be added to new ones."
+        description="Archiving is refused while active contracts are on this plan: end or change them first. Once archived, the plan is no longer offered for new contracts."
         confirmLabel="Archive plan"
         destructive
         isPending={archive.isPending}
-        error={archive.isError ? 'Could not archive the plan. Try again.' : null}
+        error={
+          archive.isError
+            ? (serverReason(archive.error) ?? 'Could not archive the plan. Try again.')
+            : null
+        }
         onConfirm={() =>
           archive.mutate(planId, {
             onSuccess: () => {

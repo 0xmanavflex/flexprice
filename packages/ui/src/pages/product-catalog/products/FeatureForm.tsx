@@ -248,6 +248,7 @@ function fromFeature(feature: Feature): FormValues {
       field: feature.aggregationField ?? '',
       expression: feature.aggregationExpression ?? '',
       groupBy: feature.aggregationGroupBy ?? '',
+      multiplier: feature.aggregationMultiplier ?? '',
     },
     filters: (feature.meterFilters ?? []).map((f) => ({
       key: f.key,
@@ -348,6 +349,9 @@ export function FeatureForm(props: FeatureFormProps) {
   } = props
   const feature = props.mode === 'edit' ? props.feature : undefined
   const isEdit = mode === 'edit'
+  // The filters the meter already has. The update merges into them, so on edit
+  // these rows and values can be added to but not removed.
+  const savedFilters = feature?.meterFilters ?? []
 
   const [useExpression, setUseExpression] = useState(
     Boolean(feature?.aggregationExpression?.trim()),
@@ -360,17 +364,27 @@ export function FeatureForm(props: FeatureFormProps) {
     const result = await schemaResolver(candidate, context, options)
     // The schema only asks for an expression; a plainly unfinished one is
     // caught here, before the API's CEL parse.
-    const problem =
-      useExpression && allowsExpression(values.meter.aggregationType)
+    const expressionInput = useExpression && allowsExpression(values.meter.aggregationType)
+    // A blank expression fails the schema's "field or expression" check, which
+    // lands on `meter.field`: a row hidden while the expression input shows. So
+    // the error moves to the Expression row the person is looking at.
+    const blank = expressionInput && !values.meter.expression.trim()
+    const problem = blank
+      ? 'Enter an expression'
+      : expressionInput
         ? expressionProblem(values.meter.expression)
         : null
     if (!problem || get(result.errors, 'meter.expression')) return result
     const errors = result.errors as Record<string, Record<string, unknown> | undefined>
+    const { field: _hidden, ...meterErrors } = errors['meter'] ?? {}
     return {
       values: {},
       errors: {
         ...errors,
-        meter: { ...errors['meter'], expression: { type: 'syntax', message: problem } },
+        meter: {
+          ...(blank ? meterErrors : errors['meter']),
+          expression: { type: blank ? 'required' : 'syntax', message: problem },
+        },
       },
     } as unknown as Awaited<ReturnType<Resolver<FormValues>>>
   }
@@ -601,54 +615,74 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
       <FormRow
         label="Event filters"
-        hint="Only events whose property matches one of the values are counted."
+        hint={
+          isEdit && savedFilters.length > 0
+            ? 'Only events whose property matches one of the values are counted. Saved values can’t be removed; new values are added to them.'
+            : 'Only events whose property matches one of the values are counted.'
+        }
         align="start"
       >
         <div className="flex flex-col gap-3">
-          {filters.fields.map((row, index) => (
-            <div key={row.id} className="grid items-start gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
-              <Field
-                label={`Filter ${index + 1} property`}
-                error={message(`${filterPath}.${index}.key`)}
-              >
-                {({ id, ...field }) => (
-                  <Input id={id} {...field} {...form.register(`filters.${index}.key`)} />
+          {filters.fields.map((row, index) => {
+            // The update merges filters into the meter's: a saved value or
+            // filter cannot be taken away, so the editor does not offer it.
+            const saved = isEdit ? savedFilters[index] : undefined
+            return (
+              <div key={row.id} className="grid items-start gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
+                <Field
+                  label={`Filter ${index + 1} property`}
+                  error={message(`${filterPath}.${index}.key`)}
+                >
+                  {({ id, ...field }) => (
+                    <Input
+                      id={id}
+                      {...field}
+                      readOnly={Boolean(saved)}
+                      {...form.register(`filters.${index}.key`)}
+                    />
+                  )}
+                </Field>
+                <Field
+                  label={`Filter ${index + 1} values`}
+                  hint="Press Enter after each value."
+                  error={message(`${filterPath}.${index}.values`)}
+                >
+                  {({ id, ...field }) => (
+                    // Held as comma-joined text, as before: only the field changed.
+                    <Controller
+                      control={form.control}
+                      name={`filters.${index}.valuesText`}
+                      render={({ field: values }) => (
+                        <ValuesInput
+                          id={id}
+                          {...field}
+                          value={splitValues(values.value)}
+                          {...(saved ? { fixed: saved.values } : {})}
+                          onChange={(next) => values.onChange(next.join(', '))}
+                          onBlur={values.onBlur}
+                        />
+                      )}
+                    />
+                  )}
+                </Field>
+                {saved ? (
+                  // Keeps the row's columns in line with a removable one.
+                  <div aria-hidden className="hidden w-8 sm:block" />
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="mt-6"
+                    aria-label={`Remove filter ${index + 1}`}
+                    onClick={() => filters.remove(index)}
+                  >
+                    <Trash2Icon aria-hidden className="size-4" />
+                  </Button>
                 )}
-              </Field>
-              <Field
-                label={`Filter ${index + 1} values`}
-                hint="Press Enter after each value."
-                error={message(`${filterPath}.${index}.values`)}
-              >
-                {({ id, ...field }) => (
-                  // Held as comma-joined text, as before: only the field changed.
-                  <Controller
-                    control={form.control}
-                    name={`filters.${index}.valuesText`}
-                    render={({ field: values }) => (
-                      <ValuesInput
-                        id={id}
-                        {...field}
-                        value={splitValues(values.value)}
-                        onChange={(next) => values.onChange(next.join(', '))}
-                        onBlur={values.onBlur}
-                      />
-                    )}
-                  />
-                )}
-              </Field>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="mt-6"
-                aria-label={`Remove filter ${index + 1}`}
-                onClick={() => filters.remove(index)}
-              >
-                <Trash2Icon aria-hidden className="size-4" />
-              </Button>
-            </div>
-          ))}
+              </div>
+            )
+          })}
           <Button
             type="button"
             variant="outline"

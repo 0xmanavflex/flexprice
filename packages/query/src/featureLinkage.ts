@@ -156,7 +156,16 @@ export function useFeatureLinkage(features: readonly LinkedFeature[]): {
   // to attribute someone else's entitlement or price to a row on screen.
   const wanted = useMemo(() => new Set(ids), [ids])
   const rows = useMemo(
-    () => (entitlements.data ?? []).filter((row) => row.featureId && wanted.has(row.featureId)),
+    () =>
+      // The PLAN-scoped search also returns subscription and add-on rows; their
+      // ids are not plans and must not feed plan names, counts or the total.
+      (entitlements.data ?? []).filter(
+        (row) =>
+          row.featureId &&
+          wanted.has(row.featureId) &&
+          (row.entityType ?? 'PLAN') === 'PLAN' &&
+          Boolean(row.entityId),
+      ),
     [entitlements.data, wanted],
   )
   const wantedMeters = useMemo(() => new Set(meterIds), [meterIds])

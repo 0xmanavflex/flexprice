@@ -73,6 +73,8 @@ export interface FeatureWire {
               field?: string | undefined
               expression?: string | undefined
               groupBy?: string | undefined
+              /** SUM_WITH_MULTIPLIER's factor; the SDK reads it as a decimal string. */
+              multiplier?: string | number | undefined
               /** The meter's own usage window, when it is bucketed at the meter level. */
               bucketSize?: string | undefined
             }
@@ -133,6 +135,10 @@ export function toFeature(wire: FeatureWire): Feature {
       ? wire.meter.aggregation.expression
       : null,
     aggregationGroupBy: wire.meter?.aggregation?.groupBy ? wire.meter.aggregation.groupBy : null,
+    aggregationMultiplier:
+      wire.meter?.aggregation?.multiplier !== undefined && wire.meter.aggregation.multiplier !== ''
+        ? String(wire.meter.aggregation.multiplier)
+        : null,
     metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,

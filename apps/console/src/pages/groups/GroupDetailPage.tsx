@@ -55,7 +55,7 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
           </Pill>
         </>
       }
-      id={data.lookupKey || data.id}
+      id={data.id}
       menuLabel="Tag actions"
       // No edit item: the SDK has no group update, so the record is read-only.
       menu={[
