@@ -671,24 +671,37 @@ interface SettingCodec<T> {
   key: SettingKey
   read: (value: unknown) => T
   write: (config: T) => Record<string, unknown>
+  /**
+   * The backend's default for this key, as it sends it on the wire
+   * (`GetDefaultSettings` in the API). What a reset lands on, read through
+   * `read`. Absent where the default is too large to mirror (the portal's
+   * layout tree): that reset reads the default back from the server instead.
+   */
+  defaults?: unknown
 }
 
 const invoiceCodec: SettingCodec<InvoiceConfig> = {
   key: SettingKey.InvoiceConfig,
   read: toInvoiceConfig,
   write: toInvoiceConfigRequest,
+  // Every field missing reads as its default, which is the API's.
+  defaults: {},
 }
 
 const subscriptionCodec: SettingCodec<SubscriptionConfig> = {
   key: SettingKey.SubscriptionConfig,
   read: toSubscriptionConfig,
   write: toSubscriptionConfigRequest,
+  // Every field missing reads as its default, which is the API's.
+  defaults: {},
 }
 
 const currencyCodec: SettingCodec<CustomCurrencyConfig> = {
   key: SettingKey.CustomCurrencyConfig,
   read: toCustomCurrencyConfig,
   write: toCustomCurrencyConfigRequest,
+  // Every field missing reads as its default, which is the API's.
+  defaults: {},
 }
 
 const portalCodec: SettingCodec<CustomerPortalConfig> = {
@@ -701,24 +714,32 @@ const onboardingCodec: SettingCodec<CustomerOnboarding> = {
   key: SettingKey.CustomerOnboarding,
   read: toCustomerOnboarding,
   write: toCustomerOnboardingRequest,
+  // Every field missing reads as its default, which is the API's.
+  defaults: {},
 }
 
 const taxCodec: SettingCodec<TaxConfig> = {
   key: SettingKey.TaxConfig,
   read: toTaxConfig,
   write: toTaxConfigRequest,
+  // Every field missing reads as its default, which is the API's.
+  defaults: {},
 }
 
 const walletAlertCodec: SettingCodec<WalletAlertConfig> = {
   key: SettingKey.WalletBalanceAlertConfig,
   read: toWalletAlertConfig,
   write: toWalletAlertConfigRequest,
+  // The API's default carries a critical threshold at zero, which `{}` would not.
+  defaults: { alert_enabled: false, critical: { condition: 'below', threshold: '0' } },
 }
 
 const bonusCreditsCodec: SettingCodec<BonusCreditsConfig> = {
   key: SettingKey.BonusCreditsTopupConfig,
   read: toBonusCreditsConfig,
   write: toBonusCreditsConfigRequest,
+  // Every field missing reads as its default, which is the API's.
+  defaults: {},
 }
 
 /** A settings hook's guard: no environment, no request. */
@@ -808,15 +829,21 @@ function useSettingUpdate<T>(
 /**
  * Puts a setting back to the backend's defaults.
  *
- * Delete, then read. Deleting removes the stored row; the read is what says
- * what the defaults now are: asking the server beats keeping a copy of its
- * defaults here, which would be a second source of truth that drifts the first
- * time a default changes.
+ * Delete, then take the codec's copy of the backend default as the result. Not
+ * a read straight after: like a GET after a PUT (see `useSettingUpdate`), a GET
+ * right after the DELETE can be answered by a replica that still holds the
+ * deleted row. Verified live: a reset answered 200, the GET that followed still
+ * returned the old `true / 7`, and the form went on showing it under "Back to
+ * the defaults". A successful delete is the fact; what it lands on is the
+ * default, so that is what the form and the cache get. The entry is then
+ * marked stale without refetching, so the next real load reads the server.
+ *
+ * Only a codec without `defaults` (the portal, whose default layout is the
+ * server's to define) still reads the default back.
  *
  * A 404 from the delete is success. It means there was no stored row to
- * remove, so this environment was already on the defaults, and the read that
- * follows returns exactly what the caller asked for. Every other failure is
- * reported.
+ * remove, so this environment was already on the defaults. Every other failure
+ * is reported.
  */
 function useSettingReset<T>(
   codec: SettingCodec<T>,
@@ -840,6 +867,7 @@ function useSettingReset<T>(
         if (!(error instanceof ApiError) || error.kind !== ErrorKind.NotFound) throw error
       }
 
+      if (codec.defaults !== undefined) return codec.read(codec.defaults)
       return codec.read(await getSetting(serverURL, token, environmentId as string, codec.key))
     },
     onSuccess: (defaults) => {

@@ -24,10 +24,13 @@ test('the transaction history loads a page at a time, and Load more reaches past
   page,
 }) => {
   const offsets: (string | null)[] = []
+  const starts: (string | null)[] = []
   page.on('request', (request) => {
     const url = new URL(request.url())
-    if (url.pathname.endsWith('/transactions') && url.searchParams.get('limit') === '10')
+    if (url.pathname.endsWith('/transactions') && url.searchParams.get('limit') === '10') {
       offsets.push(url.searchParams.get('offset'))
+      starts.push(url.searchParams.get('start_time'))
+    }
   })
   await page.goto('/p/credits?token=mock_portal_token')
   await page.getByRole('tab', { name: 'All transactions' }).click()
@@ -48,4 +51,6 @@ test('the transaction history loads a page at a time, and Load more reaches past
 
   // Each Load more asks for the next page by offset, not the list again from the top.
   expect(offsets).toEqual(['0', '10'])
+  // "Every credit added to and used": the whole history, not cut off at the billing period.
+  expect(starts).toEqual([null, null])
 })

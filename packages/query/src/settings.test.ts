@@ -3,6 +3,8 @@ import type * as ReactQuery from '@tanstack/react-query'
 import {
   AlertCondition,
   AlertThresholdType,
+  defaultInvoiceConfig,
+  defaultSubscriptionConfig,
   OnboardingAction,
   OnboardingWalletType,
 } from '@fp/domain'
@@ -94,7 +96,11 @@ import {
   toWalletAlertConfigRequest,
   useCustomerPortalConfig,
   useInvoiceConfig,
+  useResetCustomerOnboarding,
+  useResetCustomerPortalConfig,
   useResetInvoiceConfig,
+  useResetSubscriptionConfig,
+  useResetWalletAlertConfig,
   useSamlConfig,
   useUpdateInvoiceConfig,
   useWebhookDashboard,
@@ -622,15 +628,15 @@ describe('useUpdateInvoiceConfig', () => {
 })
 
 describe('useResetInvoiceConfig', () => {
-  it('deletes the stored row, then reads back what the server now says', async () => {
-    const seen = stubFetch(() => new Response(null, { status: 204 }), value({ prefix: 'INV' }))
+  it('deletes the stored row and lands on the defaults, without reading back', async () => {
+    const seen = stubFetch(() => new Response(null, { status: 204 }))
     useResetInvoiceConfig(ENV)
 
-    await expect(lastMutation().mutationFn(undefined as never)).resolves.toMatchObject({
-      prefix: 'INV',
-    })
+    await expect(lastMutation().mutationFn(undefined as never)).resolves.toEqual(
+      defaultInvoiceConfig(),
+    )
 
-    expect(seen.map((request) => request.method)).toEqual(['DELETE', 'GET'])
+    expect(seen.map((request) => request.method)).toEqual(['DELETE'])
   })
 
   /**
@@ -638,13 +644,13 @@ describe('useResetInvoiceConfig', () => {
    * already on the defaults, which is exactly what the caller asked for.
    */
   it('treats a 404 from the delete as success', async () => {
-    const seen = stubFetch(failure(404, 'setting not found'), value({ prefix: 'INV' }))
+    const seen = stubFetch(failure(404, 'setting not found'))
     useResetInvoiceConfig(ENV)
 
-    await expect(lastMutation().mutationFn(undefined as never)).resolves.toMatchObject({
-      prefix: 'INV',
-    })
-    expect(seen).toHaveLength(2)
+    await expect(lastMutation().mutationFn(undefined as never)).resolves.toEqual(
+      defaultInvoiceConfig(),
+    )
+    expect(seen).toHaveLength(1)
   })
 
   it('does not swallow a delete that failed for any other reason', async () => {
@@ -654,6 +660,78 @@ describe('useResetInvoiceConfig', () => {
     await expect(lastMutation().mutationFn(undefined as never)).rejects.toMatchObject({
       kind: 'server',
     })
+  })
+})
+
+/**
+ * A GET straight after the DELETE can still return the deleted row (seen live:
+ * a reset answered 200, then the next GET said `true / 7`). So a successful
+ * delete puts the defaults in the cache and the form, whatever a read would say,
+ * and leaves the entry stale for the next real load.
+ */
+describe('reset after a stale read', () => {
+  const stale = () => value({ auto_cancellation_enabled: true, grace_period_days: 7 })
+
+  it('caches the subscription defaults, not the old row a read would return', async () => {
+    stubFetch(() => new Response(null, { status: 204 }), stale())
+    useResetSubscriptionConfig(ENV)
+    const mutation = lastMutation()
+
+    const result = await mutation.mutationFn(undefined as never)
+    mutation.onSuccess?.(result)
+
+    const key = queryKeys.settings.detail(ENV, 'subscription_config')
+    expect(result).toEqual(defaultSubscriptionConfig())
+    expect(recorded.cached).toEqual([
+      { key, value: { autoCancellationEnabled: false, gracePeriodDays: 3 } },
+    ])
+    expect(recorded.invalidated).toEqual([{ key, refetchType: 'none' }])
+  })
+
+  it('caches no onboarding steps, though a read would still return the old one', async () => {
+    const seen = stubFetch(
+      () => new Response(null, { status: 204 }),
+      value({ workflow_type: 'customer_onboarding', actions: [{ action: 'create_wallet' }] }),
+    )
+    useResetCustomerOnboarding(ENV)
+    const mutation = lastMutation()
+
+    const result = await mutation.mutationFn(undefined as never)
+    mutation.onSuccess?.(result)
+
+    expect(seen.map((request) => request.method)).toEqual(['DELETE'])
+    expect(recorded.cached).toEqual([
+      {
+        key: queryKeys.settings.detail(ENV, 'customer_onboarding'),
+        value: { workflowType: 'customer_onboarding', actions: [] },
+      },
+    ])
+  })
+
+  it('lands wallet alerts on the API default, with its critical threshold at zero', async () => {
+    stubFetch(() => new Response(null, { status: 204 }))
+    useResetWalletAlertConfig(ENV)
+
+    await expect(lastMutation().mutationFn(undefined as never)).resolves.toEqual({
+      alertEnabled: false,
+      thresholdType: 'absolute',
+      info: null,
+      warning: null,
+      critical: { condition: 'below', threshold: '0' },
+    })
+  })
+
+  it('still reads the portal default back: its layout is the server’s to define', async () => {
+    const seen = stubFetch(
+      () => new Response(null, { status: 204 }),
+      value({ version: '1.0', sections: [{ id: 'usage', label: 'Usage', tabs: [] }] }),
+    )
+    useResetCustomerPortalConfig(ENV)
+
+    await expect(lastMutation().mutationFn(undefined as never)).resolves.toMatchObject({
+      sections: [{ id: 'usage' }],
+    })
+    expect(seen.map((request) => request.method)).toEqual(['DELETE', 'GET'])
   })
 })
 

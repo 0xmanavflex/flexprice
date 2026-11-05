@@ -142,10 +142,18 @@ export type PortalSection = z.infer<typeof portalSectionSchema>
  * background, a surface, a border, a logo and a font, none of which the server
  * has ever stored. Empty strings are the norm; the live default is `{}`.
  */
+/** A theme colour: blank, or a hex code (`#rgb` or `#rrggbb`, either case). */
+export const PORTAL_THEME_COLOR = /^(#[0-9a-f]{3}|#[0-9a-f]{6})?$/i
+
+/** The server stores any string; the portal can only paint a hex code, so the form allows only that. */
+const portalThemeColorSchema = z
+  .string()
+  .regex(PORTAL_THEME_COLOR, 'Enter a hex code such as #0f172a, or leave it blank.')
+
 export const portalThemeSchema = z.object({
-  primaryColor: z.string(),
-  secondaryColor: z.string(),
-  tertiaryColor: z.string(),
+  primaryColor: portalThemeColorSchema,
+  secondaryColor: portalThemeColorSchema,
+  tertiaryColor: portalThemeColorSchema,
 })
 export type PortalTheme = z.infer<typeof portalThemeSchema>
 

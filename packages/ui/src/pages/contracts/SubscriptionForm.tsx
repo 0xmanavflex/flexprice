@@ -3451,7 +3451,8 @@ function AddonsSection({
 }
 
 /**
- * The contract-wide commitment, across every charge. A commitment on one
+ * The contract-wide commitment, across the contract's usage charges (fixed
+ * fees are billed on top and do not count toward it). A commitment on one
  * charge is set from that charge's menu, on the phases step. Period, overage,
  * and true-up stay visible so they can be found before an amount is entered.
  */
@@ -3478,7 +3479,7 @@ function CommitmentsSection({
       title="Contract commitment"
       status="optional"
       icon={<ScaleIcon aria-hidden className="text-primary dark:text-foreground size-4 shrink-0" />}
-      description="Applies to the whole contract, across every charge. Leave the amount empty for none. A commitment on a single charge is set on that charge, in the previous step."
+      description="Applies to the whole contract, across its usage charges; fixed fees are billed on top and don't count toward it. Leave the amount empty for none. A commitment on a single charge is set on that charge, in the previous step."
     >
       <FormRow
         label="Commitment amount"

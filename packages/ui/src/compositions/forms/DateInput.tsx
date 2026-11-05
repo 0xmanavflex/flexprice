@@ -220,6 +220,12 @@ export function zonedParts(date: Date, zone: DateZone) {
  * The instant a clock in `zone` reads as `year-month-day h:m` (month 0-based).
  * For an IANA zone the offset is read at a guess and once more at the result,
  * so a time either side of a daylight-saving change lands on the right hour.
+ *
+ * A wall time the clock shows twice (the hour repeated when daylight saving
+ * ends) resolves to its first occurrence, unless `near` is given: then the
+ * occurrence with `near`'s UTC offset wins when there is one. Editing the
+ * minutes of the second 01:30 in New York keeps it the second, rather than
+ * jumping back an hour.
  */
 export function zonedInstant(
   zone: DateZone,
@@ -228,16 +234,23 @@ export function zonedInstant(
   day: number,
   hour: number,
   minute: number,
+  near?: Date,
 ): Date {
   if (zone === 'utc') return new Date(Date.UTC(year, month, day, hour, minute))
-  if (!isNamedZone(zone)) return new Date(year, month, day, hour, minute)
   const wall = Date.UTC(year, month, day, hour, minute)
+  /** How far the clock in `zone` runs ahead of UTC at `instant`, in ms. */
   const offsetAt = (instant: number) => {
     const p = zonedParts(new Date(instant), zone)
     return (
       Date.UTC(p.year, p.month, p.day, p.hour, p.minute) - Math.floor(instant / 60_000) * 60_000
     )
   }
+  if (near && !Number.isNaN(near.getTime())) {
+    const same = wall - offsetAt(near.getTime())
+    // Only when the clock really reads the wall time at that offset.
+    if (offsetAt(same) === wall - same) return new Date(same)
+  }
+  if (!isNamedZone(zone)) return new Date(year, month, day, hour, minute)
   const first = wall - offsetAt(wall)
   return new Date(wall - offsetAt(first))
 }
@@ -347,9 +360,12 @@ export function DateInput({
   const hours = clock?.hour ?? 0
   const minutes = clock?.minute ?? 0
 
-  /** `day`'s calendar date at `h:m` in the chosen zone. */
-  const at = (day: Date, h: number, m: number) =>
-    zonedInstant(zone, day.getFullYear(), day.getMonth(), day.getDate(), h, m).toISOString()
+  /**
+   * `day`'s calendar date at `h:m` in the chosen zone. With `near`, a repeated
+   * wall time keeps `near`'s offset (see `zonedInstant`).
+   */
+  const at = (day: Date, h: number, m: number, near?: Date) =>
+    zonedInstant(zone, day.getFullYear(), day.getMonth(), day.getDate(), h, m, near).toISOString()
   /** The day the calendar shows as selected: the instant's date in the chosen zone. */
   const calendarDay = clock ? new Date(clock.year, clock.month, clock.day) : undefined
 
@@ -358,8 +374,9 @@ export function DateInput({
     onValueChange(withTime ? at(date, hours, minutes) : toDay(date))
   }
   // A date-only field stores a day, never an instant: its time does nothing.
+  // Editing the time of a chosen instant keeps its occurrence of a repeated hour.
   const setTime = (h: number, m: number) => {
-    if (calendarDay && withTime) onValueChange(at(calendarDay, h, m))
+    if (calendarDay && withTime) onValueChange(at(calendarDay, h, m, selected))
   }
 
   const month = calendarDay ?? minDate
