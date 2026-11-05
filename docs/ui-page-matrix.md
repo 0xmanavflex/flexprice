@@ -87,4 +87,4 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | webhooks | `WebhookEndpointCreatePage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | WebhookEndpointForm |
 | webhooks | `WebhookEndpointDetailPage` | Detail | ConfirmDialog, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormCard, FormDialog, Section, SortMenu | ErrorState, PageLoadingState, WebhookAttemptList, WebhookEndpointDetail |
 | webhooks | `WebhooksPage` | Other | ConfirmDialog, EmptyState, EntityList, FilterBar, ResourceNavigation, Section, SortMenu | PageBody, WebhookActivity, WebhookEndpointGrid, WebhookEventCatalog, WebhookMessageLog |
-| workflows | `WorkflowListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | ListState, PageBody, WorkflowGrid |
+| workflows | `WorkflowListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SimpleTable, SortMenu | ListState, PageBody, WorkflowGrid, WorkflowRunSheet |

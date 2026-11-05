@@ -608,6 +608,8 @@ export {
 } from './workflowRuns'
 export type { WorkflowHandle } from './workflowRuns'
 export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
+export { toWorkflowActivity, toWorkflowRunDetail, useWorkflowRunDetail } from './workflowRunDetail'
+export type { WorkflowActivityWire, WorkflowRunDetailWire } from './workflowRunDetail'
 export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
 export type { UsageSyncPage, UsageSyncWire, UsageSyncEntryWire } from './usageSyncs'
 export {

@@ -209,6 +209,8 @@ export const queryKeys = {
   workflowRuns: {
     all: () => ['workflowRuns'] as const,
     list: (filter: Record<string, unknown>) => ['workflowRuns', 'list', filter] as const,
+    detail: (workflowId: string, runId: string) =>
+      ['workflowRuns', 'detail', workflowId, runId] as const,
   },
   rawEvents: {
     all: () => ['rawEvents'] as const,

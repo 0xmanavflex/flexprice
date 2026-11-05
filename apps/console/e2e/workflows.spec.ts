@@ -30,6 +30,20 @@ test.describe('workflows', () => {
     await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible()
   })
 
+  test('opens a failed run and shows why it failed', async ({ page }) => {
+    const runs = list(page)
+    // wf-0002 is the corpus's first failed run.
+    await page.goto('/workflows?search=wf-0002')
+    await expect(runs.rows()).toHaveCount(1)
+    await expect(runs.rows().first()).toContainText('Failed')
+
+    await runs.rows().first().click()
+    const sheet = page.getByRole('dialog')
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByText('RecalculateInvoiceActivity')).toBeVisible()
+    await expect(sheet.getByRole('alert')).toContainText('recalculation produced no invoice')
+  })
+
   test('puts the search in the URL and survives a reload', async ({ page }) => {
     const runs = list(page)
     await page.goto('/workflows')

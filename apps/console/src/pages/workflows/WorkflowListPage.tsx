@@ -1,6 +1,7 @@
-import { type WorkflowQuery } from '@fp/domain'
-import { useWorkflowRuns } from '@fp/query'
-import { WorkflowGrid } from '@fp/ui/pages'
+import { useState } from 'react'
+import { type WorkflowQuery, type WorkflowRun } from '@fp/domain'
+import { useWorkflowRunDetail, useWorkflowRuns } from '@fp/query'
+import { WorkflowGrid, WorkflowRunSheet } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { toListFailure } from '../shared/listFailure'
 
@@ -9,10 +10,19 @@ export interface WorkflowListPageProps {
   onQueryChange: (query: WorkflowQuery) => void
 }
 
-/** The wiring layer: fetch, turn an error into a sentence, hand the grid plain props. */
+/**
+ * The wiring layer: fetch, turn an error into a sentence, hand the grid plain
+ * props. The query lives in the URL; the opened run is ephemeral, and its
+ * details are read only while its sheet is open.
+ */
 export function WorkflowListPage({ query, onQueryChange }: WorkflowListPageProps) {
   const workflows = useWorkflowRuns(query)
   const failure = toListFailure(workflows.error, 'workflows')
+  const [selected, setSelected] = useState<WorkflowRun | null>(null)
+  const detail = useWorkflowRunDetail(
+    selected ? { workflowId: selected.workflowId, runId: selected.id } : null,
+  )
+  const detailFailure = toListFailure(detail.error, 'this workflow run')
 
   const rows = workflows.data?.runs ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -42,8 +52,18 @@ export function WorkflowListPage({ query, onQueryChange }: WorkflowListPageProps
           onQueryChange={onQueryChange}
           onRefresh={() => void workflows.refetch()}
           onClearFilters={clearFilters}
+          onRunClick={setSelected}
         />
       </ListState>
+      <WorkflowRunSheet
+        run={selected}
+        detail={detail.data ?? null}
+        isLoading={detail.isPending}
+        error={detailFailure?.message ?? null}
+        retrying={detail.isFetching && detail.isError}
+        {...(detailFailure?.canRetry ? { onRetry: () => void detail.refetch() } : {})}
+        onClose={() => setSelected(null)}
+      />
     </PageBody>
   )
 }

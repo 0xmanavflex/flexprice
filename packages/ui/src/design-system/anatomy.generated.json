@@ -2816,7 +2816,8 @@
         "S3ConnectionList",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
-        "WebhookMessageSheet"
+        "WebhookMessageSheet",
+        "WorkflowRunSheet"
       ],
       "story": "./src/compositions/tables/DetailList.stories.tsx"
     },
@@ -3118,7 +3119,8 @@
         "PlanGrid",
         "WebhookMessageSheet",
         "WebhookStatusPill",
-        "WebhookTime"
+        "WebhookTime",
+        "WorkflowRunSheet"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -3657,7 +3659,8 @@
         "SubscriptionCard",
         "SyncOptions",
         "WebhookEndpointDetail",
-        "WebhookGuide"
+        "WebhookGuide",
+        "WorkflowGrid"
       ],
       "story": null
     },
@@ -6186,7 +6189,8 @@
         "WebhookEndpointDetail",
         "WebhookEventCatalog",
         "WebhookStatusPill",
-        "WebhookTime"
+        "WebhookTime",
+        "WorkflowRunSheet"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -7487,7 +7491,8 @@
         "ManageConnectionSheet",
         "PortalInvoiceSheet",
         "UsageSyncDetailSheet",
-        "WebhookMessageSheet"
+        "WebhookMessageSheet",
+        "WorkflowRunSheet"
       ],
       "story": null
     },
@@ -7714,7 +7719,8 @@
         "SubscriptionForm",
         "SubscriptionRevenue",
         "TierTable",
-        "UsageBillingView"
+        "UsageBillingView",
+        "WorkflowRunSheet"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -9003,10 +9009,24 @@
       "composes": [
         "BookOpenIcon",
         "CopyIcon",
-        "EntityList"
+        "EntityList",
+        "EyeIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/developers/workflows/WorkflowGrid.stories.tsx"
+    },
+    "WorkflowRunSheet": {
+      "file": "src/pages/developers/workflows/WorkflowRunSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailList",
+        "EmDash",
+        "Pill",
+        "Sheet",
+        "SimpleTable"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/developers/workflows/WorkflowRunSheet.stories.tsx"
     },
     "WorkflowStepper": {
       "file": "src/compositions/forms/WorkflowStepper.tsx",
@@ -10220,6 +10240,13 @@
       "component": "WorkflowGrid",
       "uses": [
         "WorkflowGrid"
+      ]
+    },
+    "./src/pages/developers/workflows/WorkflowRunSheet.stories.tsx": {
+      "title": "App/Developers/Workflows/Workflow run sheet",
+      "component": "WorkflowRunSheet",
+      "uses": [
+        "WorkflowRunSheet"
       ]
     },
     "./src/pages/home/DashboardHome.stories.tsx": {
@@ -11841,7 +11868,8 @@
       "uses": [
         "ListState",
         "PageBody",
-        "WorkflowGrid"
+        "WorkflowGrid",
+        "WorkflowRunSheet"
       ]
     }
   }
