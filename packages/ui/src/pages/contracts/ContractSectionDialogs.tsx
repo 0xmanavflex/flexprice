@@ -1,9 +1,13 @@
 import { useState } from 'react'
-import { AddonChargesDialog, type AddonPricing } from './SubscriptionForm'
+import { ADDON_TIMING_OPTIONS, AddonChargesDialog, type AddonPricing } from './SubscriptionForm'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
+import { Switch } from '@ui/components/primitives/switch'
 import type { MeterOption } from '../product-catalog/charges/ChargeForm'
 import {
   emptyTaxAssociation,
   type AddContractAddon,
+  type RemoveContractAddon,
+  type AddonChangeAt,
   type AddContractCoupon,
   type Charge,
   type CreateCreditGrant,
@@ -57,6 +61,11 @@ export interface ContractSectionOptions {
   /** The contract's billing period: only prices that attach get a commitment. */
   billingPeriod?: string | undefined
   coupons: { code: string; name: string }[]
+  /**
+   * The charges a contract-level coupon may be scoped to instead (V1's "Apply
+   * to"). Absent when the dialog was opened from a charge, which is its scope.
+   */
+  couponLines?: { id: string; name: string }[] | undefined
   taxRates: TaxRateOption[]
   /** The days a new credit grant opens on: today, and the current period's end when known. */
   grantStartDates?: { oneTime: string; recurring: string | null } | undefined
@@ -67,7 +76,8 @@ export interface ContractSectionActions {
   onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
   /** One or more add-ons, attached together as one change. */
   onAddAddon?:
-    ((drafts: AddContractAddon[], removals?: string[]) => Promise<unknown> | void) | undefined
+    | ((drafts: AddContractAddon[], removals?: RemoveContractAddon[]) => Promise<unknown> | void)
+    | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
   onCreateTaxRate?: ((draft: CreateTaxRate) => Promise<TaxRateOption>) | undefined
@@ -155,10 +165,15 @@ export function ContractSectionDialogs({
         submitLabel={couponCopy?.submitLabel ?? 'Add coupon'}
         emptyNote="No coupons are available to apply."
         options={options.coupons.map((c) => ({ value: c.code, label: c.name }))}
+        {...(options.couponLines?.length ? { scopes: options.couponLines } : {})}
         pending={pending}
         error={error}
         onClose={onClose}
-        onSubmit={(couponCode, dates) => onRun(actions.onAddCoupon?.({ couponCode, ...dates }))}
+        onSubmit={(couponCode, dates, lineItemId) =>
+          onRun(
+            actions.onAddCoupon?.({ couponCode, ...dates, ...(lineItemId ? { lineItemId } : {}) }),
+          )
+        }
       />
 
       <TaxDialog
@@ -185,6 +200,7 @@ function PickDialog({
   submitLabel,
   emptyNote,
   options,
+  scopes,
   pending,
   error,
   onClose,
@@ -197,12 +213,19 @@ function PickDialog({
   submitLabel: string
   emptyNote: string
   options: { value: string; label: string }[]
+  /** Charges the pick may apply to instead of the whole contract; none hides the choice. */
+  scopes?: { id: string; name: string }[]
   pending: boolean
   error: string | null
   onClose: () => void
-  onSubmit: (value: string, dates: { startDate?: string; endDate?: string }) => void
+  onSubmit: (
+    value: string,
+    dates: { startDate?: string; endDate?: string },
+    lineItemId?: string,
+  ) => void
 }) {
   const [value, setValue] = useState('')
+  const [scope, setScope] = useState(WHOLE_CONTRACT)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
@@ -226,7 +249,11 @@ function PickDialog({
           setProblem(null)
           if (endDate && startDate && endDate <= startDate)
             return setProblem('End date must be after start date')
-          onSubmit(value, { ...(startDate ? { startDate } : {}), ...(endDate ? { endDate } : {}) })
+          onSubmit(
+            value,
+            { ...(startDate ? { startDate } : {}), ...(endDate ? { endDate } : {}) },
+            scope === WHOLE_CONTRACT ? undefined : scope,
+          )
         }}
       >
         <div className="flex flex-col gap-2">
@@ -245,6 +272,22 @@ function PickDialog({
             <p className="text-muted-foreground text-[13px]">{emptyNote}</p>
           ) : null}
         </div>
+        {scopes ? (
+          <Field label="Apply to" hint="The whole contract, or one of its charges.">
+            {({ id }) => (
+              <OptionCombobox
+                searchable
+                id={id}
+                value={scope}
+                onValueChange={(next) => setScope(next || WHOLE_CONTRACT)}
+                options={[
+                  { value: WHOLE_CONTRACT, label: 'Whole contract' },
+                  ...scopes.map((line) => ({ value: line.id, label: line.name })),
+                ]}
+              />
+            )}
+          </Field>
+        ) : null}
         <Field label="Start date" hint="Leave blank to apply now.">
           {({ id }) => <DateInput id={id} value={startDate} onValueChange={setStartDate} />}
         </Field>
@@ -260,6 +303,8 @@ function PickDialog({
     </FormDialog>
   )
 }
+
+const WHOLE_CONTRACT = '__contract__'
 
 /** V1's cap: adds and removes together in one `addon` modification. */
 const MAX_ADDONS = 20
@@ -297,9 +342,13 @@ function AddonDialog({
   error: string | null
   onClose: () => void
   existingAddons: { id: string; name: string; addonId?: string }[]
-  onSubmit: (drafts: AddContractAddon[], removals: string[]) => void
+  onSubmit: (drafts: AddContractAddon[], removals: RemoveContractAddon[]) => void
 }) {
   const [removals, setRemovals] = useState<string[]>([])
+  // When the removals take effect, as V1 asks it: one choice for all of them in this change.
+  const [removeWhen, setRemoveWhen] = useState<AddonChangeAt | 'date'>('end_of_period')
+  const [removeOn, setRemoveOn] = useState('')
+  const [removeProrate, setRemoveProrate] = useState(true)
   // Add-ons set aside to attach with the one in hand.
   const [staged, setStaged] = useState<{ draft: AddContractAddon; name: string }[]>([])
   const [addonId, setAddonId] = useState('')
@@ -321,7 +370,13 @@ function AddonDialog({
           ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
           ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
           ...(pricing.quantities?.length ? { quantities: pricing.quantities } : {}),
-          ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
+          // A day, or now / at period end (V1's timing), and whether to prorate.
+          ...(pricing.startWhen === 'date'
+            ? pricing.startDate
+              ? { startDate: pricing.startDate }
+              : {}
+            : { changeAt: pricing.startWhen ?? 'immediate' }),
+          prorate: pricing.prorate ?? true,
         }
       : null
   const total = staged.length + (addonId ? 1 : 0)
@@ -338,6 +393,7 @@ function AddonDialog({
     <AddonChargesDialog
       open={open}
       title="Modify add-ons"
+      timing
       submitLabel="Apply add-on changes"
       charges={charges}
       chargesFailed={chargesFailed}
@@ -366,14 +422,25 @@ function AddonDialog({
           return setProblem('Choose an add-on to add or remove')
         if (drafts.length + removals.length > MAX_ADDONS)
           return setProblem('Change at most 20 add-ons at once')
+        if (drafts.some((draft) => draft.changeAt === undefined && !draft.startDate))
+          return setProblem('Choose the day the add-on starts')
+        if (removals.length && removeWhen === 'date' && !removeOn)
+          return setProblem('Choose the day the add-ons are removed')
         setProblem(null)
-        onSubmit(drafts, removals)
+        onSubmit(
+          drafts,
+          removals.map((id) => ({
+            id,
+            ...(removeWhen === 'date' ? { effectiveDate: removeOn } : { changeAt: removeWhen }),
+            prorate: removeProrate,
+          })),
+        )
       }}
     >
       {existingAddons.length > 0 ? (
         <Field
           label="Remove existing add-ons"
-          hint="Removals and additions are submitted together as one change. Removals take effect at period end."
+          hint="Removals and additions are submitted together as one change."
         >
           {() => (
             <div className="flex flex-col gap-2">
@@ -394,6 +461,33 @@ function AddonDialog({
           )}
         </Field>
       ) : null}
+      {removals.length > 0 ? (
+        <>
+          <Field label="Removed" hint="When the add-ons you are removing stop billing.">
+            {({ id }) => (
+              <OptionSelect
+                id={id}
+                value={removeWhen}
+                onValueChange={(next) => setRemoveWhen(next as AddonChangeAt | 'date')}
+                options={ADDON_TIMING_OPTIONS}
+              />
+            )}
+          </Field>
+          {removeWhen === 'date' ? (
+            <Field label="Remove on">
+              {({ id }) => <DateInput id={id} value={removeOn} onValueChange={setRemoveOn} />}
+            </Field>
+          ) : null}
+          <span className="flex items-center justify-between gap-4 text-sm">
+            <label htmlFor="addon-remove-prorate">Prorate the removed add-ons</label>
+            <Switch
+              id="addon-remove-prorate"
+              checked={removeProrate}
+              onCheckedChange={setRemoveProrate}
+            />
+          </span>
+        </>
+      ) : null}
       {staged.length > 0 ? (
         <ul
           className="divide-border flex flex-col divide-y rounded-lg border"
@@ -406,7 +500,9 @@ function AddonDialog({
                 <p className="text-muted-foreground text-xs">
                   {draft.priceOverrides?.length || draft.commitments?.length
                     ? 'Repriced for this contract'
-                    : 'At its catalog prices'}
+                    : draft.quantities?.length
+                      ? 'At its catalog prices, quantity changed'
+                      : 'At its catalog prices'}
                 </p>
               </div>
               <Button

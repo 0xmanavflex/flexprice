@@ -85,6 +85,41 @@ describe('contract amendments survive SDK serialization', () => {
       removes: [{ addon_association_id: 'old-association' }],
     })
   })
+  it('sends each add-on timing and proration, and when a removal takes effect', () => {
+    expect(
+      ExecuteSubscriptionModifyRequest$outboundSchema.parse(
+        toAddAddonsRequest(
+          'sub',
+          [
+            { addonId: 'later', changeAt: 'end_of_period', prorate: false },
+            { addonId: 'dated', startDate: '2027-01-15', changeAt: 'immediate' },
+          ],
+          [
+            { id: 'now', changeAt: 'immediate', prorate: true },
+            { id: 'dated-removal', effectiveDate: '2027-02-01', prorate: false },
+          ],
+        ),
+      ).addon_bulk_params,
+    ).toEqual({
+      adds: [
+        { addon_id: 'later', change_at: 'end_of_period', proration_behavior: 'none' },
+        // A day replaces the timing: the API takes one or the other.
+        { addon_id: 'dated', start_date: '2027-01-15T00:00:00.000Z' },
+      ],
+      removes: [
+        {
+          addon_association_id: 'now',
+          change_at: 'immediate',
+          proration_behavior: 'create_prorations',
+        },
+        {
+          addon_association_id: 'dated-removal',
+          effective_date: '2027-02-01T00:00:00.000Z',
+          proration_behavior: 'none',
+        },
+      ],
+    })
+  })
   it('preserves bucket IDs without replacing their existing prices', () => {
     const request = toUpdateLineItemRequest({
       price: { priceId: 'price', billingModel: BillingModel.FlatFee, amount: '1' },

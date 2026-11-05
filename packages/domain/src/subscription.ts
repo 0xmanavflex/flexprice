@@ -961,6 +961,8 @@ export interface SubscriptionLine {
   endDate: Date | null
   /** Where the charge comes from: the plan (shared by every contract on it), an add-on, or this contract alone. */
   source: SubscriptionLineSource
+  /** On an add-on's line: which attachment of it (`SubscriptionAddon.id`). */
+  addonAssociationId?: string | undefined
   priceId: string
   /** Only a flat-fee price in a real currency can be repriced through a quantity change. */
   amountEditable: boolean
@@ -1324,6 +1326,26 @@ export interface AddContractAddon {
   quantities?: AddonQuantity[]
   /** When the add-on starts. Blank starts it now, with the contract. */
   startDate?: string
+  /**
+   * On a running contract, with no `startDate`: start now or at the end of the
+   * current period (V1's timing). The API takes this or a date, never both.
+   */
+  changeAt?: AddonChangeAt
+  /** Charge or credit the part of the period it is on for. Absent: the API's default. */
+  prorate?: boolean
+}
+
+export type AddonChangeAt = 'immediate' | 'end_of_period'
+
+/** Take an add-on off a running contract, when and how V1 offers it. */
+export interface RemoveContractAddon {
+  /** The add-on's association with this contract. */
+  id: string
+  /** Now or at the end of the period; with neither this nor `effectiveDate`, the API's default. */
+  changeAt?: AddonChangeAt
+  /** A day to remove it on, `YYYY-MM-DD`; replaces `changeAt`. */
+  effectiveDate?: string
+  prorate?: boolean
 }
 
 /** Apply a coupon to one contract, or replace the coupons on one of its charges. */

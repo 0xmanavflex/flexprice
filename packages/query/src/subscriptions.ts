@@ -10,6 +10,7 @@ import {
 import {
   type SpendingAllowance,
   type AddContractAddon,
+  type RemoveContractAddon,
   type AddContractCharge,
   type AddContractCoupon,
   allowancePeriod,
@@ -323,6 +324,8 @@ export interface SubscriptionLineWire {
   meterDisplayName?: string | undefined
   priceType?: string | undefined
   entityType?: string | undefined
+  /** The add-on attachment this line belongs to, on an add-on's line. */
+  addonAssociationId?: string | undefined
   priceId?: string | undefined
   predecessorLineItemId?: string | undefined
   successorLineItemId?: string | undefined
@@ -509,6 +512,7 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
     startDate: realDate(wire.startDate),
     endDate: realDate(wire.endDate),
     source: LINE_SOURCE[wire.entityType ?? ''] ?? 'plan',
+    ...(wire.addonAssociationId ? { addonAssociationId: wire.addonAssociationId } : {}),
     priceId: wire.priceId ?? '',
     amountEditable:
       wire.priceType !== 'USAGE' &&
@@ -2675,7 +2679,29 @@ export function toAddAddonRequest(
     subscriptionId,
     addonId: draft.addonId,
     ...addonPricing(draft),
-    ...(draft.startDate ? { startDate: contractDateToInstant(draft.startDate) } : {}),
+    // A day, or V1's "now" / "end of period": the API takes one or the other.
+    ...(draft.startDate
+      ? { startDate: contractDateToInstant(draft.startDate) }
+      : draft.changeAt
+        ? { changeAt: draft.changeAt }
+        : {}),
+    ...(draft.prorate === undefined ? {} : { prorationBehavior: prorationOf(draft.prorate) }),
+  }
+}
+
+const prorationOf = (prorate: boolean): 'create_prorations' | 'none' =>
+  prorate ? 'create_prorations' : 'none'
+
+/** One `addon_bulk_params.removes` entry: when (a day, or now / end of period) and proration. */
+export function toRemoveAddonEntry(removal: RemoveContractAddon) {
+  return {
+    addonAssociationId: removal.id,
+    ...(removal.effectiveDate
+      ? { effectiveDate: contractDateToInstant(removal.effectiveDate) }
+      : removal.changeAt
+        ? { changeAt: removal.changeAt }
+        : {}),
+    ...(removal.prorate === undefined ? {} : { prorationBehavior: prorationOf(removal.prorate) }),
   }
 }
 
@@ -2715,13 +2741,17 @@ export function toRemoveCouponRequest(
 export function toAddAddonsRequest(
   subscriptionId: string,
   drafts: readonly AddContractAddon[],
-  removals: readonly string[] = [],
+  removals: readonly (string | RemoveContractAddon)[] = [],
 ): FlexpriceModels.ExecuteSubscriptionModifyRequest {
   return {
     type: 'addon',
     addonBulkParams: {
       ...(removals.length
-        ? { removes: removals.map((addonAssociationId) => ({ addonAssociationId })) }
+        ? {
+            removes: removals.map((removal) =>
+              toRemoveAddonEntry(typeof removal === 'string' ? { id: removal } : removal),
+            ),
+          }
         : {}),
       adds: drafts.map((draft) => {
         const { subscriptionId: _, ...add } = toAddAddonRequest(subscriptionId, draft)
@@ -2745,7 +2775,7 @@ export function useAddSubscriptionAddon(subscriptionId: string) {
       removes = [],
     }: {
       adds: readonly AddContractAddon[]
-      removes?: readonly string[]
+      removes?: readonly (string | RemoveContractAddon)[]
     }) =>
       drafts.length === 1 && removes.length === 0
         ? call(() =>

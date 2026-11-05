@@ -341,9 +341,13 @@ export const Views: Story = {
     // Status is a filter beside the billing model, not a row of chips above the table.
     await expect(canvas.queryByRole('button', { name: 'Active 3' })).not.toBeInTheDocument()
     await expect(canvas.getByRole('heading', { name: 'Charges' })).not.toHaveClass('sr-only')
-    // Only charges billing now are rows: an ended one is history, not a row.
+    // Charges billing now are the rows; an ended one waits behind "Show ended charges".
     await expect(canvas.queryByText('Legacy seat fee')).not.toBeInTheDocument()
     await expect(canvas.getByText('Platform base')).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Show 1 ended charge' }))
+    await expect(canvas.getByText('Legacy seat fee')).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Hide ended charges' }))
+    await expect(canvas.queryByText('Legacy seat fee')).not.toBeInTheDocument()
   },
 }
 

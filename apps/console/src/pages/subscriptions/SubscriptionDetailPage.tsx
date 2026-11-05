@@ -579,7 +579,14 @@ export function SubscriptionDetailPage({
                   onCheckedChange={setFinalInvoice}
                 />
               </span>
-            ) : null}
+            ) : (
+              // The API raises a final invoice on demand only when the contract ends now;
+              // otherwise the last one comes at the end, as every period's does.
+              <span className="text-muted-foreground text-xs">
+                The last invoice is raised when the contract ends. To invoice now, cancel
+                immediately.
+              </span>
+            )}
             <label htmlFor="cancel-reason" className="flex flex-col gap-1.5 text-sm">
               Reason (optional)
               <Input

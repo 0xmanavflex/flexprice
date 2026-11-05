@@ -439,6 +439,8 @@ export type {
   SubscriptionSchedule,
   SubscriptionTax,
   AddContractAddon,
+  AddonChangeAt,
+  RemoveContractAddon,
   AddContractCoupon,
   SubscriptionUsage,
   SubscriptionUsageCharge,

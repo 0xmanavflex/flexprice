@@ -42,6 +42,7 @@ import {
   attachableAddonOverrides,
   type ChargeCommitment,
   type AddonQuantity,
+  type AddonChangeAt,
   addonQuantitySchema,
   type CreateCreditGrant,
   type CreateSubscription,
@@ -3050,6 +3051,13 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
 }
 
 /** An add-on's own pricing on one contract: new prices on its charges, commitments on its usage charges. */
+/** When an add-on starts or ends on a running contract, as V1 offers it. */
+export const ADDON_TIMING_OPTIONS: Option[] = [
+  { value: 'immediate', label: 'Immediately' },
+  { value: 'end_of_period', label: 'At the end of the current period' },
+  { value: 'date', label: 'On a date' },
+]
+
 export interface AddonPricing {
   priceOverrides: PriceOverride[]
   commitments: ChargeCommitment[]
@@ -3057,6 +3065,13 @@ export interface AddonPricing {
   quantities?: AddonQuantity[]
   /** When the add-on starts. Empty starts it with the contract. */
   startDate?: string
+  /**
+   * On a running contract (the dialog's `timing`): start now, at the end of the
+   * current period, or on `startDate`, as V1's add-on timing.
+   */
+  startWhen?: AddonChangeAt | 'date'
+  /** Charge for the part of the period it is on for (V1's proration). */
+  prorate?: boolean
 }
 
 /**
@@ -3084,10 +3099,16 @@ export function AddonChargesDialog({
   onClose,
   onSubmit,
   children,
+  timing = false,
 }: {
   open: boolean
   title: string
   submitLabel: string
+  /**
+   * The contract is running: the add-on starts now, at period end or on a day,
+   * with or without proration. During creation it only takes a start date.
+   */
+  timing?: boolean
   charges: readonly Charge[] | null | undefined
   /** With `charges` undefined: they failed to load rather than still loading. */
   chargesFailed?: boolean
@@ -3116,7 +3137,9 @@ export function AddonChargesDialog({
       ...value,
       quantities: [
         ...quantities.filter((q) => q.priceId !== priceId),
-        ...(quantity.trim() ? [{ priceId, quantity: quantity.trim() }] : []),
+        // 1 is the add-on's own quantity: no override (an override starts a contract price).
+        // A cleared box is kept, so it reads as empty and blocks saving until filled in.
+        ...(quantity.trim() === '1' ? [] : [{ priceId, quantity: quantity.trim() }]),
       ],
     })
   const badQuantity = quantities.some((q) => !addonQuantitySchema.safeParse(q).success)
@@ -3168,7 +3191,6 @@ export function AddonChargesDialog({
           <Input
             className="h-8 w-20"
             inputMode="numeric"
-            placeholder="1"
             aria-label={`Quantity of ${chargeName(charge)}`}
             aria-invalid={
               quantityOf(charge.id) !== undefined &&
@@ -3177,7 +3199,8 @@ export function AddonChargesDialog({
                 quantity: quantityOf(charge.id),
               }).success
             }
-            value={quantityOf(charge.id) ?? ''}
+            // The quantity it will bill at, 1 unless changed: shown as a value, not a hint.
+            value={quantityOf(charge.id) ?? '1'}
             onChange={(event) => setQuantity(charge.id, event.target.value)}
           />
         ),
@@ -3278,23 +3301,65 @@ export function AddonChargesDialog({
               )}
             </div>
           )}
-          <div className="flex flex-col gap-2">
-            <LabelWithHint
-              htmlFor="addon-start"
-              hint="Leave empty to start this add-on with the contract."
-            >
-              Start date
-            </LabelWithHint>
-            <DateInput
-              id="addon-start"
-              withTime
-              clearable
-              clearLabel="Clear start date"
-              value={value.startDate ?? ''}
-              onValueChange={(startDate) => onChange({ ...value, startDate })}
-              placeholder="Starts with the contract"
-            />
-          </div>
+          {timing ? (
+            <>
+              <div className="flex flex-col gap-2">
+                <LabelWithHint htmlFor="addon-when" hint="When this add-on starts billing.">
+                  Starts
+                </LabelWithHint>
+                <OptionSelect
+                  id="addon-when"
+                  value={value.startWhen ?? 'immediate'}
+                  onValueChange={(next) => {
+                    const startWhen = next as AddonChangeAt | 'date'
+                    const { startDate: _, ...rest } = value
+                    onChange(
+                      startWhen === 'date' ? { ...value, startWhen } : { ...rest, startWhen },
+                    )
+                  }}
+                  options={ADDON_TIMING_OPTIONS}
+                />
+              </div>
+              {value.startWhen === 'date' ? (
+                <div className="flex flex-col gap-2">
+                  <LabelWithHint htmlFor="addon-start" hint="The day this add-on starts.">
+                    Start date
+                  </LabelWithHint>
+                  <DateInput
+                    id="addon-start"
+                    value={value.startDate ?? ''}
+                    onValueChange={(startDate) => onChange({ ...value, startDate })}
+                  />
+                </div>
+              ) : null}
+              <span className="flex items-center justify-between gap-4 text-sm">
+                <label htmlFor="addon-prorate">Prorate the current period</label>
+                <Switch
+                  id="addon-prorate"
+                  checked={value.prorate ?? true}
+                  onCheckedChange={(prorate) => onChange({ ...value, prorate })}
+                />
+              </span>
+            </>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <LabelWithHint
+                htmlFor="addon-start"
+                hint="Leave empty to start this add-on with the contract."
+              >
+                Start date
+              </LabelWithHint>
+              <DateInput
+                id="addon-start"
+                withTime
+                clearable
+                clearLabel="Clear start date"
+                value={value.startDate ?? ''}
+                onValueChange={(startDate) => onChange({ ...value, startDate })}
+                placeholder="Starts with the contract"
+              />
+            </div>
+          )}
           {error ? (
             <p role="alert" className="text-destructive text-sm">
               {error}

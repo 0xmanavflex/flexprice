@@ -1924,6 +1924,7 @@
         "FormDialog",
         "LabelWithHint",
         "OptionCombobox",
+        "OptionSelect",
         "PlusIcon",
         "TaxDialog"
       ],
@@ -5054,9 +5055,7 @@
       "composes": [
         "Pill"
       ],
-      "usedBy": [
-        "SubscriptionDetailView"
-      ],
+      "usedBy": [],
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
     },
     "InvoiceStatusPill": {
@@ -5877,6 +5876,7 @@
         "ContractAddChargeForm",
         "ContractAmountCalculator",
         "ContractIntegrations",
+        "ContractSectionDialogs",
         "CouponCreateForm",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
@@ -6215,7 +6215,6 @@
         "PriceUnitGrid",
         "RowActionsMenu",
         "Status",
-        "SubscriptionDetailView",
         "SubscriptionForm",
         "TaxRateGrid"
       ],
@@ -7855,6 +7854,7 @@
         "ProviderConnections",
         "RevenueRecognitionReport",
         "S3ConnectionList",
+        "SubscriptionDetailView",
         "SubscriptionForm",
         "SubscriptionRevenue",
         "TierTable",
@@ -8157,19 +8157,18 @@
         "EntityLink",
         "Field",
         "FormDialog",
-        "InvoiceStatusBadge",
         "MetadataCard",
         "OverviewTiles",
         "PackageIcon",
         "PauseContractDialog",
         "PaymentStatusBadge",
-        "PencilIcon",
         "Pill",
         "PlusIcon",
         "Properties",
         "RelatedCard",
         "RowActionsMenu",
         "Section",
+        "SimpleTable",
         "SubTabState",
         "SubscriptionStatusBadge",
         "TotalRow",
