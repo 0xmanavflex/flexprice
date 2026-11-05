@@ -277,7 +277,7 @@ export function EntitlementCreateForm({
               />
             )}
           />
-          Enabled on this plan
+          Enabled
         </label>
       ) : null}
 
@@ -314,6 +314,9 @@ export function EntitlementCreateForm({
 }
 
 export interface EntitlementEditFormProps extends SharedProps {
+  /** Contract overrides can switch a legacy limit to an explicit unlimited grant. */
+  allowUnlimited?: boolean
+
   feature: FeatureOption
   defaultValue: EditEntitlement
   onSubmit: (edit: EditEntitlement) => void
@@ -326,6 +329,7 @@ export function EntitlementEditForm({
   isSubmitting = false,
   submitError = null,
   usagePrice,
+  allowUnlimited = false,
 }: EntitlementEditFormProps) {
   const form = useCalmForm<EditEntitlement>({
     resolver: standardSchemaResolver(editEntitlementSchema) as Resolver<EditEntitlement>,
@@ -375,15 +379,22 @@ export function EntitlementEditForm({
         <MeteredEntitlementFields
           limit={form.watch('usageLimit')}
           unlimited={form.watch('usageLimit') == null}
-          onLimitChange={(next) =>
-            form.setValue('usageLimit', next ?? undefined, { shouldValidate: true })
-          }
+          onLimitChange={(next) => {
+            if (allowUnlimited && next === null) {
+              form.setValue('usageLimit', undefined)
+              form.setValue(
+                'grant',
+                { ...emptyMeteredGrant(), quota: null },
+                { shouldValidate: true },
+              )
+            } else form.setValue('usageLimit', next ?? undefined, { shouldValidate: true })
+          }}
           resetPeriod={form.watch('usageResetPeriod')}
           onResetPeriodChange={(period) => form.setValue('usageResetPeriod', period)}
           unit={feature.unit}
           limitError={messageOf(errors, 'usageLimit')}
           disabled={isSubmitting}
-          lockUnlimited
+          lockUnlimited={!allowUnlimited}
           usagePrice={usagePrice}
         />
       ) : null}
@@ -414,7 +425,7 @@ export function EntitlementEditForm({
               />
             )}
           />
-          Enabled on this plan
+          Enabled
         </label>
       ) : null}
 

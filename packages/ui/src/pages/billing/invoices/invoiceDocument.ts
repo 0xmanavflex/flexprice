@@ -139,6 +139,8 @@ export function statusChips(
   if (doc.status === InvoiceStatus.Skipped)
     return [{ label: 'Skipped', tone: statusTone('Skipped') }]
   const chips: StatusChip[] = [{ label: 'Finalized', tone: statusTone('Finalized') }]
+  if (doc.paymentStatus === PaymentStatus.PartiallyRefunded)
+    return [...chips, { label: 'Partially refunded', tone: statusTone('Partially refunded') }]
   // A refunded invoice reads as refunded, not paid, though nothing remains due.
   if (doc.status === InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Refunded)
     chips.push({ label: 'Refund issued', tone: statusTone('Refund issued') })
@@ -176,6 +178,10 @@ export function displayStatus(
 ): DisplayStatus {
   if (doc.status === InvoiceStatus.Draft) return null
   if (doc.status === InvoiceStatus.Void) return { label: 'Void', tone: statusTone('Void') }
+  if (doc.paymentStatus === PaymentStatus.PartiallyRefunded)
+    return { label: 'Partially refunded', tone: statusTone('Partially refunded') }
+  if (doc.paymentStatus === PaymentStatus.Refunded)
+    return { label: 'Refund issued', tone: statusTone('Refund issued') }
   if (doc.status === InvoiceStatus.Paid) return { label: 'Paid', tone: statusTone('Paid') }
   if (doc.paymentStatus === PaymentStatus.Failed)
     return { label: 'Payment failed', tone: statusTone('Payment failed') }

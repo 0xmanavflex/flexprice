@@ -1,3 +1,6 @@
+import { Field } from '@ui/compositions/forms/Field'
+import { DateInput } from '@ui/compositions/forms/DateInput'
+import { Composer } from '@ui/compositions/detail/DetailKit'
 import {
   RBAC_ENTITY,
   type PauseSubscription,
@@ -206,6 +209,8 @@ export interface SubscriptionDetailViewProps {
         onRetry?: (() => void) | undefined
       }
     | undefined
+  benefitsEditor?: ReactNode
+  hierarchyEditor?: ReactNode
   entitlements: SubscriptionPart<SubscriptionEntitlement[]>
   /**
    * The customer's usage against this contract's entitlements
@@ -242,7 +247,8 @@ export interface SubscriptionDetailViewProps {
    */
   onAddEntitlement?: ((draft: CreateEntitlement) => Promise<unknown> | void) | undefined
   onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
-  onAddAddon?: ((drafts: AddContractAddon[]) => Promise<unknown> | void) | undefined
+  onAddAddon?:
+    ((drafts: AddContractAddon[], removals?: string[]) => Promise<unknown> | void) | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
   /**
    * Save the thresholds of an alert already watching one charge.
@@ -284,7 +290,8 @@ export interface SubscriptionDetailViewProps {
   /** Row menus: take an add-on off, stop a tax, end a credit grant. Each resolves when done. */
   onRemoveAddon?: ((addon: SubscriptionAddon) => Promise<unknown>) | undefined
   onRemoveTax?: ((tax: SubscriptionTax) => Promise<unknown>) | undefined
-  onCancelCreditGrant?: ((grant: CreditGrant) => Promise<unknown>) | undefined
+  onCancelCreditGrant?:
+    ((grant: CreditGrant, effectiveDate: string) => Promise<unknown>) | undefined
   /** What the Add dialogs offer. */
   sectionOptions?: Partial<ContractSectionOptions> | undefined
   onBack?: () => void
@@ -462,6 +469,8 @@ export function SubscriptionDetailView({
   lineHistory,
   onOpenLine,
   openLineHistory,
+  benefitsEditor,
+  hierarchyEditor,
   entitlements,
   entitlementUsage,
   creditGrants,
@@ -552,6 +561,8 @@ export function SubscriptionDetailView({
     confirmLabel: string
     run: () => Promise<unknown>
   } | null>(null)
+  const [grantEndDate, setGrantEndDate] = useState('')
+  const [endingGrant, setEndingGrant] = useState<CreditGrant | null>(null)
   const [removing, setRemoving] = useState(false)
   const [removalError, setRemovalError] = useState<string | null>(null)
   const askRemoval = (next: NonNullable<typeof removal>) => {
@@ -932,6 +943,7 @@ export function SubscriptionDetailView({
       leading={
         integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
           <ContractIntegrations
+            entityLabel="contract"
             showLink={false}
             links={integrationLinks}
             linkable={linkableProviders}
@@ -1079,7 +1091,8 @@ export function SubscriptionDetailView({
                   <InfoIcon aria-hidden="true" />
                   <AlertTitle>Inherited from a parent contract</AlertTitle>
                   <AlertDescription>
-                    Its charges and billing follow the parent contract, so it can't be changed here.
+                    Its charges and billing follow the parent contract. Use Contract hierarchy to
+                    change its parent.
                   </AlertDescription>
                   {s.parentSubscriptionId && onOpenContract ? (
                     <AlertAction>
@@ -1095,7 +1108,10 @@ export function SubscriptionDetailView({
                   ) : null}
                 </Alert>
               ) : null}
-              {inheritedContracts && (inheritedContracts.data?.length ?? 0) > 0 ? (
+              {hierarchyEditor}
+              {!hierarchyEditor &&
+              inheritedContracts &&
+              (inheritedContracts.data?.length ?? 0) > 0 ? (
                 <Section table showTitle title="Inherited contracts">
                   <DetailTable<Subscription>
                     compact
@@ -1253,7 +1269,7 @@ export function SubscriptionDetailView({
                 {
                   id: 'entitlements',
                   empty: knownEmpty(entitlements),
-                  node: (
+                  node: benefitsEditor ?? (
                     <>
                       <PartSection
                         entity={RBAC_ENTITY.Entitlement}
@@ -1346,14 +1362,11 @@ export function SubscriptionDetailView({
                                 (row) => row.name,
                                 'End grant',
                                 onCancelCreditGrant
-                                  ? (grant) =>
-                                      askRemoval({
-                                        title: `End ${grant.name}?`,
-                                        description:
-                                          'The grant stops today. Credits it already gave stay in the wallet; no further credits are granted.',
-                                        confirmLabel: 'End grant',
-                                        run: () => onCancelCreditGrant(grant),
-                                      })
+                                  ? (grant) => {
+                                      setGrantEndDate(new Date().toISOString().slice(0, 10))
+                                      setSaveError(null)
+                                      setEndingGrant(grant)
+                                    }
                                   : null,
                               ),
                             ]}
@@ -1377,7 +1390,7 @@ export function SubscriptionDetailView({
                         create={
                           s.status === SubscriptionStatus.Active ||
                           isUnstartedSubscription(s.status)
-                            ? createFor('addon', 'Add add-on', onAddAddon)
+                            ? createFor('addon', 'Modify add-ons', onAddAddon)
                             : undefined
                         }
                         failure="Add-ons could not be loaded"
@@ -1618,6 +1631,7 @@ export function SubscriptionDetailView({
               <RelatedCard items={related}>
                 {integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
                   <ContractIntegrations
+                    entityLabel="contract"
                     layout="rows"
                     links={integrationLinks}
                     linkable={linkableProviders}
@@ -1927,11 +1941,56 @@ export function SubscriptionDetailView({
             .finally(() => setRemoving(false))
         }}
       />
+      <FormDialog
+        open={endingGrant !== null}
+        onOpenChange={(open) => !open && !saving && setEndingGrant(null)}
+        title="End credit grant"
+        isPending={saving}
+      >
+        <Composer
+          submitLabel="End grant"
+          submitting={saving}
+          disabled={!grantEndDate}
+          onCancel={() => setEndingGrant(null)}
+          onSubmit={async () => {
+            if (!endingGrant || !grantEndDate) return
+            setSaving(true)
+            setSaveError(null)
+            try {
+              await onCancelCreditGrant?.(endingGrant, grantEndDate)
+              setEndingGrant(null)
+            } catch (error) {
+              setSaveError(error instanceof Error ? error.message : 'Could not end grant')
+            } finally {
+              setSaving(false)
+            }
+          }}
+        >
+          <Field
+            label="Effective date"
+            hint="Credits already issued stay in the wallet. The grant stops issuing credits on this date."
+          >
+            {({ id }) => <DateInput id={id} value={grantEndDate} onValueChange={setGrantEndDate} />}
+          </Field>
+          {saveError ? (
+            <p role="alert" className="text-destructive text-sm">
+              {saveError}
+            </p>
+          ) : null}
+        </Composer>
+      </FormDialog>
       <ContractSectionDialogs
         kind={section}
         options={{
           features: sectionOptions?.features ?? [],
           addons: sectionOptions?.addons ?? [],
+          existingAddons: (addons?.data ?? [])
+            .filter((addon) => addon.active)
+            .map((addon) => ({
+              id: addon.id,
+              name: addon.name,
+              ...(addon.addonId ? { addonId: addon.addonId } : {}),
+            })),
           addonCharges: sectionOptions?.addonCharges,
           addonChargesFailed: sectionOptions?.addonChargesFailed,
           meters,
@@ -1954,9 +2013,15 @@ export function SubscriptionDetailView({
                 const current = (coupons?.data ?? []).filter(
                   (coupon) => coupon.active && coupon.lineItemId === couponLineId,
                 )
-                if (current.length === 1 && current[0]?.code === draft.couponCode) return
+                if (
+                  current.length === 1 &&
+                  current[0]?.code === draft.couponCode &&
+                  !draft.startDate &&
+                  !draft.endDate
+                )
+                  return
                 return onAddCoupon({
-                  couponCode: draft.couponCode,
+                  ...draft,
                   lineItemId: couponLineId,
                   ...(current.length
                     ? { replaceAssociationIds: current.map((coupon) => coupon.id) }

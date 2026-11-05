@@ -1,3 +1,6 @@
+import { WriteGate, useWriteAccess } from '@ui/compositions/access/Access'
+import { RBAC_ENTITY } from '@fp/domain'
+import { ZohoGatewayFields } from './ZohoGatewayFields'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useState, type ReactNode } from 'react'
 import { type Resolver } from 'react-hook-form'
@@ -153,6 +156,7 @@ function ManageForm({
   saveError: string | null
   disconnectError: string | null
 }) {
+  const write = useWriteAccess(RBAC_ENTITY.Connection)
   const [confirming, setConfirming] = useState(false)
   // Entities on: the connection has its own webhook address and its webhook fields can be set here.
   const perConnectionWebhook = entities !== undefined
@@ -197,124 +201,134 @@ function ManageForm({
 
   return (
     <>
-      <form onSubmit={save} noValidate className="flex min-h-0 flex-1 flex-col">
-        <SheetHeader>
-          <div className="flex items-center gap-3">
-            <span className="bg-background flex size-10 shrink-0 items-center justify-center rounded-lg border p-1.5 shadow-xs">
-              {logo}
-            </span>
-            <div className="min-w-0">
-              <SheetTitle>{integration.name}</SheetTitle>
-              <SheetDescription>
-                Connected{connection.createdAt ? ` ${formatDate(connection.createdAt)}` : ''}
-              </SheetDescription>
+      <WriteGate entity={RBAC_ENTITY.Connection} block>
+        <form onSubmit={save} noValidate className="flex min-h-0 flex-1 flex-col">
+          <SheetHeader>
+            <div className="flex items-center gap-3">
+              <span className="bg-background flex size-10 shrink-0 items-center justify-center rounded-lg border p-1.5 shadow-xs">
+                {logo}
+              </span>
+              <div className="min-w-0">
+                <SheetTitle>{integration.name}</SheetTitle>
+                <SheetDescription>
+                  Connected{connection.createdAt ? ` ${formatDate(connection.createdAt)}` : ''}
+                </SheetDescription>
+              </div>
             </div>
-          </div>
-        </SheetHeader>
+          </SheetHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-7 overflow-y-auto px-4 pb-4">
-          {saveError ? (
-            <Alert variant="destructive" role="alert">
-              <TriangleAlert aria-hidden="true" />
-              <AlertTitle>Changes were not saved</AlertTitle>
-              <AlertDescription>{saveError}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          <section aria-labelledby="manage-general" className="flex flex-col gap-4">
-            <h3 id="manage-general" className="text-sm font-medium">
-              General
-            </h3>
-            <Field label="Connection name" required error={errors.name?.message}>
-              {(aria) => <Input {...aria} autoComplete="off" {...register('name')} />}
-            </Field>
-            {entities ? (
-              <BillingEntityField
-                integration={integration}
-                entities={entities}
-                connectionId={connection.id}
-                control={control}
-                error={errors.billingEntityId?.message}
-                disabled={isSaving}
-              />
+          <div className="flex min-h-0 flex-1 flex-col gap-7 overflow-y-auto px-4 pb-4">
+            {saveError ? (
+              <Alert variant="destructive" role="alert">
+                <TriangleAlert aria-hidden="true" />
+                <AlertTitle>Changes were not saved</AlertTitle>
+                <AlertDescription>{saveError}</AlertDescription>
+              </Alert>
             ) : null}
-          </section>
 
-          {spec.sync.length > 0 ? (
-            <section aria-labelledby="manage-sync" className="flex flex-col gap-3">
-              <h3 id="manage-sync" className="text-sm font-medium">
-                Sync
+            <section aria-labelledby="manage-general" className="flex flex-col gap-4">
+              <h3 id="manage-general" className="text-sm font-medium">
+                General
               </h3>
-              <SyncOptions options={spec.sync} control={control} />
+              <Field label="Connection name" required error={errors.name?.message}>
+                {(aria) => <Input {...aria} autoComplete="off" {...register('name')} />}
+              </Field>
+              {entities ? (
+                <BillingEntityField
+                  integration={integration}
+                  entities={entities}
+                  connectionId={connection.id}
+                  control={control}
+                  error={errors.billingEntityId?.message}
+                  disabled={isSaving}
+                />
+              ) : null}
             </section>
-          ) : null}
 
-          {webhook ? (
-            <section aria-labelledby="manage-webhook" className="flex flex-col gap-4">
-              <h3 id="manage-webhook" className="text-sm font-medium">
-                Webhook
+            {spec.sync.length > 0 ? (
+              <section aria-labelledby="manage-sync" className="flex flex-col gap-3">
+                <h3 id="manage-sync" className="text-sm font-medium">
+                  Sync
+                </h3>
+                <SyncOptions options={spec.sync} control={control} />
+                {spec.providerType === 'zoho_books' ? (
+                  <ZohoGatewayFields control={control} />
+                ) : null}
+              </section>
+            ) : null}
+
+            {webhook ? (
+              <section aria-labelledby="manage-webhook" className="flex flex-col gap-4">
+                <h3 id="manage-webhook" className="text-sm font-medium">
+                  Webhook
+                </h3>
+                <WebhookGuide spec={spec} url={webhook.url} events={webhook.events} />
+                {webhookFields.map((field) => (
+                  <SpecField
+                    key={field.key}
+                    field={keep(field)}
+                    control={control}
+                    errors={errors}
+                  />
+                ))}
+              </section>
+            ) : null}
+
+            <section aria-labelledby="manage-keys" className="flex flex-col gap-4">
+              <h3 id="manage-keys" className="text-sm font-medium">
+                Keys
               </h3>
-              <WebhookGuide spec={spec} url={webhook.url} events={webhook.events} />
-              {webhookFields.map((field) => (
+              <p className="text-muted-foreground flex items-start gap-2 text-[13px]">
+                <InfoIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                Keys are stored encrypted and cannot be shown.{' '}
+                {secrets.length > 0
+                  ? 'You can replace the ones below; to change any other key, disconnect and connect again.'
+                  : 'To change them, disconnect and connect again.'}
+              </p>
+              {secrets.map((field) => (
                 <SpecField key={field.key} field={keep(field)} control={control} errors={errors} />
               ))}
             </section>
-          ) : null}
 
-          <section aria-labelledby="manage-keys" className="flex flex-col gap-4">
-            <h3 id="manage-keys" className="text-sm font-medium">
-              Keys
-            </h3>
-            <p className="text-muted-foreground flex items-start gap-2 text-[13px]">
-              <InfoIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-              Keys are stored encrypted and cannot be shown.{' '}
-              {secrets.length > 0
-                ? 'You can replace the ones below; to change any other key, disconnect and connect again.'
-                : 'To change them, disconnect and connect again.'}
-            </p>
-            {secrets.map((field) => (
-              <SpecField key={field.key} field={keep(field)} control={control} errors={errors} />
-            ))}
-          </section>
-
-          <section
-            aria-labelledby="manage-disconnect"
-            className="flex flex-col gap-3 border-t pt-6"
-          >
-            <h3 id="manage-disconnect" className="text-sm font-medium">
-              Disconnect
-            </h3>
-            <p className="text-muted-foreground text-[13px]">
-              Flexprice stops syncing with {integration.name} and archives this connection. Nothing
-              is deleted in {integration.name}. Connect again whenever you like.
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-fit"
-              disabled={isSaving}
-              onClick={() => setConfirming(true)}
+            <section
+              aria-labelledby="manage-disconnect"
+              className="flex flex-col gap-3 border-t pt-6"
             >
-              Disconnect {integration.name}
-            </Button>
-          </section>
-        </div>
-
-        <SheetFooter className="border-t">
-          <div className="flex items-center justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving}>
-              Close
-            </Button>
-            <Button type="submit" disabled={!changed || isSaving}>
-              {isSaving ? <Spinner aria-hidden="true" /> : null}
-              {isSaving ? 'Saving…' : 'Save changes'}
-            </Button>
+              <h3 id="manage-disconnect" className="text-sm font-medium">
+                Disconnect
+              </h3>
+              <p className="text-muted-foreground text-[13px]">
+                Flexprice stops syncing with {integration.name} and archives this connection.
+                Nothing is deleted in {integration.name}. Connect again whenever you like.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-fit"
+                disabled={isSaving}
+                onClick={() => setConfirming(true)}
+              >
+                Disconnect {integration.name}
+              </Button>
+            </section>
           </div>
-        </SheetFooter>
-      </form>
+
+          <SheetFooter className="border-t">
+            <div className="flex items-center justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving}>
+                Close
+              </Button>
+              <Button type="submit" disabled={!changed || isSaving}>
+                {isSaving ? <Spinner aria-hidden="true" /> : null}
+                {isSaving ? 'Saving…' : 'Save changes'}
+              </Button>
+            </div>
+          </SheetFooter>
+        </form>
+      </WriteGate>
 
       <ConfirmDialog
-        open={confirming}
+        open={confirming && write.allowed}
         onOpenChange={setConfirming}
         title={`Disconnect ${integration.name}?`}
         description={`Syncing with ${integration.name} stops and this connection is archived. Connect again to resume.`}
@@ -323,7 +337,9 @@ function ManageForm({
         destructive
         isPending={isDisconnecting}
         error={disconnectError}
-        onConfirm={() => onDisconnect(connection.id)}
+        onConfirm={() => {
+          if (write.allowed) onDisconnect(connection.id)
+        }}
       />
     </>
   )

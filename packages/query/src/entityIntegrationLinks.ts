@@ -7,7 +7,7 @@ import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provide
 import { useSingleFlight } from './singleFlight'
 
 /** Entity types documented by the SDK mappings endpoint; never reuse customer mappings. */
-export type MappedEntityType = 'invoice' | 'plan' | 'payment'
+export type MappedEntityType = 'invoice' | 'plan' | 'payment' | 'subscription'
 export const entityIntegrationKey = (type: MappedEntityType, id: string) =>
   ['integrationLinks', type, id] as const
 

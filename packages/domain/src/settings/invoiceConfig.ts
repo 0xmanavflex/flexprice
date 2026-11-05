@@ -88,9 +88,47 @@ export interface InvoiceConfig {
  * than the next number.
  */
 export function previewInvoiceNumber(config: InvoiceConfig, on: Date = new Date()): string {
-  const year = String(on.getUTCFullYear())
-  const month = String(on.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(on.getUTCDate()).padStart(2, '0')
+  // IANA zones and the abbreviations accepted by the backend. Unknown zones
+  // cannot produce an honest preview; keep the editor usable and say so.
+  const aliases: Record<string, string> = {
+    IST: 'Asia/Kolkata',
+    EST: 'America/New_York',
+    CST: 'America/Chicago',
+    MST: 'America/Denver',
+    PST: 'America/Los_Angeles',
+    HST: 'Pacific/Honolulu',
+    AKST: 'America/Anchorage',
+    GMT: 'Europe/London',
+    CET: 'Europe/Berlin',
+    EET: 'Europe/Athens',
+    WET: 'Europe/Lisbon',
+    BST: 'Europe/London',
+    JST: 'Asia/Tokyo',
+    KST: 'Asia/Seoul',
+    CCT: 'Asia/Shanghai',
+    AEST: 'Australia/Sydney',
+    AWST: 'Australia/Perth',
+    MSK: 'Europe/Moscow',
+    CAT: 'Africa/Harare',
+    EAT: 'Africa/Nairobi',
+    WAT: 'Africa/Lagos',
+  }
+  const zone = config.timezone.trim() || 'UTC'
+  let parts: Intl.DateTimeFormatPart[]
+  try {
+    parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: aliases[zone.toUpperCase()] ?? zone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      numberingSystem: 'latn',
+    }).formatToParts(on)
+  } catch {
+    return 'Preview unavailable for this timezone'
+  }
+  const year = parts.find((part) => part.type === 'year')?.value ?? ''
+  const month = parts.find((part) => part.type === 'month')?.value ?? ''
+  const day = parts.find((part) => part.type === 'day')?.value ?? ''
 
   // Longest token first: replacing `YY` before `YYYY` would turn 2026 into 26026.
   const date = config.format

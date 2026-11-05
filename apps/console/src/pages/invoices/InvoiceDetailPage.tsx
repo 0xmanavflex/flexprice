@@ -197,10 +197,10 @@ export function InvoiceDetailPage({
                         mappings.pull.mutate(undefined, {
                           onSuccess: () =>
                             toast.success(
-                              `Pulling invoice from ${mappings.pullProviders.join(', ')}`,
+                              `Invoice pull queued from ${mappings.pullProviders.join(', ')}`,
                               {
                                 description:
-                                  'Payments and status recorded there update here in the background.',
+                                  'The request was accepted. Completion is not reported by this API.',
                               },
                             ),
                           onError: (cause) =>

@@ -1,3 +1,5 @@
+import { useWriteAccess } from '@ui/compositions/access/Access'
+import { RBAC_ENTITY } from '@fp/domain'
 import { useState } from 'react'
 import { WorkflowStatus, type EntitySyncRun, type IntegrationLink } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -30,9 +32,8 @@ import { IntegrationMark } from '../customers/IntegrationMark'
 import { Pill, type PillTone } from '../shared/cells'
 
 /**
- * The contract header's integration marks. The mappings belong to the contract's
- * customer, so the marks say which accounting or billing system already knows
- * this customer. Hover for the provider-side id and when the link was made;
+ * Integration mappings for the entity named by the caller. A contract uses its
+ * subscription mappings; customer mappings remain customer-scoped. Hover for the provider-side id and when the link was made;
  * click for the menu that copies the id or unlinks it; the plus links a
  * connected provider that has no mapping yet.
  */
@@ -136,6 +137,7 @@ export function ContractIntegrations({
   providerHref,
   actionsInHeader = false,
 }: ContractIntegrationsProps) {
+  const write = useWriteAccess(RBAC_ENTITY.Integration)
   const [unlinking, setUnlinking] = useState<IntegrationLink | null>(null)
   const [internalLinking, setInternalLinking] = useState(false)
   const linking = linkOpen ?? internalLinking
@@ -143,10 +145,13 @@ export function ContractIntegrations({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const canLink = showLink && !actionsInHeader && Boolean(onLink) && linkable.length > 0
-  const pushTo = onPush && pushProviders && pushProviders.length > 0 ? pushProviders : null
+  const canLink =
+    write.allowed && showLink && !actionsInHeader && Boolean(onLink) && linkable.length > 0
+  const pushTo =
+    write.allowed && onPush && pushProviders && pushProviders.length > 0 ? pushProviders : null
   const canPush = layout === 'rows' && !actionsInHeader && pushTo !== null
-  const pullFrom = onPull && pullProviders && pullProviders.length > 0 ? pullProviders : null
+  const pullFrom =
+    write.allowed && onPull && pullProviders && pullProviders.length > 0 ? pullProviders : null
   const canPull = layout === 'rows' && !actionsInHeader && pullFrom !== null
   const none = `No integrations linked to this ${entityLabel}.`
 
@@ -243,7 +248,7 @@ export function ContractIntegrations({
                   link={link}
                   entityLabel={entityLabel}
                   href={providerHref?.(link) ?? null}
-                  onUnlink={onUnlink}
+                  onUnlink={write.allowed ? onUnlink : undefined}
                   onAskUnlink={() => {
                     setError(null)
                     setUnlinking(link)
@@ -281,7 +286,7 @@ export function ContractIntegrations({
               link={link}
               entityLabel={entityLabel}
               href={providerHref?.(link) ?? null}
-              onUnlink={onUnlink}
+              onUnlink={write.allowed ? onUnlink : undefined}
               onAskUnlink={() => {
                 setError(null)
                 setUnlinking(link)
@@ -403,7 +408,7 @@ export function ContractIntegrations({
       />
       <LinkDialog
         entityLabel={entityLabel}
-        open={linking}
+        open={linking && write.allowed}
         providers={linkable}
         pending={pending}
         error={error}

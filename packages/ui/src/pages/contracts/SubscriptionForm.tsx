@@ -1,3 +1,4 @@
+import { SpendingAllowancesSection } from './SpendingAllowancesSection'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Controller, type FieldErrors, type Resolver, type UseFormRegister } from 'react-hook-form'
@@ -101,6 +102,7 @@ import { Field } from '@ui/compositions/forms/Field'
 import { GrantAllowanceFields } from '@ui/pages/product-catalog/entitlements/GrantAllowanceFields'
 import { parseDateValue } from '@ui/compositions/forms/DateInput'
 import { DateInput } from '@ui/compositions/forms/DateInput'
+import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
 import { FormPage } from '@ui/compositions/forms/FormPage'
@@ -235,6 +237,7 @@ export interface SubscriptionTaxRateOption {
 }
 
 export interface SubscriptionFormProps {
+  pickerStatus?: 'loading' | 'failed' | 'ready' | undefined
   defaultValue?: Partial<CreateSubscription>
   customers: readonly SubscriptionCustomerOption[]
   plans: readonly Option[]
@@ -447,6 +450,7 @@ export function SubscriptionForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  pickerStatus = 'ready',
   submitError = null,
   trail,
   step,
@@ -463,6 +467,13 @@ export function SubscriptionForm({
     },
   })
   const errors = form.formState.errors
+  const isDirty = form.formState.isDirty
+  const [pendingExit, setPendingExit] = useState<(() => void) | null>(null)
+  const requestExit = (exit: () => void) => {
+    if (isSubmitting) return
+    if (isDirty) setPendingExit(() => exit)
+    else exit()
+  }
   const values = form.watch()
 
   /*
@@ -1244,6 +1255,10 @@ export function SubscriptionForm({
         ) : (
           noPlan('Entitlements')
         )}
+        <SpendingAllowancesSection
+          value={values.spendingAllowances ?? []}
+          onChange={(next) => set('spendingAllowances', next)}
+        />
         <CreditsSection
           grants={values.creditGrants}
           changed={values.creditGrantsChanged}
@@ -1341,30 +1356,60 @@ export function SubscriptionForm({
   }
 
   return (
-    <FormPage
-      title="Create contract"
-      trail={trail}
-      toolbar={{
-        mode: 'create',
-        noun: 'contract',
-        formId: FORM_ID,
-        onCancel,
-        isSubmitting,
-        submitError: conflict ?? submitError,
-        actions: (
-          <Button type="button" variant="outline" onClick={saveDraft} disabled={isSubmitting}>
-            Save as draft
-          </Button>
-        ),
-      }}
-      stepper={{ flow, label: 'Contract steps' }}
-      // The charges table needs the room; every other step keeps the narrow measure.
-      width={flow.step === 'phases' ? 'medium' : 'narrow'}
-    >
-      <CouponsStatusContext.Provider value={couponsStatus}>
-        {content[flow.step]}
-      </CouponsStatusContext.Provider>
-    </FormPage>
+    <>
+      <FormPage
+        title="Create contract"
+        trail={trail?.map((crumb) => ({
+          ...crumb,
+          ...(crumb.onClick ? { onClick: () => requestExit(crumb.onClick!) } : {}),
+        }))}
+        toolbar={{
+          mode: 'create',
+          noun: 'contract',
+          formId: FORM_ID,
+          onCancel: () => requestExit(onCancel),
+          isSubmitting,
+          submitError: conflict ?? submitError,
+          actions: (
+            <Button type="button" variant="outline" onClick={saveDraft} disabled={isSubmitting}>
+              Save as draft
+            </Button>
+          ),
+        }}
+        stepper={{ flow, label: 'Contract steps' }}
+        // The charges table needs the room; every other step keeps the narrow measure.
+        width={flow.step === 'phases' ? 'medium' : 'narrow'}
+      >
+        {pickerStatus !== 'ready' ? (
+          <Alert variant={pickerStatus === 'failed' ? 'destructive' : 'info'}>
+            <AlertDescription>
+              {pickerStatus === 'failed'
+                ? 'Some contract options could not be loaded. Reload the page to search the complete catalogue.'
+                : 'Loading the complete catalogue for contract pickers…'}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        <CouponsStatusContext.Provider value={couponsStatus}>
+          {content[flow.step]}
+        </CouponsStatusContext.Provider>
+      </FormPage>
+      <ConfirmDialog
+        open={pendingExit !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingExit(null)
+        }}
+        title="Discard this contract?"
+        description="Your unsaved configuration will be lost. To keep it, continue editing and use Save as draft."
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        destructive
+        onConfirm={() => {
+          const exit = pendingExit
+          setPendingExit(null)
+          exit?.()
+        }}
+      />
+    </>
   )
 }
 
@@ -4197,7 +4242,8 @@ function TaxesSection({
           taxRates.length === 0 ? (
             <p className="text-muted-foreground text-sm">No tax rates exist yet.</p>
           ) : (
-            <OptionSelect
+            <OptionCombobox
+              searchable
               // A fresh picker after each pick, so it reads empty again.
               key={taxes.length}
               id={id}
@@ -4882,6 +4928,17 @@ function ReviewStep({
               : `${entitlements.length}, from the plan${
                   changedEntitlements > 0 ? ` · ${changedEntitlements} changed` : ''
                 }`
+          }
+        />
+        <ReviewRow
+          label="Spending allowances"
+          value={
+            (values.spendingAllowances ?? [])
+              .map(
+                (allowance) =>
+                  `${money(allowance.quota, values.currency)} / ${allowance.unit === 'subscription_period' ? 'billing period' : `${allowance.every} ${allowance.unit}`} · ${allowance.startDate || 'contract start'} → ${allowance.endDate || 'no end'}`,
+              )
+              .join(', ') || 'None'
           }
         />
         <ReviewRow

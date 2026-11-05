@@ -1,3 +1,4 @@
+import { spendingAllowanceSchema } from './spendingAllowance'
 import { FilterOp, type ListFilter, type ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
@@ -547,6 +548,7 @@ export const createSubscriptionSchema = z
     ),
     enableTrueUp: z.boolean(),
     chargeCommitments: z.array(chargeCommitmentSchema),
+    spendingAllowances: z.array(spendingAllowanceSchema).optional(),
     entitlementOverrides: z.array(
       z.object({
         entitlementId: z.string().min(1),
@@ -1276,6 +1278,8 @@ export interface InvoicePreview {
 
 /** An add-on attached to a contract. */
 export interface SubscriptionAddon {
+  addonId?: string
+
   id: string
   name: string
   active: boolean
@@ -1322,6 +1326,8 @@ export interface AddContractAddon {
 
 /** Apply a coupon to one contract, or replace the coupons on one of its charges. */
 export interface AddContractCoupon {
+  startDate?: string
+  endDate?: string
   couponCode: string
   /**
    * Apply to this charge only.

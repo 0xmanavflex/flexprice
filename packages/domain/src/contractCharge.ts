@@ -58,6 +58,8 @@ export const COMMITMENT_KIND_LABEL: Record<CommitmentKind, string> = {
 /** A minimum a customer commits to on a metered charge; usage past it is overage. */
 /** One UTC window of a windowed commitment, as the line item returns it. */
 export interface LineCommitmentWindow {
+  kind?: CommitmentKind
+
   id: string
   /** `HH:MM`, UTC. */
   start: string
@@ -164,6 +166,13 @@ export function startingNow(draft: AddContractCharge, now: Date = new Date()): A
 
 /** A new price and terms for one metered charge. Empty `effectiveFrom` means now. */
 export interface EditContractCharge {
+  subscriptionId?: string
+  /** The line had a commitment and this edit removes it. */
+  clearCommitment?: boolean
+
+  /** A new time window starts at the edited charge’s own price. Existing window IDs retain theirs. */
+  windowPrice?: CreateCharge
+
   price: PriceOverride
   /** The line's price unit, carried so amounts go out in the right unit. */
   priceUnit: string
@@ -189,6 +198,7 @@ export interface ContractTermsErrors {
   quantity?: string
   commitmentValue?: string
   overageFactor?: string
+  windows?: string
 }
 
 const DECIMAL = /^\d+(\.\d{1,8})?$/
@@ -207,13 +217,56 @@ export function validateContractTerms(input: {
   const commitment = input.terms?.commitment
   if (commitment) {
     const value = commitment.value.trim()
-    if (!DECIMAL.test(value) || Number(value) <= 0)
+    if (!DECIMAL.test(value) || (Number(value) <= 0 && !commitment.windows?.length))
       errors.commitmentValue = 'Enter a commitment greater than zero.'
-    else if (commitment.kind === CommitmentKind.Quantity && !WHOLE.test(value))
+    else if (
+      commitment.kind === CommitmentKind.Quantity &&
+      Number(value) !== 0 &&
+      !WHOLE.test(value)
+    )
       errors.commitmentValue = 'Enter a whole number of units.'
     const factor = commitment.overageFactor.trim()
     if (!DECIMAL.test(factor) || Number(factor) < 1)
       errors.overageFactor = 'Enter 1 or more. 1 means no overage premium.'
+  }
+  const windows = commitment?.windows ?? []
+  const minutes = (clock: string) =>
+    /^([01]\d|2[0-3]):[0-5]\d$/.test(clock)
+      ? Number(clock.slice(0, 2)) * 60 + Number(clock.slice(3))
+      : clock === '24:00'
+        ? 1440
+        : NaN
+  const intervals: [number, number][] = []
+  for (const window of windows) {
+    const start = minutes(window.start),
+      end = minutes(window.end)
+    if (
+      !Number.isFinite(start) ||
+      !Number.isFinite(end) ||
+      start >= 1440 ||
+      start === end ||
+      !DECIMAL.test(window.value.trim()) ||
+      Number(window.value) <= 0 ||
+      !DECIMAL.test(window.overageFactor.trim()) ||
+      Number(window.overageFactor) < 1 ||
+      ((window.kind ?? commitment?.kind) === CommitmentKind.Quantity &&
+        !WHOLE.test(window.value.trim()))
+    ) {
+      errors.windows = 'Each window needs valid UTC times and a commitment above zero.'
+      break
+    }
+    const spans: [number, number][] =
+      start < end
+        ? [[start, end]]
+        : [
+            [start, 1440],
+            [0, end],
+          ]
+    for (const span of spans) {
+      if (intervals.some(([a, b]) => span[0] < b && span[1] > a))
+        errors.windows = 'Time windows must not overlap.'
+      intervals.push(span)
+    }
   }
   return errors
 }

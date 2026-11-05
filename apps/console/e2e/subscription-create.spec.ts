@@ -116,3 +116,29 @@ test('creates a contract that other customers inherit', async ({ page }) => {
   expect(inheritance).not.toHaveProperty('invoicing_customer_external_id')
   await expect(page).toHaveURL(/\/contracts$/)
 })
+
+test('keeps an unsaved contract on a narrow screen and confirms desktop breadcrumb exit', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/contracts/new')
+  const customer = page.getByRole('combobox', { name: /^Customer/ })
+  await customer.click()
+  await page.getByRole('option').first().click()
+  const selected = await customer.inputValue()
+  await page.getByRole('button', { name: 'Close form', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Discard this contract?' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Keep editing' }).click()
+  await expect(customer).toHaveValue(selected)
+  await expect(page).toHaveURL(/\/contracts\/new/)
+  // Intermediate breadcrumbs are intentionally hidden on narrow screens.
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page
+    .getByRole('navigation', { name: 'breadcrumb' })
+    .getByRole('button', { name: 'Contracts', exact: true })
+    .click()
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Discard changes' }).click()
+  await expect(page).toHaveURL(/\/contracts$/)
+})

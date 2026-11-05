@@ -90,6 +90,11 @@ export type EntitlementAggregationMode =
   (typeof EntitlementAggregationMode)[keyof typeof EntitlementAggregationMode]
 
 export interface Entitlement {
+  startDate?: Date | null
+  endDate?: Date | null
+
+  parentEntitlementId?: string
+
   id: string
   featureId: string
   /** The feature's name, when the response expanded it: for the table. */

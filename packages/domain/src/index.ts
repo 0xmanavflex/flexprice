@@ -1181,3 +1181,9 @@ export { DOCS } from './docsLinks'
 export { eventPropertyNames, expressionProblem } from './featureExpression'
 export { invoiceProviderUrl } from './invoice'
 export { OPEN_START_DATE, isOpenStart } from './price'
+
+export { spendingAllowanceSchema, emptySpendingAllowance } from './spendingAllowance'
+export type { SpendingAllowance } from './spendingAllowance'
+
+export { zohoPaymentGateways, zohoPaymentGatewaysSchema } from './integrationConnect'
+export type { ZohoPaymentGateways } from './integrationConnect'

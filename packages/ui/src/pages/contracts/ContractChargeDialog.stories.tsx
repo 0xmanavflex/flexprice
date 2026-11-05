@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import type { SubscriptionLine } from '@fp/domain'
+import { BillingModel, BillingPeriod, CommitmentKind, type SubscriptionLine } from '@fp/domain'
 import { ContractChargeDialog } from './ContractChargeDialog'
 
 const LINE: SubscriptionLine = {
@@ -108,5 +108,75 @@ export const EditWithoutChangesSendsNothing: Story = {
     await userEvent.click(dialog.getByRole('button', { name: 'Save charge' }))
     await expect(await dialog.findByText(/Nothing has changed/)).toBeVisible()
     await expect(args.onEdit).not.toHaveBeenCalled()
+  },
+}
+
+const WINDOW_LINE: SubscriptionLine = {
+  ...LINE,
+  id: 'usage-line',
+  name: 'API calls',
+  kind: 'usage',
+  quantity: '',
+  amount: { amount: '0.05', currency: 'USD' },
+  pricing: {
+    billingModel: BillingModel.FlatFee,
+    tierMode: null,
+    tiers: [],
+    divideBy: null,
+    priceUnit: '',
+    meterId: 'api-meter',
+    currency: 'USD',
+    billingPeriod: BillingPeriod.Monthly,
+    terms: {
+      bucketSize: '',
+      commitment: {
+        kind: CommitmentKind.Amount,
+        value: '100',
+        windowed: true,
+        overageFactor: '1',
+        trueUp: false,
+        windows: [
+          {
+            id: 'keep-bucket-id',
+            start: '08:00',
+            end: '17:00',
+            value: '100',
+            overageFactor: '1',
+            trueUp: false,
+            priceId: 'keep-price-id',
+          },
+        ],
+      },
+    },
+  },
+}
+export const EditExistingTimeWindow: Story = {
+  args: {
+    state: { mode: 'edit', line: WINDOW_LINE },
+    billingPeriod: BillingPeriod.Monthly,
+    meters: [{ id: 'api-meter', name: 'API calls' }],
+  },
+  play: async ({ args }) => {
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.clear(dialog.getByRole('textbox', { name: 'Window 1 start (UTC)' }))
+    await userEvent.type(dialog.getByRole('textbox', { name: 'Window 1 start (UTC)' }), '08:30')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save charge' }))
+    await expect(args.onEdit).toHaveBeenCalledWith(
+      WINDOW_LINE,
+      expect.objectContaining({
+        priceChanged: false,
+        terms: expect.objectContaining({
+          commitment: expect.objectContaining({
+            windows: [
+              expect.objectContaining({
+                id: 'keep-bucket-id',
+                priceId: 'keep-price-id',
+                start: '08:30',
+              }),
+            ],
+          }),
+        }),
+      }),
+    )
   },
 }

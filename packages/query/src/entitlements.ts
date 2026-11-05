@@ -29,6 +29,11 @@ const RESET_PERIODS = new Set<string>(Object.values(UsageResetPeriod))
 
 /** The wire shape this reads, after the SDK camelCases the response. */
 export interface EntitlementWire {
+  startDate?: Date | undefined
+  endDate?: Date | undefined
+
+  parentEntitlementId?: string | undefined
+
   id?: string | undefined
   featureId?: string | undefined
   featureType?: string | undefined
@@ -60,6 +65,9 @@ export function toEntitlement(wire: EntitlementWire): Entitlement {
 
   return {
     id: wire.id ?? '',
+    ...(wire.startDate ? { startDate: wire.startDate } : {}),
+    ...(wire.endDate ? { endDate: wire.endDate } : {}),
+    ...(wire.parentEntitlementId ? { parentEntitlementId: wire.parentEntitlementId } : {}),
     featureId: wire.featureId ?? '',
     featureName: wire.feature?.name ?? null,
     featureType,

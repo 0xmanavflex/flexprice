@@ -678,6 +678,7 @@ describe('toPendingSchedules', () => {
       windows: [
         {
           id: 'morning',
+          kind: 'quantity',
           start: '00:00',
           end: '08:30',
           value: '30',

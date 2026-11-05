@@ -866,14 +866,15 @@ function InvoiceDocumentArticle({
   const settled = totals.due <= 0 && invoice.paid > 0
   const note = paymentFailed
     ? 'The last payment attempt failed. Retry, or send the customer a payment link.'
-    : invoice.paymentStatus === PaymentStatus.Refunded
-      ? // The read model merges full and partial refunds, so this says only that one happened.
-        'A refund was issued against this invoice.'
-      : settled || invoice.status === InvoiceStatus.Paid
-        ? 'Paid in full.'
-        : invoice.dueAt
-          ? `Payment is due on ${invoice.dueAt}.`
-          : 'Payment is due on receipt.'
+    : invoice.paymentStatus === PaymentStatus.PartiallyRefunded
+      ? 'A partial refund was issued against this invoice.'
+      : invoice.paymentStatus === PaymentStatus.Refunded
+        ? 'A refund was issued against this invoice.'
+        : settled || invoice.status === InvoiceStatus.Paid
+          ? 'Paid in full.'
+          : invoice.dueAt
+            ? `Payment is due on ${invoice.dueAt}.`
+            : 'Payment is due on receipt.'
 
   return (
     <article className="bg-background w-full overflow-hidden rounded-xl border shadow-[0_1px_2px_rgba(0,0,0,0.04)]">

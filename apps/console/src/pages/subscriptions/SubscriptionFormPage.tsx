@@ -3,32 +3,28 @@ import {
   explainContractCreateError,
   useAddons,
   useEntitiesCharges,
-  useCoupons,
+  useContractPickerCoupons,
   useCreateSubscription,
   useCreditGrants,
   useCustomerTaxAssociations,
   useCustomCurrencyConfig,
   useCustomer,
-  useCustomers,
+  useContractPickerCustomers,
   useFeaturesByMeters,
   useFxRates,
   useInheritanceBlocks,
   useParentContractCandidates,
   usePlanEntitlements,
-  usePlans,
+  useContractPickerPlans,
   usePrices,
   useTaxRates,
 } from '@fp/query'
 import {
   AddonStatus,
-  CouponStatus,
   type CreateSubscription,
   CreditGrantScope,
   creditGrantToDraft,
   DEFAULT_ADDON_QUERY,
-  DEFAULT_COUPON_QUERY,
-  DEFAULT_CUSTOMER_QUERY,
-  DEFAULT_PLAN_QUERY,
   DEFAULT_TAX_RATE_QUERY,
   formatMoney,
   FxRateScope,
@@ -48,7 +44,7 @@ export interface SubscriptionFormPageProps {
   onDone: (subscriptionId: string) => void
 }
 
-const PICKER_PAGE = { page: 1, pageSize: 100 }
+const PICKER_PAGE = { page: 1, pageSize: Number.MAX_SAFE_INTEGER }
 
 /**
  * Create a subscription (contract) on its own page.
@@ -69,8 +65,8 @@ export function SubscriptionFormPage({
   const [planId, setPlanId] = useState('')
   const [chosenCustomer, setChosenCustomer] = useState(customerId ?? '')
 
-  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, ...PICKER_PAGE })
-  const plans = usePlans({ ...DEFAULT_PLAN_QUERY, ...PICKER_PAGE })
+  const customers = useContractPickerCustomers()
+  const plans = useContractPickerPlans()
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = usePlanEntitlements(planId ? [planId] : [])
   const planGrants = useCreditGrants(CreditGrantScope.Plan, planId)
@@ -98,11 +94,7 @@ export function SubscriptionFormPage({
         : undefined,
     [currencyConfig.data],
   )
-  const coupons = useCoupons({
-    ...DEFAULT_COUPON_QUERY,
-    ...PICKER_PAGE,
-    statuses: [CouponStatus.Published],
-  })
+  const coupons = useContractPickerCoupons()
   const addons = useAddons({
     ...DEFAULT_ADDON_QUERY,
     ...PICKER_PAGE,
@@ -189,6 +181,23 @@ export function SubscriptionFormPage({
 
   return (
     <SubscriptionForm
+      pickerStatus={
+        customers.isError ||
+        plans.isError ||
+        coupons.isError ||
+        addons.isError ||
+        taxRates.isError ||
+        formOptions.isError
+          ? 'failed'
+          : customers.isPending ||
+              plans.isPending ||
+              coupons.isPending ||
+              addons.isPending ||
+              taxRates.isPending ||
+              formOptions.isLoading
+            ? 'loading'
+            : 'ready'
+      }
       customers={customerOptions}
       plans={planOptions}
       customerLocked={customerId !== undefined}

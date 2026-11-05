@@ -181,6 +181,8 @@ export function ContractUsageEditForm({
         setUnchanged(null)
         onSubmit({
           price,
+          windowPrice: charge,
+          clearCommitment: !terms.commitment && Boolean(line.pricing?.terms.commitment),
           priceUnit: charge.priceUnit ?? '',
           effectiveFrom: charge.effectiveFrom ?? '',
           terms,
@@ -190,6 +192,7 @@ export function ContractUsageEditForm({
       }}
       extras={
         <UsageTermsFields
+          allowNewWindows
           value={terms}
           onChange={setTerms}
           errors={showErrors ? errors : {}}

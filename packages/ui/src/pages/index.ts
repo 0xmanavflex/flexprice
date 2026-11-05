@@ -723,3 +723,6 @@ export { UpgradeView } from './selfBilling/UpgradeView'
 export type { UpgradeViewProps } from './selfBilling/UpgradeView'
 export { CheckoutReturnView } from './selfBilling/CheckoutReturnView'
 export type { CheckoutReturnViewProps, NextStep } from './selfBilling/CheckoutReturnView'
+
+export { ContractBenefitsEditor } from './contracts/ContractBenefitsEditor'
+export { ContractHierarchyEditor } from './contracts/ContractHierarchyEditor'

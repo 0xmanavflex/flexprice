@@ -1,11 +1,9 @@
+import { type Feature, FeatureType, PriceUnitStatus } from '@fp/domain'
 import {
-  DEFAULT_FEATURE_QUERY,
-  DEFAULT_PRICE_UNIT_QUERY,
-  type Feature,
-  FeatureType,
-  PriceUnitStatus,
-} from '@fp/domain'
-import { useFeatures, usePriceGroupOptions, usePriceUnits } from '@fp/query'
+  useContractPickerFeatures,
+  usePriceGroupOptions,
+  useContractPickerPriceUnits,
+} from '@fp/query'
 import type { FeatureOption, MeterOption, PriceUnitOption } from '@fp/ui/pages'
 
 /** A metered feature as the charge forms pick it; others have no meter to bill against. */
@@ -28,7 +26,10 @@ export function toMeterOptions(features: readonly Feature[]): MeterOption[] {
  * The picker's meters plus any of `more` it lacks: the meters a plan's charges
  * reference, read by id, which can sit past the picker's first page.
  */
-export function withMeters(meters: readonly MeterOption[], more: readonly Feature[]): MeterOption[] {
+export function withMeters(
+  meters: readonly MeterOption[],
+  more: readonly Feature[],
+): MeterOption[] {
   // Several features can share one meter: each meter is offered once.
   const known = new Set(meters.map((meter) => meter.id))
   const added = toMeterOptions(more).filter((meter) => {
@@ -41,8 +42,8 @@ export function withMeters(meters: readonly MeterOption[], more: readonly Featur
 
 /** The pickers the charge and entitlement forms need, read once from the catalogue. */
 export function usePlanFormOptions() {
-  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
-  const priceUnits = usePriceUnits({ ...DEFAULT_PRICE_UNIT_QUERY, pageSize: 100 })
+  const features = useContractPickerFeatures()
+  const priceUnits = useContractPickerPriceUnits()
   const priceGroups = usePriceGroupOptions()
 
   const allFeatures = features.data?.features ?? []
@@ -58,5 +59,13 @@ export function usePlanFormOptions() {
     ...(f.type === FeatureType.Metered && f.unitPlural ? { unit: f.unitPlural } : {}),
   }))
 
-  return { meters, units, priceGroups, featureOptions, allFeatures }
+  return {
+    meters,
+    units,
+    priceGroups,
+    featureOptions,
+    allFeatures,
+    isLoading: features.isPending || priceUnits.isPending,
+    isError: features.isError || priceUnits.isError,
+  }
 }

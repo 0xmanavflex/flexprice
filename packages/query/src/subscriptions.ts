@@ -8,6 +8,7 @@ import {
   updateSubscriptionMetadata,
 } from '@fp/api'
 import {
+  type SpendingAllowance,
   type AddContractAddon,
   type AddContractCharge,
   type AddContractCoupon,
@@ -356,6 +357,7 @@ export interface SubscriptionLineWire {
   commitmentTimeBuckets?:
     | Array<{
         id?: string | undefined
+        commitmentType?: string | undefined
         commitmentValue?: string | undefined
         start?: { hour?: number | undefined; minute?: number | undefined } | undefined
         end?: { hour?: number | undefined; minute?: number | undefined } | undefined
@@ -384,16 +386,22 @@ function toLineCommitment(wire: SubscriptionLineWire): LineCommitment | null {
         ? CommitmentKind.Amount
         : null
   const value = kind === CommitmentKind.Quantity ? wire.commitmentQuantity : wire.commitmentAmount
-  if (!kind || !value || Number(value) <= 0) return null
-  const windows = (wire.commitmentTimeBuckets ?? []).flatMap((bucket, index) => {
+  if (!kind || ((!value || Number(value) <= 0) && !wire.commitmentTimeBuckets?.length)) return null
+  const windows = (wire.commitmentTimeBuckets ?? []).flatMap((bucket) => {
     const bucketValue = bucket.commitmentValue?.trim()
     if (!bucketValue) return []
     return [
       {
-        id: bucket.id || `window_${index}`,
+        id: bucket.id || '',
         start: clock(bucket.start),
         end: clock(bucket.end),
         value: bucketValue,
+        kind:
+          bucket.commitmentType === CommitmentKind.Quantity
+            ? CommitmentKind.Quantity
+            : bucket.commitmentType === CommitmentKind.Amount
+              ? CommitmentKind.Amount
+              : kind,
         overageFactor: String(bucket.overageFactor ?? wire.commitmentOverageFactor ?? '1'),
         trueUp: bucket.trueUpEnabled ?? wire.commitmentTrueUpEnabled ?? false,
         ...(bucket.priceId ? { priceId: bucket.priceId } : {}),
@@ -406,7 +414,7 @@ function toLineCommitment(wire: SubscriptionLineWire): LineCommitment | null {
       : null
   return {
     kind,
-    value,
+    value: value || '0',
     windowed: wire.commitmentWindowed ?? false,
     overageFactor: wire.commitmentOverageFactor || '1',
     trueUp: wire.commitmentTrueUpEnabled ?? false,
@@ -882,31 +890,37 @@ export function useInheritedContracts(parentId: string) {
   return useQuery({
     queryKey: queryKeys.subscriptions.list({ parentId }),
     queryFn: async ({ signal }) => {
-      const response = await call(
-        (options) =>
-          client.subscriptions.querySubscription(
-            {
-              filters: [
-                {
-                  field: 'parent_subscription_id',
-                  operator: 'eq',
-                  dataType: 'string',
-                  value: { string: parentId },
-                },
-              ],
-              expand: 'plan,customer',
-              limit: 100,
-              offset: 0,
-            },
-            options,
-          ),
-        signal,
-      )
-      const wires = await withCustomerNames(
-        client,
-        (response.items ?? []) as SubscriptionWire[],
-        signal,
-      )
+      const all: SubscriptionWire[] = []
+      for (let offset = 0; ; offset += 100) {
+        const response = await call(
+          (options) =>
+            client.subscriptions.querySubscription(
+              {
+                filters: [
+                  {
+                    field: 'parent_subscription_id',
+                    operator: 'eq',
+                    dataType: 'string',
+                    value: { string: parentId },
+                  },
+                ],
+                expand: 'plan,customer',
+                limit: 100,
+                offset,
+              },
+              options,
+            ),
+          signal,
+        )
+        const items = (response.items ?? []) as SubscriptionWire[]
+        all.push(...items)
+        if (
+          items.length === 0 ||
+          (response.pagination?.total !== undefined && all.length >= response.pagination.total)
+        )
+          break
+      }
+      const wires = await withCustomerNames(client, all, signal)
       return wires.map(toSubscription)
     },
     enabled: parentId.length > 0,
@@ -1011,22 +1025,31 @@ export function useParentContractCandidates(enabled = true) {
   return useQuery({
     queryKey: queryKeys.subscriptions.list({ parentCandidates: true }),
     queryFn: async ({ signal }) => {
-      const response = await call(
-        (options) =>
-          client.subscriptions.querySubscription(
-            {
-              subscriptionStatus: ['active', 'trialing'],
-              expand: 'customer,plan',
-              limit: 100,
-              offset: 0,
-            },
-            options,
-          ),
-        signal,
-      )
-      return toParentContractCandidates(
-        await withCustomerNames(client, (response.items ?? []) as SubscriptionWire[], signal),
-      )
+      const contracts: SubscriptionWire[] = []
+      for (let offset = 0; ; offset += 100) {
+        const response = await call(
+          (options) =>
+            client.subscriptions.querySubscription(
+              {
+                subscriptionStatus: ['active', 'trialing'],
+                expand: 'customer,plan',
+                limit: 100,
+                offset,
+              },
+              options,
+            ),
+          signal,
+        )
+        const items = (response.items ?? []) as SubscriptionWire[]
+        contracts.push(...items)
+        if (
+          items.length === 0 ||
+          (response.pagination?.total !== undefined &&
+            contracts.length >= response.pagination.total)
+        )
+          break
+      }
+      return toParentContractCandidates(await withCustomerNames(client, contracts, signal))
     },
     enabled,
     staleTime: 30_000,
@@ -1417,6 +1440,9 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
 
   return {
     customerId: draft.customerId,
+    ...(draft.spendingAllowances?.length
+      ? { subscriptionEntitlementGrants: draft.spendingAllowances.map(toSpendingAllowanceRequest) }
+      : {}),
     planId: draft.planId,
     currency: draft.currency.toLowerCase(),
     billingPeriod: draft.billingPeriod,
@@ -1836,7 +1862,7 @@ const effectiveFrom = (day: string) => (day ? `${day}T00:00:00Z` : undefined)
 /** Commitment fields shared by the add and edit requests; the API takes the numbers as numbers. */
 function commitmentFields(
   terms: UsageTerms,
-  { update = false }: { update?: boolean } = {},
+  { update = false, windowPrice }: { update?: boolean; windowPrice?: Record<string, unknown> } = {},
 ): Record<string, unknown> {
   const commitment = terms.commitment
   if (!commitment) return {}
@@ -1847,7 +1873,8 @@ function commitmentFields(
       : { commitmentAmount: Number(commitment.value) }),
     // Per bucket only when there are buckets: the API rejects a windowed
     // commitment on a charge summed over the whole period.
-    commitmentWindowed: commitment.windowed && terms.bucketSize !== '',
+    commitmentWindowed:
+      Boolean(commitment.windows?.length) || (commitment.windowed && terms.bucketSize !== ''),
     // On an update an omitted period keeps the stored one; an empty string is
     // how the API is told to go back to the billing period.
     ...(commitment.duration
@@ -1857,6 +1884,26 @@ function commitmentFields(
         : {}),
     commitmentOverageFactor: Number(commitment.overageFactor),
     commitmentTrueUpEnabled: commitment.trueUp,
+    ...(commitment.windows !== undefined
+      ? {
+          commitmentTimeBuckets: commitment.windows.map((window) => {
+            const clock = (value: string) => {
+              const [hour, minute] = value.split(':').map(Number)
+              return { hour, minute }
+            }
+            return {
+              ...(window.id ? { id: window.id } : { price: windowPrice }),
+              start: clock(window.start),
+              end: clock(window.end),
+              commitmentType: window.kind ?? commitment.kind,
+              commitmentValue: window.value,
+              overageFactor: window.overageFactor,
+              trueUpEnabled: window.trueUp,
+              // Existing bucket IDs retain their own price. Do not replace it with the line's price.
+            }
+          }),
+        }
+      : {}),
   }
 }
 
@@ -1928,24 +1975,46 @@ export function toUpdateLineItemRequest(draft: EditContractCharge): Record<strin
   }
   return {
     ...(draft.priceChanged === false ? {} : { billingModel: price.billingModel, ...priced }),
-    ...termsUpdate(draft.terms, draft.previousTerms),
+    ...termsUpdate(draft),
     ...(from ? { effectiveFrom: from } : {}),
   }
 }
 
 /**
  * The bucket and commitment part of a line update. Without the line's old
- * terms everything is sent, as before. With them, unchanged terms send
- * nothing, and a removed commitment is cleared explicitly: an omitted field
- * keeps the stored value, so leaving it out would not remove it. Zero amount
- * and quantity are how the API reads "no commitment"; an empty window list
- * clears the line's windows.
+ * terms everything is sent. With them, unchanged terms send nothing, and a
+ * removed commitment is cleared explicitly: an omitted field keeps the stored
+ * value. Zero amount and quantity are how the API reads "no commitment"; an
+ * empty window list clears the line's windows. Existing windows keep their
+ * bucket and price ids; a new window is priced at the charge's own price, in
+ * this contract's scope.
  */
-function termsUpdate(terms: UsageTerms, previous: UsageTerms | undefined): Record<string, unknown> {
+function termsUpdate(draft: EditContractCharge): Record<string, unknown> {
+  const { terms, previousTerms: previous } = draft
+  const windowPrice = draft.windowPrice
+    ? (() => {
+        const {
+          entityId: _,
+          entityType: __,
+          ...price
+        } = toChargeRequest(draft.windowPrice, 'PLAN', '')
+        return { ...price, entityId: draft.subscriptionId ?? '', entityType: 'SUBSCRIPTION' }
+      })()
+    : undefined
+  const commitment = () =>
+    commitmentFields(terms, { update: true, ...(windowPrice ? { windowPrice } : {}) })
+  const cleared = (windows: boolean) => ({
+    commitmentAmount: 0,
+    commitmentQuantity: 0,
+    commitmentWindowed: false,
+    commitmentTrueUpEnabled: false,
+    ...(windows ? { commitmentTimeBuckets: [] } : {}),
+  })
   if (!previous) {
     return {
       ...(terms.bucketSize ? { bucketSize: terms.bucketSize } : {}),
-      ...commitmentFields(terms, { update: true }),
+      ...(draft.clearCommitment ? cleared(true) : {}),
+      ...commitment(),
     }
   }
   if (sameUsageTerms(terms, previous)) return {}
@@ -1953,16 +2022,9 @@ function termsUpdate(terms: UsageTerms, previous: UsageTerms | undefined): Recor
     terms.bucketSize && terms.bucketSize !== previous.bucketSize
       ? { bucketSize: terms.bucketSize }
       : {}
-  if (terms.commitment) return { ...bucket, ...commitmentFields(terms, { update: true }) }
+  if (terms.commitment) return { ...bucket, ...commitment() }
   if (!previous.commitment) return bucket
-  return {
-    ...bucket,
-    commitmentAmount: 0,
-    commitmentQuantity: 0,
-    commitmentWindowed: false,
-    commitmentTrueUpEnabled: false,
-    ...(previous.commitment.windows?.length ? { commitmentTimeBuckets: [] } : {}),
-  }
+  return { ...bucket, ...cleared(Boolean(previous.commitment.windows?.length)) }
 }
 
 export function toDeleteLineItemRequest(draft: EndContractCharge): Record<string, unknown> {
@@ -2367,6 +2429,7 @@ interface AddonAssociationWire {
 export function toSubscriptionAddon(wire: AddonAssociationWire): SubscriptionAddon {
   return {
     id: wire.id ?? wire.addonId ?? '',
+    ...(wire.addonId ? { addonId: wire.addonId } : {}),
     name: wire.addon?.name || wire.addonId || 'Add-on',
     active: (wire.addonStatus ?? 'active').toLowerCase() === 'active',
     startDate: realDate(wire.startDate),
@@ -2617,11 +2680,15 @@ export function toAddCouponRequest(
   draft: AddContractCoupon,
 ): FlexpriceModels.ExecuteSubscriptionModifyRequest {
   const couponCode = draft.couponCode.trim()
+  const dates = {
+    ...(draft.startDate ? { startDate: contractDateToInstant(draft.startDate) } : {}),
+    ...(draft.endDate ? { endDate: contractDateToInstant(draft.endDate) } : {}),
+  }
   return {
     type: 'coupon',
     couponParams: draft.lineItemId
-      ? { action: 'add', couponCode, subscriptionLineItemId: draft.lineItemId }
-      : { action: 'add', couponCode, subscriptionId },
+      ? { action: 'add', couponCode, subscriptionLineItemId: draft.lineItemId, ...dates }
+      : { action: 'add', couponCode, subscriptionId, ...dates },
   }
 }
 
@@ -2643,10 +2710,14 @@ export function toRemoveCouponRequest(
 export function toAddAddonsRequest(
   subscriptionId: string,
   drafts: readonly AddContractAddon[],
+  removals: readonly string[] = [],
 ): FlexpriceModels.ExecuteSubscriptionModifyRequest {
   return {
     type: 'addon',
     addonBulkParams: {
+      ...(removals.length
+        ? { removes: removals.map((addonAssociationId) => ({ addonAssociationId })) }
+        : {}),
       adds: drafts.map((draft) => {
         const { subscriptionId: _, ...add } = toAddAddonRequest(subscriptionId, draft)
         return add
@@ -2664,8 +2735,14 @@ export function useAddSubscriptionAddon(subscriptionId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (drafts: readonly AddContractAddon[]) =>
-      drafts.length === 1
+    mutationFn: ({
+      adds: drafts,
+      removes = [],
+    }: {
+      adds: readonly AddContractAddon[]
+      removes?: readonly string[]
+    }) =>
+      drafts.length === 1 && removes.length === 0
         ? call(() =>
             client.subscriptions.addSubscriptionAddon(
               toAddAddonRequest(subscriptionId, drafts[0]!),
@@ -2674,7 +2751,7 @@ export function useAddSubscriptionAddon(subscriptionId: string) {
         : call(() =>
             client.subscriptions.executeSubscriptionModify(
               subscriptionId,
-              toAddAddonsRequest(subscriptionId, drafts),
+              toAddAddonsRequest(subscriptionId, drafts, removes),
             ),
           ),
     onSuccess: () => invalidateContract(queryClient),
@@ -2774,13 +2851,95 @@ export function useRemoveSubscriptionTax() {
 }
 
 /** End a contract's credit grant now: `DELETE /creditgrants/{id}` with today as the end date. */
+export function toCancelCreditGrantRequest(
+  effectiveDate: string,
+): FlexpriceModels.DeleteCreditGrantRequest {
+  return { effectiveDate: contractDateToInstant(effectiveDate) }
+}
+
 export function useCancelSubscriptionCreditGrant() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (grantId: string) =>
-      call(() => client.creditGrants.deleteCreditGrant(grantId, { effectiveDate: new Date() })),
+    mutationFn: ({ grantId, effectiveDate }: { grantId: string; effectiveDate: string }) =>
+      call(() =>
+        client.creditGrants.deleteCreditGrant(grantId, toCancelCreditGrantRequest(effectiveDate)),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** Spending allowances are featureless subscription entitlement grants. */
+export function toSpendingAllowanceRequest(
+  draft: SpendingAllowance,
+): FlexpriceModels.CreateSubscriptionEntitlementGrantRequest {
+  const period = draft.unit === 'subscription_period'
+  return {
+    grantQuota: draft.quota,
+    grantDurationUnit: draft.unit,
+    aggregationMode: draft.aggregation,
+    ...(!period
+      ? { grantDurationValue: draft.every, grantAllocationBehavior: draft.allocation }
+      : {}),
+    ...(draft.startDate ? { startDate: contractDateToInstant(draft.startDate) } : {}),
+    ...(draft.endDate ? { endDate: contractDateToInstant(draft.endDate) } : {}),
+  }
+}
+
+export function useCreateSpendingAllowance(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (draft: SpendingAllowance) =>
+      call(() =>
+        client.entitlements.createEntitlement({
+          ...toSpendingAllowanceRequest(draft),
+          entityType: 'SUBSCRIPTION',
+          entityId: subscriptionId,
+          grantMeasure: 'amount',
+        }),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+export function useUpdateContractParent(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (parentSubscriptionId: string) =>
+      call(() => client.subscriptions.updateSubscription(subscriptionId, { parentSubscriptionId })),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+export function toInheritanceChangeRequest(
+  action: 'add' | 'remove',
+  externalIds: string[],
+): FlexpriceModels.ExecuteSubscriptionModifyRequest {
+  return {
+    type: 'inheritance',
+    inheritanceParams: {
+      action,
+      ...(action === 'add'
+        ? { externalCustomerIdsToInheritSubscription: externalIds }
+        : { externalCustomerIdsToRemove: externalIds }),
+    },
+  }
+}
+
+export function useChangeInheritedCustomers(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ action, externalIds }: { action: 'add' | 'remove'; externalIds: string[] }) =>
+      call(() =>
+        client.subscriptions.executeSubscriptionModify(
+          subscriptionId,
+          toInheritanceChangeRequest(action, externalIds),
+        ),
+      ),
     onSuccess: () => invalidateContract(queryClient),
   })
 }

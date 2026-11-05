@@ -221,8 +221,7 @@ describe('manage changes', () => {
     const saved: IntegrationConnection = {
       ...connection,
       providerType: 'zoho_books',
-      syncConfig: { invoice: { outbound: true }, customer: { inbound: true } },
-      rawSyncConfig: {
+      syncConfig: {
         invoice: { outbound: true },
         customer: { inbound: true },
         invoice_sync_settings: {
@@ -267,5 +266,82 @@ describe('connectionForEntity', () => {
     const integration = { connections: [unowned] }
     expect(connectionForEntity(integration, 'be_us', entities)).toBe(unowned)
     expect(connectionForEntity(integration, 'be_eu', entities)).toBeNull()
+  })
+})
+
+describe('Zoho invoice payment gateways', () => {
+  const zoho = spec('zoho_books')
+  const connection: IntegrationConnection = {
+    id: 'connection',
+    name: 'Zoho',
+    providerType: 'zoho_books',
+    metadata: {},
+    billingEntityId: null,
+    syncConfig: {
+      invoice: { outbound: true, future: 'keep' },
+      invoice_sync_settings: {
+        payment_gateways: {
+          enabled: true,
+          gateways: ['paypal', 'future_gateway'],
+          paypal_payment_method: 'adaptive',
+          future: 'keep',
+        },
+        template_id: 'template',
+      },
+      future_settings: { enabled: true },
+    },
+  }
+  it('round-trips unchanged settings without issuing an update', () => {
+    expect(toConnectionChanges(zoho, connection, connectionToFormValues(zoho, connection))).toEqual(
+      {},
+    )
+  })
+  it('edits gateways without dropping opaque provider settings', () => {
+    const values = connectionToFormValues(zoho, connection)
+    values.zohoPaymentGateways = {
+      enabled: true,
+      gateways: ['stripe', 'future_gateway'],
+      paypalPaymentMethod: 'standard',
+    }
+    expect(toConnectionChanges(zoho, connection, values).sync_config).toEqual({
+      invoice: { outbound: true, future: 'keep' },
+      invoice_sync_settings: {
+        template_id: 'template',
+        payment_gateways: { enabled: true, gateways: ['stripe', 'future_gateway'], future: 'keep' },
+      },
+      future_settings: { enabled: true },
+    })
+  })
+  it('rejects enabling gateways without a choice', () => {
+    const values = connectionToFormValues(zoho, connection)
+    values.zohoPaymentGateways = { enabled: true, gateways: [], paypalPaymentMethod: 'standard' }
+    expect(manageFormSchema(zoho).safeParse(values).success).toBe(false)
+  })
+  it('includes gateway configuration when creating a connection', () => {
+    const values = defaultConnectionValues(zoho, 'Zoho')
+    values.zohoPaymentGateways = {
+      enabled: true,
+      gateways: ['paypal'],
+      paypalPaymentMethod: 'adaptive',
+    }
+    expect(toConnectionPayload(zoho, values).sync_config).toMatchObject({
+      invoice_sync_settings: {
+        payment_gateways: {
+          enabled: true,
+          gateways: ['paypal'],
+          paypal_payment_method: 'adaptive',
+        },
+      },
+    })
+  })
+  it('defaults new QuickBooks connections to the active environment', () => {
+    expect(
+      defaultConnectionValues(spec('quickbooks'), 'QuickBooks', 'production').fields['environment'],
+    ).toBe('production')
+    expect(
+      defaultConnectionValues(spec('quickbooks'), 'QuickBooks', 'development').fields[
+        'environment'
+      ],
+    ).toBe('sandbox')
   })
 })

@@ -74,6 +74,7 @@ const STATUS_WORD_TONE: Record<string, PillTone> = {
   disabled: 'neutral',
   expired: 'neutral',
   refunded: 'neutral',
+  'partially refunded': 'neutral',
   'refund issued': 'neutral',
   'invoice adjusted': 'neutral',
   skipped: 'neutral',

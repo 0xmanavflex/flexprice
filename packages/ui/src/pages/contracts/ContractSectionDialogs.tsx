@@ -12,12 +12,15 @@ import {
   type CreateTaxRate,
   attachableAddonCharges,
 } from '@fp/domain'
+import { Field } from '@ui/compositions/forms/Field'
+import { DateInput } from '@ui/compositions/forms/DateInput'
+import { CheckboxRow } from '@ui/compositions/forms/CheckboxRow'
 import { Button } from '@ui/components/primitives/button'
 import { PlusIcon, XIcon } from '@ui/icons'
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
-import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
+import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { provenance } from '@ui/provenance'
 import { TaxDialog, type TaxRateOption } from '../customers/CustomerTaxSection'
 import { CreditGrantCreateForm } from '../product-catalog/credit-grants/CreditGrantForm'
@@ -41,6 +44,7 @@ export type ContractSectionKind = 'entitlement' | 'creditGrant' | 'addon' | 'cou
 
 export interface ContractSectionOptions {
   features: FeatureOption[]
+  existingAddons?: { id: string; name: string; addonId?: string }[] | undefined
   addons: { id: string; name: string }[]
   /** An add-on's charges, so each usage charge can carry a commitment, as V1. */
   addonCharges?: ((addonId: string) => readonly Charge[] | undefined) | undefined
@@ -62,7 +66,8 @@ export interface ContractSectionActions {
   onAddEntitlement?: ((draft: CreateEntitlement) => Promise<unknown> | void) | undefined
   onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
   /** One or more add-ons, attached together as one change. */
-  onAddAddon?: ((drafts: AddContractAddon[]) => Promise<unknown> | void) | undefined
+  onAddAddon?:
+    ((drafts: AddContractAddon[], removals?: string[]) => Promise<unknown> | void) | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
   onCreateTaxRate?: ((draft: CreateTaxRate) => Promise<TaxRateOption>) | undefined
@@ -125,6 +130,7 @@ export function ContractSectionDialogs({
         key={kind === 'addon' ? 'open' : 'closed'}
         open={kind === 'addon'}
         addons={options.addons}
+        existingAddons={options.existingAddons ?? []}
         chargesOf={options.addonCharges}
         chargesFailed={options.addonChargesFailed ?? false}
         meters={options.meters ?? []}
@@ -133,7 +139,11 @@ export function ContractSectionDialogs({
         pending={pending}
         error={error}
         onClose={onClose}
-        onSubmit={(drafts) => onRun(actions.onAddAddon?.(drafts))}
+        onSubmit={(drafts, removals) =>
+          onRun(
+            removals.length ? actions.onAddAddon?.(drafts, removals) : actions.onAddAddon?.(drafts),
+          )
+        }
       />
 
       <PickDialog
@@ -148,7 +158,7 @@ export function ContractSectionDialogs({
         pending={pending}
         error={error}
         onClose={onClose}
-        onSubmit={(couponCode) => onRun(actions.onAddCoupon?.({ couponCode }))}
+        onSubmit={(couponCode, dates) => onRun(actions.onAddCoupon?.({ couponCode, ...dates }))}
       />
 
       <TaxDialog
@@ -190,9 +200,11 @@ function PickDialog({
   pending: boolean
   error: string | null
   onClose: () => void
-  onSubmit: (value: string) => void
+  onSubmit: (value: string, dates: { startDate?: string; endDate?: string }) => void
 }) {
   const [value, setValue] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const id = `pick-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 
@@ -212,14 +224,17 @@ function PickDialog({
         onSubmit={() => {
           if (!value) return setProblem(`Choose a ${label.toLowerCase()}`)
           setProblem(null)
-          onSubmit(value)
+          if (endDate && startDate && endDate <= startDate)
+            return setProblem('End date must be after start date')
+          onSubmit(value, { ...(startDate ? { startDate } : {}), ...(endDate ? { endDate } : {}) })
         }}
       >
         <div className="flex flex-col gap-2">
           <LabelWithHint htmlFor={id} hint={hint}>
             {label}
           </LabelWithHint>
-          <OptionSelect
+          <OptionCombobox
+            searchable
             id={id}
             value={value || undefined}
             onValueChange={setValue}
@@ -230,6 +245,12 @@ function PickDialog({
             <p className="text-muted-foreground text-[13px]">{emptyNote}</p>
           ) : null}
         </div>
+        <Field label="Start date" hint="Leave blank to apply now.">
+          {({ id }) => <DateInput id={id} value={startDate} onValueChange={setStartDate} />}
+        </Field>
+        <Field label="End date" hint="Leave blank for no end date.">
+          {({ id }) => <DateInput id={id} value={endDate} onValueChange={setEndDate} />}
+        </Field>
         {problem || error ? (
           <p role="alert" className="text-destructive text-sm">
             {problem ?? error}
@@ -253,6 +274,7 @@ const MAX_ADDONS = 20
  */
 function AddonDialog({
   open,
+  existingAddons,
   addons,
   chargesOf,
   chargesFailed,
@@ -274,8 +296,10 @@ function AddonDialog({
   pending: boolean
   error: string | null
   onClose: () => void
-  onSubmit: (drafts: AddContractAddon[]) => void
+  existingAddons: { id: string; name: string; addonId?: string }[]
+  onSubmit: (drafts: AddContractAddon[], removals: string[]) => void
 }) {
+  const [removals, setRemovals] = useState<string[]>([])
   // Add-ons set aside to attach with the one in hand.
   const [staged, setStaged] = useState<{ draft: AddContractAddon; name: string }[]>([])
   const [addonId, setAddonId] = useState('')
@@ -302,13 +326,19 @@ function AddonDialog({
       : null
   const total = staged.length + (addonId ? 1 : 0)
   // An add-on goes on a contract once: those set aside leave the picker.
-  const choosable = addons.filter((a) => !staged.some(({ draft }) => draft.addonId === a.id))
+  const choosable = addons.filter(
+    (a) =>
+      !staged.some(({ draft }) => draft.addonId === a.id) &&
+      !existingAddons.some(
+        (existing) => existing.addonId === a.id && !removals.includes(existing.id),
+      ),
+  )
 
   return (
     <AddonChargesDialog
       open={open}
-      title="Add add-on"
-      submitLabel={total > 1 ? `Add ${total} add-ons` : 'Add add-on'}
+      title="Modify add-ons"
+      submitLabel="Apply add-on changes"
       charges={charges}
       chargesFailed={chargesFailed}
       meters={meters}
@@ -317,16 +347,53 @@ function AddonDialog({
       onChange={setPricing}
       pending={pending}
       error={problem ?? error}
-      disabled={addons.length === 0}
+      disabled={
+        total + removals.length === 0 || (addons.length === 0 && existingAddons.length === 0)
+      }
       onClose={onClose}
       onSubmit={() => {
         const inHand = current()
         const drafts = [...staged.map(({ draft }) => draft), ...(inHand ? [inHand] : [])]
-        if (drafts.length === 0) return setProblem('Choose an add-on')
+        if (
+          drafts.some((draft) =>
+            existingAddons.some(
+              (existing) => existing.addonId === draft.addonId && !removals.includes(existing.id),
+            ),
+          )
+        )
+          return setProblem('An add-on already attached must be removed before adding it again')
+        if (drafts.length + removals.length === 0)
+          return setProblem('Choose an add-on to add or remove')
+        if (drafts.length + removals.length > MAX_ADDONS)
+          return setProblem('Change at most 20 add-ons at once')
         setProblem(null)
-        onSubmit(drafts)
+        onSubmit(drafts, removals)
       }}
     >
+      {existingAddons.length > 0 ? (
+        <Field
+          label="Remove existing add-ons"
+          hint="Removals and additions are submitted together as one change. Removals take effect at period end."
+        >
+          {() => (
+            <div className="flex flex-col gap-2">
+              {existingAddons.map((addon) => (
+                <CheckboxRow
+                  key={addon.id}
+                  checked={removals.includes(addon.id)}
+                  onCheckedChange={(checked) =>
+                    setRemovals((ids) =>
+                      checked ? [...ids, addon.id] : ids.filter((id) => id !== addon.id),
+                    )
+                  }
+                >
+                  {addon.name}
+                </CheckboxRow>
+              ))}
+            </div>
+          )}
+        </Field>
+      ) : null}
       {staged.length > 0 ? (
         <ul
           className="divide-border flex flex-col divide-y rounded-lg border"
@@ -362,7 +429,8 @@ function AddonDialog({
         <LabelWithHint htmlFor="pick-add-on" hint="The add-on to attach to this contract.">
           Add-on
         </LabelWithHint>
-        <OptionSelect
+        <OptionCombobox
+          searchable
           id="pick-add-on"
           value={addonId || undefined}
           onValueChange={(next) => {
