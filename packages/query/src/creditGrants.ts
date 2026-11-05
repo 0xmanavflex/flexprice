@@ -39,6 +39,7 @@ export interface CreditGrantWire {
   expirationDuration?: number | undefined
   expirationDurationUnit?: string | undefined
   conversionRate?: string | undefined
+  topupConversionRate?: string | undefined
   priority?: number | undefined
   endDate?: Date | undefined
   metadata?: Record<string, string> | undefined
@@ -70,6 +71,7 @@ export function toCreditGrant(wire: CreditGrantWire): CreditGrant {
     expirationDurationUnit: (wire.expirationDurationUnit ??
       null) as CreditGrantExpiryDurationUnit | null,
     conversionRate: wire.conversionRate ?? null,
+    topupConversionRate: wire.topupConversionRate ?? null,
     priority: typeof wire.priority === 'number' ? wire.priority : 0,
     endDate: wire.endDate ?? null,
     metadata: wire.metadata ?? {},
@@ -131,6 +133,7 @@ export function toCreditGrantTerms(draft: CreateCreditGrant): Record<string, unk
         }
       : {}),
     ...(draft.conversionRate ? { conversionRate: draft.conversionRate } : {}),
+    ...(draft.topupConversionRate ? { topupConversionRate: draft.topupConversionRate } : {}),
     priority: draft.priority,
   }
 }

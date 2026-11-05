@@ -218,6 +218,17 @@ function billedCustomer<C extends { id?: string | undefined }>(wire: {
   return customer.id && wire.customerId && customer.id !== wire.customerId ? undefined : customer
 }
 
+/**
+ * Whether money is still owed. The balance left decides; without it, the
+ * amount due. With neither, the invoice is not assumed settled: a missing
+ * field read as zero once showed unpaid invoices as Paid.
+ */
+function outstanding(wire: Pick<InvoiceWire, 'amountRemaining' | 'amountDue' | 'currency'>) {
+  const balance = wire.amountRemaining ?? wire.amountDue
+  if (balance === undefined || balance === null || balance === '') return true
+  return !isZeroMoney(moneyOr(balance, wire.currency))
+}
+
 export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
   const currency = wire.currency
   const amountRemaining = moneyOr(wire.amountRemaining, currency)
@@ -236,7 +247,7 @@ export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
       invoiceStatus: wire.invoiceStatus,
       paymentStatus: wire.paymentStatus,
       dueDate: wire.dueDate ?? null,
-      hasOutstandingBalance: !isZeroMoney(amountRemaining),
+      hasOutstandingBalance: outstanding(wire),
       ...(now ? { now } : {}),
     }),
     // The same field `deriveInvoiceStatus` reads above, kept rather than

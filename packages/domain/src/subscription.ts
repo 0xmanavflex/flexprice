@@ -497,6 +497,13 @@ export const INHERITANCE_BLOCK_LABEL: Record<InheritanceBlock, string> = {
   [InheritanceBlock.OtherParent]: "Inherits another customer's contract",
 }
 
+/** A fixed add-on charge's quantity on one contract: a whole number of at least one. */
+export const addonQuantitySchema = z.object({
+  priceId: z.string().min(1),
+  quantity: z.string().regex(/^[1-9]\d*$/, 'Enter a whole number of at least 1'),
+})
+export type AddonQuantity = z.infer<typeof addonQuantitySchema>
+
 /**
  * The rules for starting a contract, in the order the form asks them: V1's:
  * customer and plan with the contract's dates; phases, each with its own
@@ -595,10 +602,18 @@ export const createSubscriptionSchema = z
         /** New prices for the add-on's own charges (`override_line_items`). */
         priceOverrides: z.array(priceOverrideSchema).optional(),
         commitments: z.array(chargeCommitmentSchema).optional(),
+        /** How many of each fixed charge, when not the add-on's own (an override's `quantity`). */
+        quantities: z.array(addonQuantitySchema).optional(),
         /** When this add-on starts. Blank starts it with the contract. An instant, or a day. */
         startDate: z.string().optional(),
       }),
     ),
+    /**
+     * Bill a charge at a shorter cadence as one line per invoice rather than
+     * one per its own period (`line_item_grouping: per_billing_period`). The
+     * total is the same either way.
+     */
+    combineChargePeriods: z.boolean().optional(),
     // Billing configuration.
     billingCycle: z.enum([BillingCycle.Anniversary, BillingCycle.Calendar]),
     /** `YYYY-MM-DD`: the day cycles are anchored to; blank follows the start date. */
@@ -1299,6 +1314,8 @@ export interface AddContractAddon {
   /** New prices for the add-on's own charges, sent as `override_line_items`. */
   priceOverrides?: PriceOverride[]
   commitments?: ChargeCommitment[]
+  /** How many of each fixed charge, when not the add-on's own. */
+  quantities?: AddonQuantity[]
   /** When the add-on starts. Blank starts it now, with the contract. */
   startDate?: string
 }

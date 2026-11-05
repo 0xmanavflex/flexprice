@@ -169,6 +169,20 @@ export interface EditContractCharge {
   priceUnit: string
   effectiveFrom: string
   terms: UsageTerms
+  /**
+   * False when the price is as it was: only the terms go out, so no new price
+   * starts. Absent counts as changed.
+   */
+  priceChanged?: boolean
+  /** The terms the line had: only what changed is sent, and what was removed is cleared. */
+  previousTerms?: UsageTerms
+}
+
+/** Whether two sets of terms say the same thing (windows included). */
+export function sameUsageTerms(a: UsageTerms, b: UsageTerms): boolean {
+  return (
+    a.bucketSize === b.bucketSize && JSON.stringify(a.commitment) === JSON.stringify(b.commitment)
+  )
 }
 
 export interface ContractTermsErrors {

@@ -24,6 +24,7 @@ import {
   type PauseSubscription,
   type ResumeSubscription,
   type ChargeCommitment,
+  type AddonQuantity,
   type PriceOverride,
   CommitmentType,
   type CommitmentPriceBase,
@@ -41,6 +42,7 @@ import {
   CreditGrantCadence,
   CreditGrantScope,
   type EditContractCharge,
+  sameUsageTerms,
   type EndContractCharge,
   EntitlementEntityType,
   type InvoicePreview,
@@ -1211,6 +1213,27 @@ function overrideLines(phase: SubscriptionPhase): Record<string, unknown>[] {
  * itself wins: the form keeps the two in step when either dialog saves, and
  * this keeps an explicit choice from being overwritten if they ever differ.
  */
+/**
+ * A fixed charge's quantity rides on that price's override line, as V1 sends
+ * it; a charge with no new price gets a line of its own carrying only the
+ * quantity, which the API accepts.
+ */
+function withQuantities(
+  lines: Record<string, unknown>[],
+  quantities: readonly AddonQuantity[],
+): Record<string, unknown>[] {
+  if (quantities.length === 0) return lines
+  const byPrice = new Map(quantities.map((q) => [q.priceId, q.quantity]))
+  const merged = lines.map((line) => {
+    const quantity = byPrice.get(line.priceId as string)
+    return quantity ? { ...line, quantity } : line
+  })
+  const covered = new Set(lines.map((line) => line.priceId))
+  for (const [priceId, quantity] of byPrice)
+    if (!covered.has(priceId)) merged.push({ priceId, quantity })
+  return merged
+}
+
 function withBuckets(
   lines: Record<string, unknown>[],
   commitments: readonly ChargeCommitment[],
@@ -1301,14 +1324,18 @@ function toLineItemCommitment(commitment: ChargeCommitment): Record<string, unkn
 function addonPricing(addon: {
   priceOverrides?: PriceOverride[] | undefined
   commitments?: ChargeCommitment[] | undefined
+  quantities?: AddonQuantity[] | undefined
 }): {
   lineItemCommitments?: Record<string, Record<string, unknown>>
   overrideLineItems?: FlexpriceModels.OverrideLineItemRequest[]
 } {
   const commitments = addon.commitments ?? []
   const lines = withBuckets(
-    (addon.priceOverrides ?? []).map(
-      (override) => toOverrideLineItem(override) as unknown as Record<string, unknown>,
+    withQuantities(
+      (addon.priceOverrides ?? []).map(
+        (override) => toOverrideLineItem(override) as unknown as Record<string, unknown>,
+      ),
+      addon.quantities ?? [],
     ),
     commitments,
   )
@@ -1497,6 +1524,8 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
     billingCycle: draft.billingCycle,
     ...(draft.billingAnchor ? { billingAnchor: utcDay(draft.billingAnchor) } : {}),
     ...(draft.paymentTerms ? { paymentTerms: draft.paymentTerms } : {}),
+    // Left out, the API bills a shorter-cadence charge one line per its own period.
+    ...(draft.combineChargePeriods ? { lineItemGrouping: 'per_billing_period' } : {}),
     prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
     ...(draft.autoInvoiceThreshold ? { autoInvoiceThreshold: draft.autoInvoiceThreshold } : {}),
     ...(draft.draft ? { subscriptionStatus: 'draft' } : {}),
@@ -1898,11 +1927,41 @@ export function toUpdateLineItemRequest(draft: EditContractCharge): Record<strin
       break
   }
   return {
-    billingModel: price.billingModel,
-    ...priced,
-    ...(draft.terms.bucketSize ? { bucketSize: draft.terms.bucketSize } : {}),
-    ...commitmentFields(draft.terms, { update: true }),
+    ...(draft.priceChanged === false ? {} : { billingModel: price.billingModel, ...priced }),
+    ...termsUpdate(draft.terms, draft.previousTerms),
     ...(from ? { effectiveFrom: from } : {}),
+  }
+}
+
+/**
+ * The bucket and commitment part of a line update. Without the line's old
+ * terms everything is sent, as before. With them, unchanged terms send
+ * nothing, and a removed commitment is cleared explicitly: an omitted field
+ * keeps the stored value, so leaving it out would not remove it. Zero amount
+ * and quantity are how the API reads "no commitment"; an empty window list
+ * clears the line's windows.
+ */
+function termsUpdate(terms: UsageTerms, previous: UsageTerms | undefined): Record<string, unknown> {
+  if (!previous) {
+    return {
+      ...(terms.bucketSize ? { bucketSize: terms.bucketSize } : {}),
+      ...commitmentFields(terms, { update: true }),
+    }
+  }
+  if (sameUsageTerms(terms, previous)) return {}
+  const bucket =
+    terms.bucketSize && terms.bucketSize !== previous.bucketSize
+      ? { bucketSize: terms.bucketSize }
+      : {}
+  if (terms.commitment) return { ...bucket, ...commitmentFields(terms, { update: true }) }
+  if (!previous.commitment) return bucket
+  return {
+    ...bucket,
+    commitmentAmount: 0,
+    commitmentQuantity: 0,
+    commitmentWindowed: false,
+    commitmentTrueUpEnabled: false,
+    ...(previous.commitment.windows?.length ? { commitmentTimeBuckets: [] } : {}),
   }
 }
 
@@ -2489,18 +2548,32 @@ export function useCreateSubscriptionEntitlement(subscriptionId: string) {
 }
 
 /**
- * When a grant added to a running contract starts. The API requires a
- * `start_date` for subscription-scoped grants and the dialog has no date, so
- * it is set as V1 sets it: a recurring grant starts at the end of the current
- * period, so it refreshes on the contract's own cycle; a one-time grant is
- * issued now.
+ * When a grant added to a running contract starts; the API requires a
+ * `start_date` for subscription-scoped grants. The dialog asks for a day,
+ * seeded as V1 seeds it: today for a one-time grant, the end of the current
+ * period for a recurring one, so it refreshes on the contract's own cycle.
+ * Today means now, and the period end's own day means that exact instant;
+ * any other day starts at its midnight, UTC. With no day chosen, the same
+ * defaults apply, and a recurring grant with no known period end is refused
+ * rather than started now on the wrong cycle.
  */
 export function subscriptionGrantStart(
-  draft: Pick<CreateCreditGrant, 'cadence'>,
+  draft: Pick<CreateCreditGrant, 'cadence' | 'startDate'>,
   currentPeriodEnd: Date | null | undefined,
   now: Date = new Date(),
 ): Date {
-  return draft.cadence === CreditGrantCadence.Recurring && currentPeriodEnd ? currentPeriodEnd : now
+  const day = (value: Date) => value.toISOString().slice(0, 10)
+  const chosen = draft.startDate?.trim()
+  if (chosen) {
+    if (chosen === day(now)) return now
+    if (currentPeriodEnd && chosen === day(currentPeriodEnd)) return currentPeriodEnd
+    return new Date(`${chosen}T00:00:00Z`)
+  }
+  if (draft.cadence !== CreditGrantCadence.Recurring) return now
+  if (currentPeriodEnd) return currentPeriodEnd
+  throw new Error(
+    'Choose when the recurring grant starts: this contract has no current period end.',
+  )
 }
 
 /** Grant this contract credits of its own: `POST /creditgrants`, scoped to the subscription. */

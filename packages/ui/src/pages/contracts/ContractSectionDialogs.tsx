@@ -54,6 +54,8 @@ export interface ContractSectionOptions {
   billingPeriod?: string | undefined
   coupons: { code: string; name: string }[]
   taxRates: TaxRateOption[]
+  /** The days a new credit grant opens on: today, and the current period's end when known. */
+  grantStartDates?: { oneTime: string; recurring: string | null } | undefined
 }
 
 export interface ContractSectionActions {
@@ -111,6 +113,7 @@ export function ContractSectionDialogs({
         isPending={pending}
       >
         <CreditGrantCreateForm
+          startDates={options.grantStartDates ?? { oneTime: '', recurring: null }}
           submitLabel="Add credit grant"
           isSubmitting={pending}
           submitError={error}
@@ -293,6 +296,7 @@ function AddonDialog({
           addonId,
           ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
           ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
+          ...(pricing.quantities?.length ? { quantities: pricing.quantities } : {}),
           ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
         }
       : null

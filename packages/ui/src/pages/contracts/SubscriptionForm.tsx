@@ -40,6 +40,8 @@ import {
   attachableAddonCommitments,
   attachableAddonOverrides,
   type ChargeCommitment,
+  type AddonQuantity,
+  addonQuantitySchema,
   type CreateCreditGrant,
   type CreateSubscription,
   FEATURE_TYPE_LABEL,
@@ -52,6 +54,7 @@ import {
   phaseStarts,
   contractDay,
   selectContractCharges,
+  splitsAcrossBillingPeriod,
   type ContractChargeSelection,
   CREDIT_GRANT_CADENCE_LABEL,
   creditGrantExpiryLabel,
@@ -714,6 +717,13 @@ export function SubscriptionForm({
     ],
   )
   const charges = selection.attached
+  // Only a charge billed more often than the contract makes line grouping mean anything.
+  const splitting = charges.some((charge) =>
+    splitsAcrossBillingPeriod(
+      { billingPeriod: values.billingPeriod, billingPeriodCount: values.billingPeriodCount },
+      charge,
+    ),
+  )
   // Fixed charges bill every period, so an early invoice on usage does not apply.
   const hasFixedCharges =
     charges.some((charge) => charge.type === PriceType.Fixed) ||
@@ -758,9 +768,16 @@ export function SubscriptionForm({
             addonCharges?.(addon.addonId),
             draft,
           ),
+          quantities: attachableAddonOverrides(
+            addon.quantities ?? [],
+            addonCharges?.(addon.addonId),
+            draft,
+          ),
         }),
       ),
       optedInChargeIds: draft.optedInChargeIds.filter((id) => billed.has(id)),
+      // A no-op without a charge that splits, so it is not sent.
+      combineChargePeriods: splitting && (draft.combineChargePeriods ?? false),
       // Only when invoices are converted, and only a rate that was set: the API
       // refuses fx_rates on a contract billed in the customer's own currency.
       fxRates: fxOverridable ? draft.fxRates.filter((fx) => fx.rate) : [],
@@ -1189,6 +1206,9 @@ export function SubscriptionForm({
           selection={selection}
           optedIn={values.optedInChargeIds}
           onChange={(next) => set('optedInChargeIds', next)}
+          splits={splitting}
+          combine={values.combineChargePeriods ?? false}
+          onCombine={(next) => set('combineChargePeriods', next)}
         />
         <AddonsSection
           selected={values.addons}
@@ -1497,10 +1517,18 @@ function OtherCadences({
   selection,
   optedIn,
   onChange,
+  splits,
+  combine,
+  onCombine,
 }: {
   selection: ContractChargeSelection
   optedIn: string[]
   onChange: (next: string[]) => void
+  /** A charge on the contract bills more often than the contract does. */
+  splits: boolean
+  /** Bill each such charge as one line per invoice. */
+  combine: boolean
+  onCombine: (next: boolean) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const optedInCharges = selection.attached.filter((charge) => optedIn.includes(charge.id))
@@ -1577,6 +1605,22 @@ function OtherCadences({
             </li>
           ) : null}
         </ul>
+      ) : null}
+      {splits ? (
+        <label className="flex items-start justify-between gap-4 border-t px-5 py-4 sm:px-6">
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-sm font-medium">One line per invoice</span>
+            <span className="text-muted-foreground text-xs">
+              Bill a charge at a shorter cadence as a single line covering the contract&apos;s
+              period, instead of one line for each of its own periods. The total is the same.
+            </span>
+          </span>
+          <Switch
+            checked={combine}
+            onCheckedChange={onCombine}
+            aria-label="Bill each shorter-cadence charge as one line per invoice"
+          />
+        </label>
       ) : null}
       {selection.excluded.length > 0 ? (
         <div className="text-muted-foreground border-t px-5 py-3 text-xs sm:px-6">
@@ -2964,6 +3008,8 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
 export interface AddonPricing {
   priceOverrides: PriceOverride[]
   commitments: ChargeCommitment[]
+  /** How many of each fixed charge, where not the add-on's own. */
+  quantities?: AddonQuantity[]
   /** When the add-on starts. Empty starts it with the contract. */
   startDate?: string
 }
@@ -3018,6 +3064,17 @@ export function AddonChargesDialog({
     charge: Charge
   } | null>(null)
   const overrideOf = (priceId: string) => value.priceOverrides.find((o) => o.priceId === priceId)
+  const quantities = value.quantities ?? []
+  const quantityOf = (priceId: string) => quantities.find((q) => q.priceId === priceId)?.quantity
+  const setQuantity = (priceId: string, quantity: string) =>
+    onChange({
+      ...value,
+      quantities: [
+        ...quantities.filter((q) => q.priceId !== priceId),
+        ...(quantity.trim() ? [{ priceId, quantity: quantity.trim() }] : []),
+      ],
+    })
+  const badQuantity = quantities.some((q) => !addonQuantitySchema.safeParse(q).success)
   const commitmentOf = (priceId: string) => value.commitments.find((c) => c.priceId === priceId)
   const without = <T extends { priceId: string }>(list: T[], priceId: string) =>
     list.filter((item) => item.priceId !== priceId)
@@ -3056,12 +3113,40 @@ export function AddonChargesDialog({
       },
     },
     {
+      key: 'quantity',
+      header: 'Qty',
+      className: 'w-24',
+      cell: (charge) =>
+        charge.type === PriceType.Usage ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          <Input
+            className="h-8 w-20"
+            inputMode="numeric"
+            placeholder="1"
+            aria-label={`Quantity of ${chargeName(charge)}`}
+            aria-invalid={
+              quantityOf(charge.id) !== undefined &&
+              !addonQuantitySchema.safeParse({
+                priceId: charge.id,
+                quantity: quantityOf(charge.id),
+              }).success
+            }
+            value={quantityOf(charge.id) ?? ''}
+            onChange={(event) => setQuantity(charge.id, event.target.value)}
+          />
+        ),
+    },
+    {
       key: 'actions',
       header: '',
       className: 'w-10 text-right',
       cell: (charge) => {
         const name = chargeName(charge)
-        const changed = overrideOf(charge.id) !== undefined || commitmentOf(charge.id) !== undefined
+        const changed =
+          overrideOf(charge.id) !== undefined ||
+          commitmentOf(charge.id) !== undefined ||
+          quantityOf(charge.id) !== undefined
         return (
           <RowActionsMenu
             label={name}
@@ -3087,8 +3172,10 @@ export function AddonChargesDialog({
                       icon: <RotateCcwIcon aria-hidden />,
                       onSelect: () =>
                         onChange({
+                          ...value,
                           priceOverrides: without(value.priceOverrides, charge.id),
                           commitments: without(value.commitments, charge.id),
+                          quantities: without(quantities, charge.id),
                         }),
                     },
                   ]
@@ -3116,13 +3203,13 @@ export function AddonChargesDialog({
           submitting={pending}
           // Not while the chosen add-on's charges are loading: it would attach before
           // they could be priced. A failed load still attaches it, as the note says.
-          disabled={Boolean(disabled) || (charges === undefined && !chargesFailed)}
+          disabled={Boolean(disabled) || badQuantity || (charges === undefined && !chargesFailed)}
           onSubmit={onSubmit}
         >
           {children}
           {charges === null ? null : (
             <div className="flex flex-col gap-2">
-              <LabelWithHint hint="Every charge this add-on bills on the contract. Change a price, or commit on a usage charge, before adding it. Optional.">
+              <LabelWithHint hint="Every charge this add-on bills on the contract. Change a price or a fixed charge's quantity, or commit on a usage charge, before adding it. Optional.">
                 Charges
               </LabelWithHint>
               {charges === undefined ? (
@@ -3248,6 +3335,7 @@ function withAddonPricing(
     name: addon.name,
     ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
     ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
+    ...(pricing.quantities?.length ? { quantities: pricing.quantities } : {}),
     ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
   }
 }
@@ -3255,8 +3343,8 @@ function withAddonPricing(
 /**
  * Add-ons the contract starts with: a table once there is one, and a picker
  * under it for the next. Picking an add-on opens its charges, fixed and usage,
- * to reprice or commit on before it is added; Edit reopens them. An add-on has
- * no quantity on a new contract: the API takes none.
+ * to reprice, set a fixed charge's quantity or commit on before it is added;
+ * Edit reopens them.
  */
 function AddonsSection({
   selected,
@@ -3301,6 +3389,10 @@ function AddonsSection({
       },
     ),
     commitments: attachableAddonCommitments(addon.commitments ?? [], chargesOf?.(addon.addonId), {
+      currency,
+      billingPeriod,
+    }),
+    quantities: attachableAddonOverrides(addon.quantities ?? [], chargesOf?.(addon.addonId), {
       currency,
       billingPeriod,
     }),

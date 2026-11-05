@@ -74,3 +74,39 @@ export const EndsOnADay: Story = {
     await expect(args.onEnd).toHaveBeenCalledWith(LINE, { effectiveFrom: FIFTEENTH })
   },
 }
+
+const USAGE_LINE: SubscriptionLine = {
+  ...LINE,
+  id: 'li_api',
+  name: 'API calls',
+  kind: 'usage',
+  quantity: '',
+  amount: { amount: '0.02', currency: 'USD' },
+  priceId: 'price_api',
+  amountEditable: false,
+  pricing: {
+    billingModel: 'FLAT_FEE',
+    tierMode: null,
+    tiers: [],
+    divideBy: null,
+    priceUnit: '',
+    meterId: 'meter_api',
+    billingPeriod: 'MONTHLY',
+    currency: 'USD',
+    terms: { bucketSize: '', commitment: null },
+  },
+} as SubscriptionLine
+
+/** Saving a metered charge as it was sends nothing: a save would still start a new price. */
+export const EditWithoutChangesSendsNothing: Story = {
+  args: {
+    state: { mode: 'edit', line: USAGE_LINE },
+    meters: [{ id: 'meter_api', name: 'API calls' }],
+  } as never,
+  play: async ({ args }) => {
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save charge' }))
+    await expect(await dialog.findByText(/Nothing has changed/)).toBeVisible()
+    await expect(args.onEdit).not.toHaveBeenCalled()
+  },
+}

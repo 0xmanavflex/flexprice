@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -152,7 +153,17 @@ export function CreditGrantCreateForm({
   onSubmit,
   submitLabel,
   defaultValue,
-}: CreditGrantFormProps<CreateCreditGrant>) {
+  startDates,
+}: CreditGrantFormProps<CreateCreditGrant> & {
+  /**
+   * Ask when the grant starts (`YYYY-MM-DD`), opened on these days: a grant
+   * added to a running contract. Recurring is null when the contract has no
+   * current period end, so the day must be chosen.
+   */
+  startDates?: { oneTime: string; recurring: string | null } | undefined
+}) {
+  const [pickedStart, setPickedStart] = useState<string | null>(null)
+  const [startError, setStartError] = useState<string | null>(null)
   const form = useCalmForm<CreateCreditGrant>({
     resolver: standardSchemaResolver(createCreditGrantSchema) as Resolver<CreateCreditGrant>,
     defaultValues: defaultValue ?? emptyCreditGrant(),
@@ -166,6 +177,14 @@ export function CreditGrantCreateForm({
   const period = form.watch('period')
   const duration = form.watch('expirationDuration')
   const durationUnit = form.watch('expirationDurationUnit')
+
+  // Follows the grant type until a day is picked by hand.
+  const startDay = startDates
+    ? (pickedStart ??
+      (cadence === CreditGrantCadence.Recurring
+        ? (startDates.recurring ?? '')
+        : startDates.oneTime))
+    : ''
 
   const creditsNumber = Number(credits)
   const rateNumber = Number(rate)
@@ -198,7 +217,14 @@ export function CreditGrantCreateForm({
 
   return (
     <form
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
+      onSubmit={form.handleSubmit((values) => {
+        if (!startDates) return onSubmit(values)
+        if (!startDay) {
+          setStartError('Choose when the grant starts')
+          return
+        }
+        onSubmit({ ...values, startDate: startDay })
+      })}
       noValidate
       className="flex flex-col gap-5"
     >
@@ -270,6 +296,47 @@ export function CreditGrantCreateForm({
             />
           )}
         </Field>
+        <Field
+          label="Top-up conversion rate"
+          hint="Optional. What a credit costs when bought as a top-up, if not the rate above."
+          error={messageOf(errors, 'topupConversionRate')}
+        >
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              inputMode="decimal"
+              placeholder="Same as above"
+              disabled={isSubmitting}
+              {...field}
+              {...form.register('topupConversionRate')}
+            />
+          )}
+        </Field>
+        {startDates ? (
+          <Field
+            label="Starts"
+            hint={
+              cadence === CreditGrantCadence.Recurring
+                ? 'Defaults to the end of the current period, so it refreshes on the contract’s cycle.'
+                : 'Today issues the credits now.'
+            }
+            required
+            error={startError ?? undefined}
+          >
+            {({ id, 'aria-describedby': describedBy }) => (
+              <DateInput
+                id={id}
+                value={startDay}
+                onValueChange={(day) => {
+                  setPickedStart(day)
+                  setStartError(null)
+                }}
+                disabled={isSubmitting}
+                aria-describedby={describedBy}
+              />
+            )}
+          </Field>
+        ) : null}
         <Field label="Expiry" hint="When credits from this grant stop being usable." required>
           {({ id }) => (
             <Controller

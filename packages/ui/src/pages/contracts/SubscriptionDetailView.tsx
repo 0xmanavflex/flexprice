@@ -1939,6 +1939,10 @@ export function SubscriptionDetailView({
           billingPeriod: s.billingPeriod ?? undefined,
           coupons: sectionOptions?.coupons ?? [],
           taxRates: sectionOptions?.taxRates ?? [],
+          grantStartDates: {
+            oneTime: new Date().toISOString().slice(0, 10),
+            recurring: s.currentPeriodEnd ? s.currentPeriodEnd.toISOString().slice(0, 10) : null,
+          },
         }}
         actions={{
           onAddEntitlement,

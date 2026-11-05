@@ -13,6 +13,7 @@ import {
   PriceType,
   TierMode,
   hasTermsErrors,
+  sameUsageTerms,
   validateContractTerms,
 } from '@fp/domain'
 import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
@@ -110,8 +111,10 @@ export function ContractUsageEditForm({
   isSubmitting = false,
   submitError = null,
 }: ContractUsageEditFormProps) {
-  const [terms, setTerms] = useState<UsageTerms>(line.pricing?.terms ?? NO_USAGE_TERMS)
+  const initialTerms = line.pricing?.terms ?? NO_USAGE_TERMS
+  const [terms, setTerms] = useState<UsageTerms>(initialTerms)
   const [showErrors, setShowErrors] = useState(false)
+  const [unchanged, setUnchanged] = useState<string | null>(null)
   const draft = toDraft(line, currency, billingPeriod)
   const errors = validateContractTerms({ terms })
 
@@ -139,7 +142,7 @@ export function ContractUsageEditForm({
       meters={meters}
       priceUnits={priceUnits}
       isSubmitting={isSubmitting}
-      submitError={submitError}
+      submitError={unchanged ?? submitError}
       submitLabel="Save charge"
       notice={
         <Alert variant="info">
@@ -159,11 +162,30 @@ export function ContractUsageEditForm({
           setShowErrors(true)
           return
         }
+        // The API cannot take a bucket off a charge: an omitted size keeps the stored one.
+        if (initialTerms.bucketSize !== '' && terms.bucketSize === '') {
+          setUnchanged(
+            'A charge’s usage window can’t be removed. End this charge and add a new one summed over the whole period.',
+          )
+          return
+        }
+        const price = toOverride(line.priceId, charge)
+        const priceChanged =
+          JSON.stringify(price) !== JSON.stringify(toOverride(line.priceId, draft)) ||
+          (charge.priceUnit ?? '') !== (draft.priceUnit ?? '')
+        // Saving what is already there would still start a new price; send nothing.
+        if (!priceChanged && sameUsageTerms(terms, initialTerms)) {
+          setUnchanged('Nothing has changed. Edit the price or terms, or close this.')
+          return
+        }
+        setUnchanged(null)
         onSubmit({
-          price: toOverride(line.priceId, charge),
+          price,
           priceUnit: charge.priceUnit ?? '',
           effectiveFrom: charge.effectiveFrom ?? '',
           terms,
+          priceChanged,
+          previousTerms: initialTerms,
         })
       }}
       extras={

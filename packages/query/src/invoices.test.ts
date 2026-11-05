@@ -125,9 +125,20 @@ describe('toInvoice: a narrow model out of a 45-field optional response', () => 
     const invoice = toInvoice({})
 
     expect(invoice.total).toEqual({ amount: '0', currency: 'USD' })
-    expect(invoice.status).toBe(InvoiceStatus.Paid)
+    // No balance on the response is not proof it was paid.
+    expect(invoice.status).toBe(InvoiceStatus.Open)
     expect(invoice.dueDate).toBeNull()
     expect(invoice.customerName).toBe('Unknown')
+  })
+
+  it('does not read a missing balance as paid', () => {
+    const unpaid = { ...wire, amountRemaining: undefined }
+    expect(toInvoice(unpaid, new Date('2025-12-15T00:00:00Z')).status).toBe(InvoiceStatus.Open)
+    expect(
+      toInvoice({ ...unpaid, amountDue: undefined }, new Date('2025-12-15T00:00:00Z')).status,
+    ).toBe(InvoiceStatus.Open)
+    expect(toInvoice({ ...unpaid, amountDue: '0' }).status).toBe(InvoiceStatus.Paid)
+    expect(toInvoice({ ...unpaid, paymentStatus: 'SUCCEEDED' }).status).toBe(InvoiceStatus.Paid)
   })
 
   it('treats a zero remaining balance as paid, whatever the payment status says', () => {

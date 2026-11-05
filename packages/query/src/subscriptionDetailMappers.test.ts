@@ -460,6 +460,68 @@ describe('toPendingSchedules', () => {
       })
     })
 
+    it('sends only the terms when the price is unchanged, and nothing for unchanged terms', () => {
+      const price = { priceId: 'p', billingModel: 'FLAT_FEE', amount: '120' } as const
+      const terms = { bucketSize: 'HOUR', commitment: null } as const
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price,
+          terms,
+          priceChanged: false,
+          previousTerms: terms,
+        }),
+      ).toEqual({})
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price,
+          terms: { bucketSize: 'DAY', commitment: null },
+          priceChanged: false,
+          previousTerms: terms,
+        }),
+      ).toEqual({ bucketSize: 'DAY' })
+    })
+
+    it('clears a removed commitment and its windows explicitly', () => {
+      const price = { priceId: 'p', billingModel: 'FLAT_FEE', amount: '120' } as const
+      const previousTerms = {
+        bucketSize: 'HOUR',
+        commitment: {
+          kind: 'amount',
+          value: '500',
+          windowed: true,
+          overageFactor: '1',
+          trueUp: true,
+          windows: [
+            {
+              id: 'b1',
+              start: '09:00',
+              end: '17:00',
+              value: '10',
+              overageFactor: '1',
+              trueUp: false,
+            },
+          ],
+        },
+      } as const
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price,
+          terms: { bucketSize: 'HOUR', commitment: null },
+          priceChanged: false,
+          previousTerms,
+        } as unknown as Parameters<typeof toUpdateLineItemRequest>[0]),
+      ).toEqual({
+        commitmentAmount: 0,
+        commitmentQuantity: 0,
+        commitmentWindowed: false,
+        commitmentTrueUpEnabled: false,
+        commitmentTimeBuckets: [],
+      })
+    })
+
     it('clears a stored commitment period when the edit goes back to the billing period', () => {
       const price = { priceId: 'p', billingModel: 'FLAT_FEE', amount: '120' } as const
       const commitment = {

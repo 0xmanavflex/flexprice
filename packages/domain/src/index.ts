@@ -391,6 +391,7 @@ export {
   subscriptionDiscountSchema,
   subscriptionPhaseSchema,
   chargeCommitmentSchema,
+  addonQuantitySchema,
   commitmentWindowSchema,
   CommitmentType,
   WindowBillingModel,
@@ -422,6 +423,7 @@ export type {
   SubscriptionDiscount,
   SubscriptionPhase,
   ChargeCommitment,
+  AddonQuantity,
   ContractCommitment,
   InvoicePreview,
   InvoicePreviewLine,
@@ -448,6 +450,7 @@ export {
   COMMITMENT_KIND_LABEL,
   CommitmentKind,
   NO_USAGE_TERMS,
+  sameUsageTerms,
   PRORATION,
   PRORATION_LABEL,
   hasTermsErrors,
@@ -945,6 +948,7 @@ export {
   attachableAddonOverrides,
   cadenceAllowed,
   selectContractCharges,
+  splitsAcrossBillingPeriod,
 } from './contractCharges'
 export type { ContractChargeSelection } from './contractCharges'
 export {
