@@ -38,8 +38,13 @@ export const WorkflowRunSheetProvenance = provenance({
 })
 
 export interface WorkflowRunSheetProps {
-  /** The row that was opened; `null` closes the sheet. Its summary shows while the detail loads. */
+  /** The row that was opened, when it is on the list; its summary shows while the detail loads. */
   run: WorkflowRun | null
+  /**
+   * Whether the sheet is open. Defaults to "a row was given"; set it when the
+   * run comes from the address and its row is not on the page loaded.
+   */
+  open?: boolean
   /** The full run, once read. */
   detail: WorkflowRunDetail | null
   isLoading?: boolean
@@ -57,6 +62,7 @@ function Mono({ value }: { value: string }) {
 
 export function WorkflowRunSheet({
   run,
+  open,
   detail,
   isLoading = false,
   error = null,
@@ -121,7 +127,7 @@ export function WorkflowRunSheet({
   ]
 
   return (
-    <Sheet open={run !== null} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={open ?? run !== null} onOpenChange={(next) => !next && onClose()}>
       <SheetContent>
         {shown ? (
           <>
@@ -194,7 +200,11 @@ export function WorkflowRunSheet({
                     ) : null}
                   </div>
                 ) : !detail || isLoading || retrying ? (
-                  <div className="flex flex-col gap-2" role="status" aria-label="Loading activities">
+                  <div
+                    className="flex flex-col gap-2"
+                    role="status"
+                    aria-label="Loading activities"
+                  >
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
                   </div>

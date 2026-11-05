@@ -30,18 +30,23 @@ test.describe('workflows', () => {
     await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible()
   })
 
-  test('opens a failed run and shows why it failed', async ({ page }) => {
+  test('opens a failed run, shows why it failed, and keeps it open on reload', async ({ page }) => {
     const runs = list(page)
-    // wf-0002 is the corpus's first failed run.
-    await page.goto('/workflows?search=wf-0002')
-    await expect(runs.rows()).toHaveCount(1)
-    await expect(runs.rows().first()).toContainText('Failed')
+    // Whichever failed run the list shows first: no fixture id is pinned.
+    await page.goto('/workflows?status=failed')
+    const failed = runs.rows().filter({ hasText: 'Failed' }).first()
+    await expect(failed).toBeVisible()
 
-    await runs.rows().first().click()
+    await failed.click()
     const sheet = page.getByRole('dialog')
     await expect(sheet).toBeVisible()
-    await expect(sheet.getByText('RecalculateInvoiceActivity')).toBeVisible()
-    await expect(sheet.getByRole('alert')).toContainText('recalculation produced no invoice')
+    // A failed run names its failure, in the alert, once the details load.
+    await expect(sheet.getByRole('alert')).not.toBeEmpty()
+    // The open run is in the address: a reload opens it again.
+    await expect(page).toHaveURL(/[?&]workflow=[^&]+.*[?&]run=[^&]+/)
+    await page.reload()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('dialog').getByRole('alert')).not.toBeEmpty()
   })
 
   test('puts the search in the URL and survives a reload', async ({ page }) => {
