@@ -1090,7 +1090,19 @@ export interface LineChangePreview {
     startDate: Date | null
     endDate: Date | null
   }[]
-  invoices: { action: string; status: string; amountDue: Money | null }[]
+  /**
+   * What the change bills or credits. A raise prorates onto an invoice
+   * (`amountDue`); a cut can instead credit the customer's wallet
+   * (`action: 'wallet_credit'`), which is no invoice at all and carries its
+   * amount as `walletCredit`.
+   */
+  invoices: {
+    action: string
+    status: string
+    amountDue: Money | null
+    /** The amount credited to the wallet, for a `wallet_credit`; null otherwise. */
+    walletCredit: Money | null
+  }[]
 }
 
 export interface LineChangeError {

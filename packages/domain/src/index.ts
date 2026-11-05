@@ -126,6 +126,13 @@ export {
   versionStatus,
   type VersionStatus,
   type ChargeLineage,
+  PERCENTAGE_LABEL,
+  PERCENTAGE_METADATA_KEY,
+  PERCENTAGE_METADATA_VALUE,
+  isPercentagePrice,
+  percentToDecimalAmount,
+  decimalAmountToPercent,
+  formatPercentageAmount,
 } from './price'
 export type { Charge, CreateCharge, PriceTier, Tier } from './price'
 export { ChargeSection, chargeFlags, isChargeCustomised } from './chargeFlags'
@@ -471,6 +478,7 @@ export {
   emptyPayment,
   recordPaymentSchema,
   toPaymentStatus,
+  isPaymentDeletable,
 } from './payment'
 export type { Payment, PaymentDetail, PaymentQuery, RecordPayment } from './payment'
 

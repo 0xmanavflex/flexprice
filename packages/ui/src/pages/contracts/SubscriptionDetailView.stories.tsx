@@ -547,7 +547,9 @@ const BASE: SubscriptionDetailViewProps = {
         endDate: null,
       },
     ],
-    invoices: [{ action: 'created', status: 'draft', amountDue: money('600', 'USD') }],
+    invoices: [
+      { action: 'created', status: 'draft', amountDue: money('600', 'USD'), walletCredit: null },
+    ],
   })),
   onChangeQuantity: fn(),
 }

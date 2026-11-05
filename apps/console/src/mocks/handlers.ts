@@ -3633,6 +3633,14 @@ export const handlers = [
     return response
   }),
   http.delete(`${BASE}/payments/:id`, ({ params }) => {
+    // As the API: only a payment that never moved money (INITIATED or FAILED) can be deleted.
+    const stored = paymentStore.find((row) => readString(row, 'id') === String(params['id']))
+    const status = stored ? readString(stored, 'payment_status') : ''
+    if (stored && status !== 'INITIATED' && status !== 'FAILED') {
+      return fxRefusal(
+        `A payment in status ${status} cannot be deleted. Void or refund it instead.`,
+      )
+    }
     removeRow(paymentStore, String(params['id']))
     return HttpResponse.json({ message: 'Payment deleted' })
   }),

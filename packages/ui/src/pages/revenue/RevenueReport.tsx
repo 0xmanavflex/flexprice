@@ -31,7 +31,7 @@ import { FilterSelect, type FilterOption } from '../home/DashboardHome'
 import { DetailTable } from '../shared/DetailTable'
 import { csvFilename, downloadCsv, toCsv, type CsvColumn } from './reportCsv'
 import { Panel } from '../shared/Panel'
-import { TrendBadge, toneColor, toneRamp } from '../shared/charts'
+import { TrendBadge, toneColor } from '../shared/charts'
 
 export const RevenueReportProvenance = provenance({
   source: 'composition',
@@ -162,7 +162,7 @@ export interface RevenueReportProps {
   comparing: boolean
   /**
    * The report library is not configured. Only what the revenue dashboard
-   * returns is shown: the revenue total, its usage and contract split, and
+   * returns is shown: the revenue total, its usage and contract figures, and
    * customers. Charts, receivables, payments and usage stay off the page.
    */
   revenueOnly?: boolean | undefined
@@ -638,12 +638,15 @@ function DaysChart({
   )
 }
 
-const [USAGE_TONE, CONTRACT_TONE] = toneRamp('series-1', 2) as [string, string]
-
+/**
+ * Revenue per customer, one bar each. The bar is the invoiced revenue only: the
+ * usage and contract figures beside it come from another read (service-period
+ * charges with their own cutoff), so stacking them here would present two
+ * parts that do not add up to the total as if they did.
+ */
 function CustomerBars({ rows, height }: { rows: CustomerRevenueRow[]; height: number }) {
   const config: ChartConfig = {
-    usage: { label: 'Usage', color: USAGE_TONE },
-    contract: { label: 'Contract', color: CONTRACT_TONE },
+    revenue: { label: 'Revenue', color: REVENUE },
   }
   const data = rows.map((row) => ({ ...row, total: row.display.revenue }))
   return (
@@ -667,8 +670,7 @@ function CustomerBars({ rows, height }: { rows: CustomerRevenueRow[]; height: nu
           cursor={{ fill: 'var(--muted)', opacity: 0.5 }}
           content={<ChartTooltipContent />}
         />
-        <Bar dataKey="usage" stackId="c" fill="var(--color-usage)" />
-        <Bar dataKey="contract" stackId="c" fill="var(--color-contract)" radius={[0, 3, 3, 0]}>
+        <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[0, 3, 3, 0]}>
           <LabelList
             dataKey="total"
             position="right"
@@ -732,7 +734,9 @@ function EventsChart({
 export function RevenueReport(props: RevenueReportProps) {
   const { filters, headline, comparing, view, onViewChange, revenueOnly = false } = props
   const tabs = revenueOnly
-    ? TABS.filter((tab) => tab.value === 'overview' || tab.value === 'revenue' || tab.value === 'customers')
+    ? TABS.filter(
+        (tab) => tab.value === 'overview' || tab.value === 'revenue' || tab.value === 'customers',
+      )
     : TABS
   const figure = (value: ReportFigure): ReportFigure =>
     headline.status === 'ready'
@@ -878,79 +882,79 @@ function OverviewTab(props: RevenueReportProps) {
       </Panel>
 
       {props.revenueOnly ? null : (
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Panel
-          title="Receivables aging"
-          description="Unpaid balance by days past due, as of today"
-          action={withCsv(
-            <CsvButton
-              name="Receivables aging"
-              rangeLabel={asOfToday()}
-              columns={AGING_COLUMNS}
-              rows={receivables.status === 'ready' ? receivables.buckets : []}
-            />,
-            <ViewReport onClick={() => onViewChange('receivables')} />,
-          )}
-        >
-          <Surface>
-            {receivables.status === 'ready' ? (
-              <>
-                <OverviewTiles
-                  variant="flush"
-                  tiles={[
-                    { label: 'Outstanding', value: receivables.outstanding },
-                    {
-                      label: 'Overdue',
-                      value: receivables.overdue,
-                      detail: `${receivables.overdueShare} of outstanding`,
-                    },
-                  ]}
-                />
-                <AgingChart buckets={receivables.buckets} />
-              </>
-            ) : (
-              <NotReady state={receivables} height={240} empty="Nothing outstanding" />
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Panel
+            title="Receivables aging"
+            description="Unpaid balance by days past due, as of today"
+            action={withCsv(
+              <CsvButton
+                name="Receivables aging"
+                rangeLabel={asOfToday()}
+                columns={AGING_COLUMNS}
+                rows={receivables.status === 'ready' ? receivables.buckets : []}
+              />,
+              <ViewReport onClick={() => onViewChange('receivables')} />,
             )}
-            <BasedOn text={receivables.basedOn} />
-          </Surface>
-        </Panel>
+          >
+            <Surface>
+              {receivables.status === 'ready' ? (
+                <>
+                  <OverviewTiles
+                    variant="flush"
+                    tiles={[
+                      { label: 'Outstanding', value: receivables.outstanding },
+                      {
+                        label: 'Overdue',
+                        value: receivables.overdue,
+                        detail: `${receivables.overdueShare} of outstanding`,
+                      },
+                    ]}
+                  />
+                  <AgingChart buckets={receivables.buckets} />
+                </>
+              ) : (
+                <NotReady state={receivables} height={240} empty="Nothing outstanding" />
+              )}
+              <BasedOn text={receivables.basedOn} />
+            </Surface>
+          </Panel>
 
-        <Panel
-          title="Days to pay over time"
-          description="Average days from issue to payment"
-          action={withCsv(
-            <CsvButton
-              name="Days to pay"
-              rangeLabel={rangeLabel}
-              columns={DAYS_COLUMNS}
-              rows={payments.status === 'ready' ? payments.series : []}
-            />,
-            <ViewReport onClick={() => onViewChange('payments')} />,
-          )}
-        >
-          <Surface>
-            {payments.status === 'ready' ? (
-              <>
-                <OverviewTiles
-                  variant="flush"
-                  tiles={[
-                    { label: 'Average', value: payments.average.value },
-                    { label: 'Median', value: payments.median },
-                  ]}
-                />
-                {daysHaveData(payments.series) ? (
-                  <DaysChart series={payments.series} />
-                ) : (
-                  <NoChartData title="No payments in this range" />
-                )}
-              </>
-            ) : (
-              <NotReady state={payments} height={240} empty="No payments in this range" />
+          <Panel
+            title="Days to pay over time"
+            description="Average days from issue to payment"
+            action={withCsv(
+              <CsvButton
+                name="Days to pay"
+                rangeLabel={rangeLabel}
+                columns={DAYS_COLUMNS}
+                rows={payments.status === 'ready' ? payments.series : []}
+              />,
+              <ViewReport onClick={() => onViewChange('payments')} />,
             )}
-            <BasedOn text={payments.basedOn} />
-          </Surface>
-        </Panel>
-      </div>
+          >
+            <Surface>
+              {payments.status === 'ready' ? (
+                <>
+                  <OverviewTiles
+                    variant="flush"
+                    tiles={[
+                      { label: 'Average', value: payments.average.value },
+                      { label: 'Median', value: payments.median },
+                    ]}
+                  />
+                  {daysHaveData(payments.series) ? (
+                    <DaysChart series={payments.series} />
+                  ) : (
+                    <NoChartData title="No payments in this range" />
+                  )}
+                </>
+              ) : (
+                <NotReady state={payments} height={240} empty="No payments in this range" />
+              )}
+              <BasedOn text={payments.basedOn} />
+            </Surface>
+          </Panel>
+        </div>
       )}
 
       <div className={props.revenueOnly ? 'grid gap-5' : 'grid gap-5 lg:grid-cols-2'}>
@@ -973,12 +977,6 @@ function OverviewTab(props: RevenueReportProps) {
             ) : customers.status === 'ready' ? (
               <>
                 <CustomerBars rows={topFive} height={236} />
-                <Legend
-                  items={[
-                    { label: 'Usage', color: USAGE_TONE },
-                    { label: 'Contract', color: CONTRACT_TONE },
-                  ]}
-                />
               </>
             ) : (
               <NotReady state={customers} height={236} empty="No billed customers in this range" />
@@ -987,41 +985,41 @@ function OverviewTab(props: RevenueReportProps) {
         </Panel>
 
         {props.revenueOnly ? null : (
-        <Panel
-          title="Events volume"
-          description="Usage events ingested per day"
-          action={withCsv(
-            <CsvButton
-              name="Events volume"
-              rangeLabel={rangeLabel}
-              columns={EVENTS_COLUMNS}
-              rows={usage.status === 'ready' ? usage.series : []}
-            />,
-            <ViewReport onClick={() => onViewChange('usage')} />,
-          )}
-        >
-          <Surface>
-            {usage.status === 'ready' ? (
-              <>
-                <OverviewTiles
-                  variant="flush"
-                  tiles={[
-                    { label: 'Total events', value: usage.total },
-                    { label: 'Peak day', value: usage.peak },
-                  ]}
-                />
-                {eventsHaveData(usage.series) ? (
-                  <EventsChart series={usage.series} height={220} />
-                ) : (
-                  <NoChartData title="No events in this range" />
-                )}
-                <BasedOn text={usage.basedOn} />
-              </>
-            ) : (
-              <NotReady state={usage} height={220} empty="No events in this range" />
+          <Panel
+            title="Events volume"
+            description="Usage events ingested per day"
+            action={withCsv(
+              <CsvButton
+                name="Events volume"
+                rangeLabel={rangeLabel}
+                columns={EVENTS_COLUMNS}
+                rows={usage.status === 'ready' ? usage.series : []}
+              />,
+              <ViewReport onClick={() => onViewChange('usage')} />,
             )}
-          </Surface>
-        </Panel>
+          >
+            <Surface>
+              {usage.status === 'ready' ? (
+                <>
+                  <OverviewTiles
+                    variant="flush"
+                    tiles={[
+                      { label: 'Total events', value: usage.total },
+                      { label: 'Peak day', value: usage.peak },
+                    ]}
+                  />
+                  {eventsHaveData(usage.series) ? (
+                    <EventsChart series={usage.series} height={220} />
+                  ) : (
+                    <NoChartData title="No events in this range" />
+                  )}
+                  <BasedOn text={usage.basedOn} />
+                </>
+              ) : (
+                <NotReady state={usage} height={220} empty="No events in this range" />
+              )}
+            </Surface>
+          </Panel>
         )}
       </div>
     </div>
@@ -1208,7 +1206,7 @@ function CustomersTab(props: RevenueReportProps) {
             rows={customers.status === 'ready' ? top : []}
           />
         }
-        description={`Revenue per customer, ${rangeLabel}, split into usage and contract`}
+        description={`Invoiced revenue per customer, ${rangeLabel}`}
       >
         <Surface>
           {customers.status === 'ready' ? (
@@ -1229,12 +1227,6 @@ function CustomersTab(props: RevenueReportProps) {
               {top.length > 0 ? (
                 <>
                   <CustomerBars rows={top} height={Math.max(160, top.length * 32 + 20)} />
-                  <Legend
-                    items={[
-                      { label: 'Usage', color: USAGE_TONE },
-                      { label: 'Contract', color: CONTRACT_TONE },
-                    ]}
-                  />
                 </>
               ) : (
                 <NoChartData title="No billed customers in this range" />
@@ -1430,7 +1422,7 @@ function CustomersTab(props: RevenueReportProps) {
               }
             />
           }
-          description="Ordered by revenue, highest first"
+          description="Ordered by invoiced revenue, highest first. Contract and usage are service-period charges from a separate read, counted on their own, so they need not add up to revenue."
         >
           <Surface>
             {customers.all.status === 'error' ? (

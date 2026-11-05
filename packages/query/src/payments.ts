@@ -11,6 +11,7 @@ import {
   PaymentStatus,
   moneyOr,
   toPaymentStatus,
+  isPaymentDeletable,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { toTopLevelChoice } from './search'
@@ -271,6 +272,7 @@ export function toPaymentDetail(wire: PaymentDetailWire): PaymentDetail {
     failedAt: wire.failedAt ?? null,
     refundedAt: wire.refundedAt ?? null,
     voidedAt: wire.voidedAt ?? null,
+    deletable: isPaymentDeletable(wire.paymentStatus),
   }
 }
 

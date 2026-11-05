@@ -205,6 +205,33 @@ export const PricedInCurrencyAndUnit: Story = {
 }
 
 /**
+ * A V1 percentage fee (a flat fee of 0.07125 marked as a percentage) reads as its rate and
+ * model, never as a $0.07125 flat fee (QA #94). The read model already formats it.
+ */
+export const PercentagePrice: Story = {
+  args: {
+    charges: [
+      {
+        ...chargeFixtures[0]!,
+        id: 'price_pct',
+        type: PriceType.Usage,
+        displayName: 'Processing fee',
+        amount: '0.07125',
+        displayAmount: '7.125%',
+        percentage: true,
+        invoiceCadence: InvoiceCadence.Arrear,
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('7.125%')).toBeInTheDocument()
+    await expect(canvas.getAllByText(/Percentage/).length).toBeGreaterThan(0)
+    await expect(canvas.queryByText('$0.07125')).not.toBeInTheDocument()
+  },
+}
+
+/**
  * The five flags, and what a click on one is for.
  *
  * The chips carry no values: never "20% off": because a value on a chip is a

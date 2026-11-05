@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  explainContractHierarchyError,
+  explainContractCreateError,
   useAddons,
   useEntitiesCharges,
   useCoupons,
@@ -256,7 +256,7 @@ export function SubscriptionFormPage({
       isSubmitting={create.isPending}
       // The hierarchy explanation is guidance, so it stays at the top; every
       // other refusal from the API is a toast (MutationToasts).
-      submitError={explainContractHierarchyError(create.error, nameOf)}
+      submitError={explainContractCreateError(create.error, nameOf)}
       onSubmit={(draft) =>
         create.mutate(draft, {
           onSuccess: (created) => onDone((created as { id?: string }).id ?? ''),

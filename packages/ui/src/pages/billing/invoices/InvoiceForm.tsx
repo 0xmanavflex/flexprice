@@ -872,39 +872,122 @@ export function InvoiceForm(props: InvoiceFormProps) {
                         {taxes.length === 0 ? (
                           <p className="text-muted-foreground text-sm">No taxes are applied.</p>
                         ) : (
-                          taxes.map((tax) => (
-                            <div
-                              key={tax.taxRateCode}
-                              className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
-                            >
-                              <span className="flex min-w-0 flex-col">
-                                <span className="truncate font-medium">
-                                  {tax.name || tax.taxRateCode}
-                                  {tax.percentage ? ` · ${tax.percentage}%` : ''}
-                                </span>
-                                <span className="text-muted-foreground text-xs">
-                                  {tax.taxRateCode} ·{' '}
-                                  {tax.taxBehavior === 'inclusive'
-                                    ? 'Included in the price'
-                                    : 'Added on top of the price'}
-                                </span>
-                              </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label={`Remove ${tax.name || tax.taxRateCode}`}
-                                disabled={isSubmitting}
-                                onClick={() =>
-                                  setTaxes((items) =>
-                                    items.filter((item) => item.taxRateCode !== tax.taxRateCode),
-                                  )
-                                }
+                          taxes.map((tax) => {
+                            const label = tax.name || tax.taxRateCode
+                            const fieldId = `invoice-tax-${tax.taxRateCode}`
+                            const updateTax = (patch: Partial<InvoiceTax>) =>
+                              setTaxes((items) =>
+                                items.map((item) =>
+                                  item.taxRateCode === tax.taxRateCode
+                                    ? { ...item, ...patch }
+                                    : item,
+                                ),
+                              )
+                            return (
+                              <div
+                                key={tax.taxRateCode}
+                                className="flex flex-col gap-3 rounded-lg border px-3 py-2 text-sm"
                               >
-                                <Trash2Icon aria-hidden />
-                              </Button>
-                            </div>
-                          ))
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="flex min-w-0 flex-col">
+                                    <span className="truncate font-medium">
+                                      {label}
+                                      {tax.percentage ? ` · ${tax.percentage}%` : ''}
+                                    </span>
+                                    <span className="text-muted-foreground text-xs">
+                                      {tax.taxRateCode} ·{' '}
+                                      {tax.taxBehavior === 'inclusive'
+                                        ? 'Included in the price'
+                                        : 'Added on top of the price'}
+                                    </span>
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    aria-label={`Remove ${label}`}
+                                    disabled={isSubmitting}
+                                    onClick={() =>
+                                      setTaxes((items) =>
+                                        items.filter(
+                                          (item) => item.taxRateCode !== tax.taxRateCode,
+                                        ),
+                                      )
+                                    }
+                                  >
+                                    <Trash2Icon aria-hidden />
+                                  </Button>
+                                </div>
+                                {/* V1's per-invoice overrides: behaviour, priority and auto-apply. */}
+                                <FieldGroup className="grid gap-3 md:grid-cols-3">
+                                  <Field>
+                                    <LabelWithHint
+                                      htmlFor={`${fieldId}-behavior`}
+                                      hint="Exclusive adds the tax on top of the lines; inclusive treats it as already in the price."
+                                    >
+                                      Tax behaviour
+                                    </LabelWithHint>
+                                    <OptionSelect
+                                      id={`${fieldId}-behavior`}
+                                      aria-label={`${label} tax behaviour`}
+                                      value={tax.taxBehavior}
+                                      disabled={isSubmitting}
+                                      options={[
+                                        { value: 'exclusive', label: 'Exclusive' },
+                                        { value: 'inclusive', label: 'Inclusive' },
+                                      ]}
+                                      onValueChange={(value) =>
+                                        updateTax({
+                                          taxBehavior:
+                                            value === 'inclusive' ? 'inclusive' : 'exclusive',
+                                        })
+                                      }
+                                    />
+                                  </Field>
+                                  <Field>
+                                    <LabelWithHint
+                                      htmlFor={`${fieldId}-priority`}
+                                      hint="The order taxes are applied in; lower numbers apply first."
+                                    >
+                                      Priority
+                                    </LabelWithHint>
+                                    <Input
+                                      id={`${fieldId}-priority`}
+                                      aria-label={`${label} priority`}
+                                      type="number"
+                                      inputMode="numeric"
+                                      min={0}
+                                      step={1}
+                                      value={String(tax.priority)}
+                                      disabled={isSubmitting}
+                                      onChange={(event) => {
+                                        const next = Number.parseInt(event.target.value, 10)
+                                        updateTax({ priority: Number.isFinite(next) ? next : 0 })
+                                      }}
+                                    />
+                                  </Field>
+                                  <Field orientation="horizontal" className="md:self-end md:pb-2">
+                                    <Switch
+                                      id={`${fieldId}-auto-apply`}
+                                      checked={tax.autoApply}
+                                      disabled={isSubmitting}
+                                      onCheckedChange={(checked) =>
+                                        updateTax({ autoApply: checked })
+                                      }
+                                    />
+                                    <LabelWithHint
+                                      htmlFor={`${fieldId}-auto-apply`}
+                                      hint="Apply this rate automatically when the invoice is computed."
+                                    >
+                                      Auto-apply
+                                      {/* Every tax row has one: the name tells them apart for a screen reader. */}
+                                      <span className="sr-only"> for {label}</span>
+                                    </LabelWithHint>
+                                  </Field>
+                                </FieldGroup>
+                              </div>
+                            )
+                          })
                         )}
                         {availableRates.length > 0 ? (
                           <div className="max-w-xs">

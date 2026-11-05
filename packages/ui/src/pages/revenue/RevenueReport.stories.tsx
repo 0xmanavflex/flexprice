@@ -356,11 +356,16 @@ export const PaymentsWithoutSeries: Story = {
   },
 }
 
-/** Credits consumed and credits topped up are separate, titled panels. */
+/**
+ * Credits consumed and credits topped up are separate, titled panels. Revenue is the invoiced
+ * total; usage and contract are separate service-period figures, never presented as its split.
+ */
 export const Customers: Story = {
   args: { view: 'customers' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/^Invoiced revenue per customer/)).toBeVisible()
+    await expect(canvas.queryByText(/split into usage and contract/)).toBeNull()
     await expect(await canvas.findByRole('heading', { name: 'Credits consumed' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Credits topped up' })).toBeVisible()
     await expect(canvas.getByLabelText('Credits consumed by type table')).toBeVisible()

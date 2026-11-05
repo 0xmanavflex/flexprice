@@ -160,6 +160,23 @@ export interface PaymentDetail extends Payment {
   failedAt: Date | null
   refundedAt: Date | null
   voidedAt: Date | null
+  /**
+   * Whether the API will delete it. Only a payment that never moved money can
+   * go: `INITIATED` (recorded, not yet processed) or `FAILED`. A succeeded,
+   * pending or processing one is voided or refunded instead, so the page does
+   * not offer Delete there. Read from the wire status, because the domain's
+   * `pending` folds the deletable `INITIATED` together with `PENDING` and
+   * `PROCESSING`, which are not.
+   */
+  deletable: boolean
+}
+
+/** The wire statuses `DELETE /payments/:id` accepts (`IsDeletable` in the API). */
+const DELETABLE_WIRE_PAYMENT_STATUS = new Set(['INITIATED', 'FAILED'])
+
+/** Whether a payment in this wire status can be deleted. */
+export function isPaymentDeletable(wire: string | null | undefined): boolean {
+  return DELETABLE_WIRE_PAYMENT_STATUS.has((wire ?? '').toUpperCase())
 }
 
 export const PaymentMethod = {

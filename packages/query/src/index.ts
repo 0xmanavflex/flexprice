@@ -285,6 +285,7 @@ export {
   useParentContractCandidates,
   toParentContractCandidates,
   type ParentContractCandidate,
+  explainContractCreateError,
   explainContractHierarchyError,
   useCancelSubscription,
   useCreateSubscription,

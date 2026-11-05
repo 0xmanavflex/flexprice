@@ -1151,6 +1151,29 @@ export function explainContractHierarchyError(
 }
 
 /**
+ * A plain sentence for a refused `POST /subscriptions`, or null to keep the
+ * caller's own message.
+ *
+ * The customer-hierarchy refusals are reworded by
+ * {@link explainContractHierarchyError}. A refused charge commitment arrives
+ * as the API's generic hint ("Line item commitment validation failed") with
+ * the actual reason only in `details.error` (say, "bucket price entity_type
+ * must be SUBSCRIPTION"), so that reason is added to the sentence instead of
+ * leaving the person with a message that names no cause.
+ */
+export function explainContractCreateError(
+  error: unknown,
+  nameOf: (externalId: string) => string = (externalId) => externalId,
+): string | null {
+  const hierarchy = explainContractHierarchyError(error, nameOf)
+  if (hierarchy) return hierarchy
+  if (!(error instanceof ApiError) || !error.fromServer) return null
+  const reason = error.details?.['error']?.trim()
+  if (!reason || error.message.toLowerCase().includes(reason.toLowerCase())) return null
+  return `${error.message.replace(/[.\s]+$/, '')}: ${reason}`
+}
+
+/**
  * A subscription draft, as a `CreateSubscriptionRequest`.
  *
  * Empty lists and blank optionals are left out rather than sent empty: an
@@ -1212,13 +1235,21 @@ function toBucket(time: string): { hour: number; minute: number } {
   return { hour, minute }
 }
 
-/** A window's own price: the plan charge it reprices, at the window's rate. */
+/**
+ * A window's own price: the plan charge it reprices, at the window's rate.
+ *
+ * The API makes it a price of the new subscription and refuses any other scope
+ * ("bucket price entity_type must be SUBSCRIPTION"), so it goes as
+ * `SUBSCRIPTION`, not the plan charge's `PLAN`. The subscription does not exist
+ * yet, and the API fills in its id itself, so the entity id is left blank (the
+ * SDK still requires the field).
+ */
 function windowPrice(window: CommitmentWindow, base: CommitmentPriceBase): Record<string, unknown> {
   return {
     type: PriceType.Usage,
     priceUnitType: 'FIAT',
-    entityId: base.entityId,
-    entityType: base.entityType,
+    entityId: '',
+    entityType: 'SUBSCRIPTION',
     meterId: base.meterId,
     currency: base.currency.toLowerCase(),
     billingPeriod: base.billingPeriod,
@@ -1928,10 +1959,31 @@ interface ModifyResponseWire {
               status?: string | undefined
               invoice?:
                 { amountDue?: string | undefined; currency?: string | undefined } | undefined
+              walletTransaction?:
+                | {
+                    amount?: string | undefined
+                    creditAmount?: string | undefined
+                    currency?: string | undefined
+                  }
+                | undefined
             }[]
           | undefined
       }
     | undefined
+}
+
+/** A previewed wallet credit's amount, in the wallet's currency; null when there is none. */
+function walletCreditOf(
+  wire:
+    | {
+        amount?: string | undefined
+        creditAmount?: string | undefined
+        currency?: string | undefined
+      }
+    | undefined,
+): Money | null {
+  const amount = wire?.amount?.trim() || wire?.creditAmount?.trim()
+  return amount ? moneyOr(amount, wire?.currency) : null
 }
 
 export function toLineChangePreview(wire: ModifyResponseWire): LineChangePreview {
@@ -1950,6 +2002,8 @@ export function toLineChangePreview(wire: ModifyResponseWire): LineChangePreview
       amountDue: item.invoice?.amountDue
         ? moneyOr(item.invoice.amountDue, item.invoice.currency)
         : null,
+      // A cut that credits the wallet carries its amount on the wallet transaction, not an invoice.
+      walletCredit: walletCreditOf(item.walletTransaction),
     })),
   }
 }

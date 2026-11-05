@@ -118,6 +118,46 @@ export const Usage: Story = {
   },
 }
 
+/**
+ * A usage charge can be a percentage, as V1's "Percentage fee": entered as a percent and sent
+ * as a flat fee marked as a percentage (the request mapper stores 7.125 as 0.07125).
+ */
+export const UsagePercentage: Story = {
+  args: {
+    meters,
+    defaultValue: {
+      type: PriceType.Usage,
+      billingModel: BillingModel.FlatFee,
+      currency: 'USD',
+      billingPeriod: BillingPeriod.Monthly,
+      invoiceCadence: InvoiceCadence.Arrear,
+      amount: '',
+      meterId: 'meter_api',
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('radio', { name: /Percentage/ }))
+    await userEvent.type(await canvas.findByLabelText(/Percentage \(%\)/), '7.125')
+    await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billingModel: BillingModel.FlatFee,
+        amount: '7.125',
+        percentage: true,
+      }),
+    )
+  },
+}
+
+/** Percentage is a usage-charge option, as in V1: a fixed charge does not offer it. */
+export const PercentageOnlyOnUsage: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('radio', { name: /Percentage/ })).toBeNull()
+  },
+}
+
 /** A usage charge on tiered bands, seeded from an existing value. */
 export const UsageTiered: Story = {
   args: { meters, defaultValue: usageTiered },
