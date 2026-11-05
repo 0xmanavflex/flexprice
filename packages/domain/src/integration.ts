@@ -157,6 +157,12 @@ export interface IntegrationConnection {
   providerType: string
   /** Entity → which directions are on, as the connection was saved. */
   syncConfig: Record<string, { inbound?: boolean; outbound?: boolean }>
+  /**
+   * The saved `sync_config` exactly as it came back, provider settings included
+   * (Zoho's `invoice_sync_settings`, AWS's region). A sync edit starts from this
+   * so the settings the form does not show survive the save.
+   */
+  rawSyncConfig?: Record<string, unknown> | undefined
   /** The non-secret settings saved with it (environment, redirect URLs). */
   metadata: Record<string, string>
   /** The billing entity that owns it; null when the environment has no entities or the provider is not per entity. */

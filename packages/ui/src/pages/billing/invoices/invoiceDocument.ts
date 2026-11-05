@@ -67,6 +67,17 @@ export interface InvoiceCreditNoteRow {
   status?: string
 }
 
+export interface InvoiceTaxRow {
+  id: string
+  /** "GST", or "Tax" when the rate has no name. */
+  name: string
+  /** "2" for 2%; null for a fixed or engine-calculated tax. */
+  percentage: string | null
+  behavior: 'inclusive' | 'exclusive' | null
+  taxableAmount: number
+  amount: number
+}
+
 export interface InvoiceDocument {
   id: string
   number: string | null
@@ -88,6 +99,10 @@ export interface InvoiceDocument {
   /** Coupons and discounts taken off the subtotal, positive. Absent or 0 when none. */
   discount?: number
   tax: number
+  /** Each tax applied, shown under the total tax. Absent or empty: one Tax row. */
+  taxes?: InvoiceTaxRow[]
+  /** Why no tax was charged, shown beside a zero tax. */
+  taxExemption?: string | null
   paid: number
   customerId: string
   /** The subscription (contract) this invoice bills, if any. */

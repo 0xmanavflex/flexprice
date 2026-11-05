@@ -190,6 +190,15 @@ export function toInvoiceDocument(
     prepaidCredits: num(invoice.prepaidCredits),
     discount: num(invoice.discount),
     tax: num(invoice.tax),
+    taxes: invoice.taxes.map((tax) => ({
+      id: tax.id,
+      name: tax.name || tax.code || 'Tax',
+      percentage: tax.percentage,
+      behavior: tax.behavior,
+      taxableAmount: num(tax.taxableAmount),
+      amount: num(tax.taxAmount),
+    })),
+    taxExemption: invoice.taxExemption,
     paid: num(invoice.amountPaid),
     totals: {
       subtotal: num(invoice.subtotal),

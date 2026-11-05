@@ -764,7 +764,8 @@ export function toConnectionChanges(
   const perConnectionWebhook = entities !== undefined
   const initial = connectionToFormValues(spec, connection, perConnectionWebhook)
   if (spec.sync.some((o) => values.sync[syncKey(o)] !== initial.sync[syncKey(o)])) {
-    const next: Record<string, unknown> = { ...connection.syncConfig }
+    // Start from what was saved, so provider settings this form does not edit are sent back as they were.
+    const next: Record<string, unknown> = { ...(connection.rawSyncConfig ?? connection.syncConfig) }
     for (const option of spec.sync) {
       const current = (next[option.entity] ?? {}) as Record<string, boolean>
       next[option.entity] = {

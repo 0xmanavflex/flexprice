@@ -69,6 +69,7 @@ import {
   statusChips,
   type InvoiceCreditNoteRow,
   type InvoiceDocument,
+  type InvoiceTaxRow,
   type InvoiceLine,
   type InvoiceParty,
   type InvoicePaymentRow,
@@ -264,6 +265,7 @@ export function InvoiceDetailView({
                 label: `Push to ${integrationControls.pushProviders.join(', ')}`,
                 icon: <UploadIcon aria-hidden />,
                 onSelect: integrationControls.onPush,
+                disabled: integrationControls.syncing ?? false,
               },
             ]
           : []),
@@ -274,6 +276,7 @@ export function InvoiceDetailView({
                 label: `Pull from ${integrationControls.pullProviders.join(', ')}`,
                 icon: <DownloadIcon aria-hidden />,
                 onSelect: integrationControls.onPull,
+                disabled: integrationControls.syncing ?? false,
               },
             ]
           : []),
@@ -847,6 +850,19 @@ function InvoiceDocumentArticle({
   retryPending?: boolean
   onRetryPayment?: () => void
 }) {
+  // Zero-amount lines (an included allowance, unused usage) stay out of the way
+  // but can be shown: they explain what the invoice covered at no charge.
+  const [showZero, setShowZero] = useState(false)
+  const zeroLines = invoice.lines.length - lines.length
+  const shownLines = showZero ? invoice.lines : lines
+  const taxes = invoice.taxes ?? []
+  const rate = (tax: InvoiceTaxRow) =>
+    [
+      tax.percentage !== null ? `${Number(tax.percentage)}%` : null,
+      tax.behavior === 'inclusive' ? 'included in price' : null,
+    ]
+      .filter(Boolean)
+      .join(', ')
   const settled = totals.due <= 0 && invoice.paid > 0
   const note = paymentFailed
     ? 'The last payment attempt failed. Retry, or send the customer a payment link.'
@@ -915,7 +931,7 @@ function InvoiceDocumentArticle({
               Amount
             </span>
           </div>
-          {lines.map((line) => (
+          {shownLines.map((line) => (
             <div
               key={line.id}
               role="row"
@@ -952,6 +968,21 @@ function InvoiceDocumentArticle({
             </div>
           ))}
         </div>
+        {zeroLines > 0 ? (
+          <div className="py-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-pressed={showZero}
+              onClick={() => setShowZero((on) => !on)}
+            >
+              {showZero
+                ? 'Hide zero-amount lines'
+                : `Show ${zeroLines} zero-amount line${zeroLines === 1 ? '' : 's'}`}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {invoice.memo ? (
@@ -970,7 +1001,29 @@ function InvoiceDocumentArticle({
           {invoice.prepaidCredits ? (
             <TotalRow label="Prepaid credits" value={`− ${money(invoice.prepaidCredits)}`} />
           ) : null}
-          <TotalRow label="Tax" value={money(invoice.tax)} />
+          {taxes.length > 0 ? (
+            taxes.map((tax) => (
+              <TotalRow
+                key={tax.id}
+                label={
+                  <span className="flex flex-col">
+                    <span>
+                      {tax.name}
+                      {rate(tax) ? ` (${rate(tax)})` : ''}
+                    </span>
+                    <span className="text-xs">on {money(tax.taxableAmount)}</span>
+                  </span>
+                }
+                value={money(tax.amount)}
+              />
+            ))
+          ) : (
+            <TotalRow
+              label={invoice.taxExemption ? `Tax (${invoice.taxExemption})` : 'Tax'}
+              value={money(invoice.tax)}
+            />
+          )}
+          {taxes.length > 1 ? <TotalRow label="Total tax" value={money(invoice.tax)} /> : null}
           <TotalRow label="Total" value={money(totals.total)} emphasis="total" rule />
           {invoice.paid > 0 ? <TotalRow label="Paid" value={`− ${money(invoice.paid)}`} /> : null}
           <TotalRow label="Amount due" value={money(totals.due)} emphasis="due" />

@@ -37,6 +37,7 @@ describe('toIntegrations', () => {
       name: 'Stripe (live)',
       providerType: 'stripe',
       syncConfig: { invoice: { outbound: true }, plan: { inbound: false } },
+      rawSyncConfig: { invoice: { outbound: true }, plan: { inbound: false } },
       metadata: { region: 'eu' },
       billingEntityId: 'be_1',
       createdAt: '2026-10-01T00:00:00Z',

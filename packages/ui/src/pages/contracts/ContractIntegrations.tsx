@@ -75,6 +75,8 @@ export interface ContractIntegrationsProps {
   /** Provider names a pull reads from (inbound sync on); one "Pull from {names}" action. */
   pullProviders?: string[]
   onPull?: () => void
+  /** A push or pull request is on its way: both actions wait for it. */
+  syncing?: boolean | undefined
   /**
    * Where a mapping can be opened at its provider (an invoice on Stripe). A
    * row with one opens it from its name and from its menu.
@@ -113,6 +115,7 @@ export function ContractIntegrations({
   onPush,
   pullProviders,
   onPull,
+  syncing = false,
   providerHref,
   actionsInHeader = false,
 }: ContractIntegrationsProps) {
@@ -307,6 +310,7 @@ export function ContractIntegrations({
           type="button"
           variant="ghost"
           className="text-muted-foreground h-auto justify-start rounded-none px-6 py-3"
+          disabled={syncing}
           onClick={onPush}
         >
           <UploadIcon aria-hidden className="size-3.5" />
@@ -318,6 +322,7 @@ export function ContractIntegrations({
           type="button"
           variant="ghost"
           className="text-muted-foreground h-auto justify-start rounded-none px-6 py-3"
+          disabled={syncing}
           onClick={onPull}
         >
           <DownloadIcon aria-hidden className="size-3.5" />

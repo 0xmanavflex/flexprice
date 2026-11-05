@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { InvoiceStatus, PaymentStatus } from '@fp/domain'
 import type { SubTabQuery } from '../../../compositions/detail/SubTabState'
-import { DEMO_INVOICE, type InvoiceDocument } from './invoiceDocument'
+import { DEMO_INVOICE, type InvoiceDocument, type InvoiceTaxRow } from './invoiceDocument'
 import { InvoiceDetailView, type InvoiceDetailViewProps } from './InvoiceDetailView'
 
 const ITEMS = ['Platform plan', 'API requests', 'Seats', 'Storage', 'Support add-on']
@@ -33,6 +33,7 @@ interface InvoiceShape {
   /** The memo written on the invoice, and a note on its first line. */
   memo?: string
   lineNote?: string
+  taxes?: InvoiceTaxRow[]
   paymentsState: SubTabMode
   creditNotesState: SubTabMode
 }
@@ -97,6 +98,9 @@ function makeInvoice(
     prepaidCredits: Math.min(100, subtotal),
     ...(args.discount ? { discount: args.discount } : {}),
     ...(args.memo ? { memo: args.memo } : {}),
+    ...(args.taxes
+      ? { taxes: args.taxes, tax: args.taxes.reduce((sum, t) => sum + t.amount, 0) }
+      : {}),
     paid: args.paidAmount,
     payments: Array.from({ length: args.paymentCount }, (_, index) => ({
       id: `pay_${index + 1}`,
@@ -137,6 +141,7 @@ function InvoiceDetailPlayground({
   issuerTaxIds,
   memo,
   lineNote,
+  taxes,
   paymentsState,
   creditNotesState,
   onRetrySubTab,
@@ -158,6 +163,7 @@ function InvoiceDetailPlayground({
     ...(issuerTaxIds ? { issuerTaxIds } : {}),
     ...(memo ? { memo } : {}),
     ...(lineNote ? { lineNote } : {}),
+    ...(taxes ? { taxes } : {}),
   })
   return (
     <InvoiceDetailView
@@ -433,6 +439,52 @@ export const WithNotes: Story = {
     await expect(document.getByText('Memo')).toBeVisible()
     await expect(document.getByText('Thanks for your business.')).toBeVisible()
     await expect(document.getByText('Billed per active seat')).toBeVisible()
+  },
+}
+
+/** Each applied tax is its own total row: the rate, whether it was in the price, and what it was charged on. */
+export const AppliedTaxes: Story = {
+  args: {
+    taxes: [
+      {
+        id: 'tax_1',
+        name: 'CGST',
+        percentage: '9',
+        behavior: 'exclusive',
+        taxableAmount: 1000,
+        amount: 90,
+      },
+      {
+        id: 'tax_2',
+        name: 'SGST',
+        percentage: '9',
+        behavior: 'inclusive',
+        taxableAmount: 1000,
+        amount: 90,
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const document = within(within(canvasElement).getByRole('article'))
+    await expect(document.getByText('CGST (9%)')).toBeVisible()
+    await expect(document.getByText('SGST (9%, included in price)')).toBeVisible()
+    await expect(document.getAllByText('on $1,000.00')).toHaveLength(2)
+    await expect(document.getByText('Total tax')).toBeVisible()
+    await expect(document.getByText('$180.00')).toBeVisible()
+  },
+}
+
+/** Zero-amount lines are hidden until asked for; showing them changes no total. */
+export const ZeroLines: Story = {
+  args: { lineCount: 5 },
+  play: async ({ canvasElement }) => {
+    const document = within(within(canvasElement).getByRole('article'))
+    await expect(document.getAllByRole('row')).toHaveLength(5)
+    await userEvent.click(document.getByRole('button', { name: 'Show 1 zero-amount line' }))
+    await expect(document.getAllByRole('row')).toHaveLength(6)
+    await expect(document.getByText('No usage this period')).toBeVisible()
+    await userEvent.click(document.getByRole('button', { name: 'Hide zero-amount lines' }))
+    await expect(document.getAllByRole('row')).toHaveLength(5)
   },
 }
 

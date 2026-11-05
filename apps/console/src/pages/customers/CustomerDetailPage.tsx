@@ -236,6 +236,7 @@ export function CustomerDetailPage({
                 onLink: (input: { providerType: string; providerEntityId: string }) =>
                   linkIntegration.mutateAsync(input),
                 onUnlink: (input: { providerType: string }) => unlinkIntegration.mutateAsync(input),
+                syncing: pushCustomer.isPending,
                 ...(pushTargets.length > 0
                   ? {
                       pushProviders: pushTargets,

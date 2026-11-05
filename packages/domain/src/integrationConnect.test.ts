@@ -216,6 +216,33 @@ describe('manage changes', () => {
     })
   })
 
+  it('sends provider settings the form does not show back as they were saved', () => {
+    const zoho = spec('zoho_books')
+    const saved: IntegrationConnection = {
+      ...connection,
+      providerType: 'zoho_books',
+      syncConfig: { invoice: { outbound: true }, customer: { inbound: true } },
+      rawSyncConfig: {
+        invoice: { outbound: true },
+        customer: { inbound: true },
+        invoice_sync_settings: {
+          payment_gateways: { enabled: true, gateways: ['paypal'] },
+          submit_for_approval: true,
+        },
+      },
+    }
+    const values = connectionToFormValues(zoho, saved)
+    values.sync['invoice:outbound'] = false
+    expect(toConnectionChanges(zoho, saved, values).sync_config).toEqual({
+      invoice: { outbound: false },
+      customer: { inbound: true },
+      invoice_sync_settings: {
+        payment_gateways: { enabled: true, gateways: ['paypal'] },
+        submit_for_approval: true,
+      },
+    })
+  })
+
   it('requires the Chargebee webhook login as a pair', () => {
     const values = connectionToFormValues(chargebee, connection)
     values.fields['webhook_username'] = 'hook'

@@ -8,6 +8,7 @@ import {
   toInvoice,
   toInvoiceFilter,
   type InvoiceWire,
+  toInvoiceDetail,
 } from './invoices'
 
 describe('toInvoiceFilter: domain vocabulary out, transport in', () => {
@@ -425,5 +426,38 @@ describe('the customer an invoice bills', () => {
       toInvoice({ id: 'inv_2', customerId: 'cust_1', customer: { id: 'cust_1', name: 'Acme' } })
         .customerName,
     ).toBe('Acme')
+  })
+})
+
+describe('toInvoiceDetail taxes', () => {
+  it('keeps each applied tax with its rate, leaves reversals out and carries the exemption', () => {
+    const detail = toInvoiceDetail({
+      id: 'inv_1',
+      currency: 'usd',
+      totalTax: '2.2',
+      taxes: [
+        {
+          id: 'ta_1',
+          taxableAmount: '110',
+          taxAmount: '2.2',
+          taxBehavior: 'exclusive',
+          taxRate: { name: 'GST', code: 'gst', percentageValue: '2' },
+        },
+        { id: 'ta_2', taxAmount: '2.2', taxTransactionType: 'reversal' },
+      ],
+      taxSummary: { exemption: { reason: 'Reverse charge' } },
+    })
+    expect(detail.taxes).toEqual([
+      {
+        id: 'ta_1',
+        name: 'GST',
+        code: 'gst',
+        percentage: '2',
+        behavior: 'exclusive',
+        taxableAmount: '110',
+        taxAmount: '2.2',
+      },
+    ])
+    expect(detail.taxExemption).toBe('Reverse charge')
   })
 })

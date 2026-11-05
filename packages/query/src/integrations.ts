@@ -33,7 +33,7 @@ export interface ConnectionWire {
   provider_type?: string
   connection_status?: string
   metadata?: Record<string, unknown> | null
-  sync_config?: Record<string, { inbound?: boolean; outbound?: boolean } | undefined> | null
+  sync_config?: Record<string, unknown> | null
   billing_entity_id?: string | null
   webhook_secret_set?: boolean
   created_at?: string
@@ -46,11 +46,13 @@ function isPublished(wire: ConnectionWire): boolean {
 export function toIntegrationConnection(wire: ConnectionWire): IntegrationConnection {
   const syncConfig: IntegrationConnection['syncConfig'] = {}
   for (const [entity, value] of Object.entries(wire.sync_config ?? {})) {
-    if (value && typeof value === 'object')
-      syncConfig[entity] = {
-        ...(typeof value.inbound === 'boolean' ? { inbound: value.inbound } : {}),
-        ...(typeof value.outbound === 'boolean' ? { outbound: value.outbound } : {}),
-      }
+    if (!value || typeof value !== 'object') continue
+    const { inbound, outbound } = value as { inbound?: unknown; outbound?: unknown }
+    if (typeof inbound !== 'boolean' && typeof outbound !== 'boolean') continue
+    syncConfig[entity] = {
+      ...(typeof inbound === 'boolean' ? { inbound } : {}),
+      ...(typeof outbound === 'boolean' ? { outbound } : {}),
+    }
   }
   const metadata: Record<string, string> = {}
   for (const [key, value] of Object.entries(wire.metadata ?? {})) {
@@ -61,6 +63,7 @@ export function toIntegrationConnection(wire: ConnectionWire): IntegrationConnec
     name: wire.name ?? '',
     providerType: wire.provider_type ?? '',
     syncConfig,
+    ...(wire.sync_config ? { rawSyncConfig: { ...wire.sync_config } } : {}),
     metadata,
     billingEntityId: wire.billing_entity_id ?? null,
     ...(typeof wire.webhook_secret_set === 'boolean'

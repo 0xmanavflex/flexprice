@@ -161,6 +161,7 @@ export function InvoiceDetailPage({
           mappings.controls
             ? {
                 ...mappings.controls,
+                syncing: mappings.push.isPending || mappings.pull.isPending,
                 ...(mappings.pushProviders.length > 0
                   ? {
                       pushProviders: mappings.pushProviders,
