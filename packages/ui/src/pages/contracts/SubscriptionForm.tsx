@@ -3551,12 +3551,14 @@ function AddonsSection({
             {charges.map((charge) => {
               const override = pricing.priceOverrides.find((o) => o.priceId === charge.id)
               const commitment = pricing.commitments.find((c) => c.priceId === charge.id)
+              const quantity = pricing.quantities?.find((q) => q.priceId === charge.id)?.quantity
               return (
                 <span key={charge.id}>
                   <span className="font-medium">{chargeName(charge)}</span>
                   <span className="text-muted-foreground tabular-nums">
                     {`: ${priceText(charge, override)}`}
                     {override ? ' (changed)' : ''}
+                    {quantity ? ` × ${quantity}` : ''}
                     {commitment ? ` · ${commitmentText(commitment, currency)}` : ''}
                   </span>
                 </span>
@@ -3565,6 +3567,15 @@ function AddonsSection({
           </span>
         )
       },
+    },
+    {
+      key: 'starts',
+      header: 'Starts',
+      cell: (addon) => (
+        <span className="text-muted-foreground text-[13px] tabular-nums">
+          {addon.startDate ? addon.startDate.replace('T', ' ') : 'With the contract'}
+        </span>
+      ),
     },
     {
       key: 'actions',

@@ -20,7 +20,7 @@ import { Field } from '@ui/compositions/forms/Field'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import { CheckboxRow } from '@ui/compositions/forms/CheckboxRow'
 import { Button } from '@ui/components/primitives/button'
-import { PlusIcon, XIcon } from '@ui/icons'
+import { PencilIcon, PlusIcon, XIcon } from '@ui/icons'
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
@@ -379,6 +379,45 @@ function AddonDialog({
           prorate: pricing.prorate ?? true,
         }
       : null
+  // Back from a set-aside add-on to its editor: everything chosen for it, as it was.
+  const pricingOfDraft = (draft: AddContractAddon): AddonPricing => ({
+    priceOverrides: draft.priceOverrides ?? [],
+    commitments: draft.commitments ?? [],
+    ...(draft.quantities?.length ? { quantities: draft.quantities } : {}),
+    ...(draft.startDate
+      ? { startDate: draft.startDate, startWhen: 'date' as const }
+      : { startWhen: draft.changeAt ?? 'immediate' }),
+    ...(draft.prorate === undefined ? {} : { prorate: draft.prorate }),
+  })
+  // V1 keeps every add-on being added open to change: reopening one sets the one in hand aside.
+  const reopen = (target: AddContractAddon) => {
+    const inHand = current()
+    const inHandName = addons.find((a) => a.id === addonId)?.name ?? addonId
+    setStaged((list) => {
+      const rest = list.filter((item) => item.draft.addonId !== target.addonId)
+      return inHand ? [...rest, { draft: inHand, name: inHandName }] : rest
+    })
+    setAddonId(target.addonId)
+    setPricing(pricingOfDraft(target))
+    setProblem(null)
+  }
+  const describe = (draft: AddContractAddon) =>
+    [
+      draft.priceOverrides?.length || draft.commitments?.length
+        ? 'Repriced for this contract'
+        : 'At its catalog prices',
+      draft.quantities?.length
+        ? `quantity ${draft.quantities.map((q) => q.quantity).join(', ')}`
+        : null,
+      draft.startDate
+        ? `starts ${draft.startDate}`
+        : draft.changeAt === 'end_of_period'
+          ? 'starts at period end'
+          : 'starts now',
+      draft.prorate === false ? 'not prorated' : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')
   const total = staged.length + (addonId ? 1 : 0)
   // An add-on goes on a contract once: those set aside leave the picker.
   const choosable = addons.filter(
@@ -497,26 +536,32 @@ function AddonDialog({
             <li key={draft.addonId} className="flex items-center justify-between gap-3 px-3 py-2">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{name}</p>
-                <p className="text-muted-foreground text-xs">
-                  {draft.priceOverrides?.length || draft.commitments?.length
-                    ? 'Repriced for this contract'
-                    : draft.quantities?.length
-                      ? 'At its catalog prices, quantity changed'
-                      : 'At its catalog prices'}
-                </p>
+                <p className="text-muted-foreground text-xs">{describe(draft)}</p>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground size-7 shrink-0"
-                aria-label={`Remove ${name}`}
-                onClick={() =>
-                  setStaged((list) => list.filter((item) => item.draft.addonId !== draft.addonId))
-                }
-              >
-                <XIcon aria-hidden />
-              </Button>
+              <span className="flex shrink-0 items-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground size-7 shrink-0"
+                  aria-label={`Edit ${name}`}
+                  onClick={() => reopen(draft)}
+                >
+                  <PencilIcon aria-hidden />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground size-7 shrink-0"
+                  aria-label={`Remove ${name}`}
+                  onClick={() =>
+                    setStaged((list) => list.filter((item) => item.draft.addonId !== draft.addonId))
+                  }
+                >
+                  <XIcon aria-hidden />
+                </Button>
+              </span>
             </li>
           ))}
         </ul>
