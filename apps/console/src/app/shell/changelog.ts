@@ -10,15 +10,21 @@ import { env } from '@/env'
  * of dismissing stops being news. Adding a release is adding an entry at the
  * top with a new `id` (it is what a dismissal is remembered under, so reusing
  * one would hide the new card from anyone who dismissed the old); drop the
- * oldest to stay at six. Every `href` is a page on docs.flexprice.io that
- * explains the change, and `scene` is the product figure for its area.
+ * oldest to stay at six. Every `href` explains the change: a page on
+ * docs.flexprice.io, or for the console as a whole its walkthrough video.
+ * `scene` is the product figure for its area.
  */
+/** "New Flexprice Console | Quick Walkthrough", the tour of this console (Loom, 1:29). */
+export const CONSOLE_WALKTHROUGH_URL = 'https://www.loom.com/share/125badfaeeb94dfabca6c195b49687b3'
+
 const RELEASES: ShellChangelogEntry[] = [
   {
-    id: '2026-11-console-v2',
+    // A new id (it was `2026-11-console-v2`, to the docs): the card now plays the walkthrough,
+    // so it shows again for anyone who dismissed the old one.
+    id: '2026-11-console-walkthrough',
     title: 'A new console',
-    summary: 'Search every record with ⌘K, and switch environments from the breadcrumb.',
-    href: DOCS.home,
+    summary: 'Watch the 90-second walkthrough of what moved and what is new.',
+    href: CONSOLE_WALKTHROUGH_URL,
     scene: 'home',
   },
   {
