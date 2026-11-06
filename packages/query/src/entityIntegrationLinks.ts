@@ -4,9 +4,10 @@ import { toIntegrationLinks } from './customers'
 import { queryKeys } from './keys'
 import { useConnections } from './integrations'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
+import { useSingleFlight } from './singleFlight'
 
 /** Entity types documented by the SDK mappings endpoint; never reuse customer mappings. */
-export type MappedEntityType = 'invoice' | 'plan' | 'payment'
+export type MappedEntityType = 'invoice' | 'plan' | 'payment' | 'subscription'
 export const entityIntegrationKey = (type: MappedEntityType, id: string) =>
   ['integrationLinks', type, id] as const
 
@@ -100,15 +101,17 @@ export function useEntityIntegrationControls(type: MappedEntityType, id: string)
       method,
     )
   }
-  const push = useMutation({ mutationFn: sync('push'), onSuccess: refresh })
+  const push = useSingleFlight(useMutation({ mutationFn: sync('push'), onSuccess: refresh }))
   // V1's "Pull from Integration": the provider's copy is read back over this one.
-  const pull = useMutation({
-    mutationFn: sync('pull'),
-    onSuccess: () => {
-      void refresh()
-      if (type === 'invoice') void cache.invalidateQueries({ queryKey: queryKeys.invoices.all() })
-    },
-  })
+  const pull = useSingleFlight(
+    useMutation({
+      mutationFn: sync('pull'),
+      onSuccess: () => {
+        void refresh()
+        if (type === 'invoice') void cache.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+      },
+    }),
+  )
   // The providers a push reaches: connected, with this entity's outbound sync on.
   const pushProviders = (providers.data ?? [])
     .filter((provider) =>

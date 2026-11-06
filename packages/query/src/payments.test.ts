@@ -27,14 +27,16 @@ describe('toPayment', () => {
     ['OVERPAID', PaymentStatus.Overpaid],
     ['FAILED', PaymentStatus.Failed],
     ['REFUNDED', PaymentStatus.Refunded],
-    ['PARTIALLY_REFUNDED', PaymentStatus.Refunded],
+    ['PARTIALLY_REFUNDED', PaymentStatus.PartiallyRefunded],
     ['VOIDED', PaymentStatus.Voided],
   ])('maps the wire status %s to %s', (wire, expected) => {
     expect(toPayment({ paymentStatus: wire }).status).toBe(expected)
   })
 
   it('folds a partial refund into refunded', () => {
-    expect(toPayment({ paymentStatus: 'PARTIALLY_REFUNDED' }).status).toBe(PaymentStatus.Refunded)
+    expect(toPayment({ paymentStatus: 'PARTIALLY_REFUNDED' }).status).toBe(
+      PaymentStatus.PartiallyRefunded,
+    )
   })
 
   it('treats an unknown or missing status as pending', () => {

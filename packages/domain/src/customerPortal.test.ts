@@ -15,6 +15,7 @@ import {
   totalDue,
   unitPriceLabel,
   toPortalActionUrl,
+  toPortalOpenCheckout,
   DEFAULT_PORTAL_CONFIG,
   toPortalConfig,
   toPortalCustomer,
@@ -28,7 +29,13 @@ import {
   toPortalWalletTransactions,
   toPortalWallets,
   withPortalAutoTopup,
+  toPortalSavedCards,
+  chargeableCard,
+  preferGateway,
+  toPortalWallet,
   walletFlows,
+  toPortalCheckoutResult,
+  toPortalCheckoutSessionId,
 } from './customerPortal'
 import { money } from './money'
 
@@ -338,6 +345,38 @@ describe('wallets', () => {
     })
   })
 
+  it('clears a saved wait when the save sends zero', () => {
+    const before = {
+      ...wallets[0]!,
+      autoTopup: {
+        enabled: true,
+        threshold: '500',
+        credits: '2000',
+        cooldown: { value: 2, unit: 'hour' as const },
+      },
+    }
+    const next = withPortalAutoTopup([before], 'w1', {
+      enabled: true,
+      threshold: '500',
+      credits: '2000',
+      cooldown: { value: 0, unit: 'hour' },
+    })
+    expect(next[0]!.autoTopup?.cooldown).toBeNull()
+  })
+
+  it('keeps a wait stored in seconds exactly', () => {
+    const wallet = toPortalWallet({
+      id: 'w9',
+      auto_topup: {
+        enabled: true,
+        threshold: '1',
+        amount: '2',
+        cooldown: { value: 30, unit: 'second' },
+      },
+    })
+    expect(wallet.autoTopup?.cooldown).toEqual({ value: 30, unit: 'second' })
+  })
+
   it('reads the API’s lowercase transaction types', () => {
     const { items } = toPortalWalletTransactions(
       {
@@ -626,6 +665,59 @@ describe('payment methods and gateways', () => {
     ])
   })
 
+  it('keeps a gateway that failed to list its cards apart from one with none', () => {
+    const saved = toPortalSavedCards({
+      providers: [
+        { provider: 'stripe', items: [], error: { message: 'Stripe is unreachable.' } },
+        {
+          provider: 'chargebee',
+          items: [{ id: 'pm_1', is_default: true, card: { brand: 'visa', last4: '1111' } }],
+        },
+      ],
+    })
+    expect(saved.cards.map((c) => c.id)).toEqual(['pm_1'])
+    expect(saved.unavailable).toEqual([
+      { provider: 'stripe', label: 'Stripe', message: 'Stripe is unreachable.' },
+    ])
+  })
+
+  it('charges the default card only when it can be charged, else another that can', () => {
+    const gateways = toPortalGateways({
+      payment_integrations: [{ provider: 'stripe', capabilities: [{ type: 'auto_charge' }] }],
+    })
+    const cards = toPortalPaymentMethods(
+      {
+        providers: [
+          {
+            provider: 'stripe',
+            items: [
+              {
+                id: 'inactive_default',
+                is_default: true,
+                status: 'INACTIVE',
+                card: { brand: 'visa', last4: '1', exp_month: 1, exp_year: 2030 },
+              },
+              {
+                id: 'no_mandate',
+                can_auto_charge: false,
+                card: { brand: 'visa', last4: '2', exp_month: 1, exp_year: 2030 },
+              },
+              {
+                id: 'usable',
+                status: 'ACTIVE',
+                can_auto_charge: true,
+                card: { brand: 'visa', last4: '3', exp_month: 1, exp_year: 2030 },
+              },
+            ],
+          },
+        ],
+      },
+      NOW,
+    )
+    expect(chargeableCard(cards, gateways)?.id).toBe('usable')
+    expect(chargeableCard(cards, [])).toBeNull()
+  })
+
   it('reads gateway capabilities', () => {
     expect(
       toPortalGateways({
@@ -672,6 +764,31 @@ describe('payment methods and gateways', () => {
       toPortalActionUrl({ checkout_session: { payment_action: { url: 'https://pay.example/c' } } }),
     ).toBe('https://pay.example/c')
     expect(toPortalActionUrl({ wallet: {} })).toBeNull()
+  })
+
+  it('reads the checkout already open when the API made no new one', () => {
+    const session = {
+      id: 'cs_1',
+      payment_provider: 'razorpay',
+      payment_action: { type: 'payment_link', url: 'https://rzp.io/rzp/FQDMXiuA' },
+      expires_at: '2026-11-05T16:08:46Z',
+    }
+    expect(
+      toPortalOpenCheckout({
+        checkout_session: {
+          ...session,
+          entity_creation_result: { status: 'failed_already_exists', entity_id: 'cs_1' },
+        },
+      }),
+    ).toEqual({
+      url: 'https://rzp.io/rzp/FQDMXiuA',
+      provider: 'razorpay',
+      label: 'Razorpay',
+      expiresAt: new Date('2026-11-05T16:08:46Z'),
+    })
+    // A checkout that was just made is not a conflict.
+    expect(toPortalOpenCheckout({ checkout_session: session })).toBeNull()
+    expect(toPortalOpenCheckout({ wallet: {} })).toBeNull()
   })
 })
 
@@ -804,5 +921,62 @@ describe('usage', () => {
     expect(byName['Calls']?.unitCost?.amount).toBe('0.0002')
     expect(byName['Calls']?.unitCostIsAverage).toBe(false)
     expect(byName['Idle']?.unitCost).toBeNull()
+  })
+})
+
+describe('preferGateway', () => {
+  it('puts the gateway the card is saved at first, keeping the rest in order', () => {
+    const list = [{ provider: 'razorpay' }, { provider: 'stripe' }, { provider: 'nomod' }]
+    expect(preferGateway(list, 'stripe').map((g) => g.provider)).toEqual([
+      'stripe',
+      'razorpay',
+      'nomod',
+    ])
+    expect(preferGateway(list, undefined)).toEqual(list)
+  })
+})
+
+describe('a failed top-up', () => {
+  it('stays in the ledger, marked, and counts in neither the totals nor the top-ups', () => {
+    const { items } = toPortalWalletTransactions(
+      {
+        items: [
+          {
+            id: 'ok',
+            type: 'credit',
+            transaction_reason: 'PURCHASED_CREDIT_INVOICED',
+            transaction_status: 'completed',
+            amount: '10',
+            credit_amount: '100',
+          },
+          {
+            id: 'failed',
+            type: 'credit',
+            transaction_reason: 'PURCHASED_CREDIT_INVOICED',
+            transaction_status: 'failed',
+            amount: '50',
+            credit_amount: '500',
+          },
+        ],
+      },
+      'USD',
+    )
+    expect(items.map((t) => [t.id, t.failed, t.pending])).toEqual([
+      ['ok', false, false],
+      ['failed', true, false],
+    ])
+    expect(walletFlows(items, 'USD').in.credits).toBe('100')
+    expect(toPortalTopUps(items).map((t) => t.id)).toEqual(['ok'])
+  })
+})
+
+describe('toPortalCheckoutResult', () => {
+  it('reads the settled states and treats anything else as still pending', () => {
+    expect(toPortalCheckoutResult({ checkout_status: 'completed' }).status).toBe('completed')
+    expect(
+      toPortalCheckoutResult({ checkout_status: 'failed', failure_reason: 'Card declined' }),
+    ).toEqual({ status: 'failed', failureReason: 'Card declined' })
+    expect(toPortalCheckoutResult({ checkout_status: 'initiated' }).status).toBe('pending')
+    expect(toPortalCheckoutSessionId({ checkout_session: { id: 'cs_1' } })).toBe('cs_1')
   })
 })

@@ -391,6 +391,7 @@ export {
   subscriptionDiscountSchema,
   subscriptionPhaseSchema,
   chargeCommitmentSchema,
+  addonQuantitySchema,
   commitmentWindowSchema,
   CommitmentType,
   WindowBillingModel,
@@ -422,6 +423,7 @@ export type {
   SubscriptionDiscount,
   SubscriptionPhase,
   ChargeCommitment,
+  AddonQuantity,
   ContractCommitment,
   InvoicePreview,
   InvoicePreviewLine,
@@ -437,6 +439,8 @@ export type {
   SubscriptionSchedule,
   SubscriptionTax,
   AddContractAddon,
+  AddonChangeAt,
+  RemoveContractAddon,
   AddContractCoupon,
   SubscriptionUsage,
   SubscriptionUsageCharge,
@@ -448,6 +452,7 @@ export {
   COMMITMENT_KIND_LABEL,
   CommitmentKind,
   NO_USAGE_TERMS,
+  sameUsageTerms,
   PRORATION,
   PRORATION_LABEL,
   hasTermsErrors,
@@ -740,7 +745,13 @@ export {
   WorkflowActivityStatus,
   WorkflowStatus,
 } from './workflowRun'
-export type { WorkflowActivity, WorkflowQuery, WorkflowRun, WorkflowRunDetail } from './workflowRun'
+export type {
+  EntitySyncRun,
+  WorkflowActivity,
+  WorkflowQuery,
+  WorkflowRun,
+  WorkflowRunDetail,
+} from './workflowRun'
 export { DEFAULT_USAGE_SYNC_QUERY, USAGE_SYNC_STATE, USAGE_SYNC_STATE_LABEL } from './usageSync'
 export type { UsageSync, UsageSyncEntry, UsageSyncQuery, UsageSyncState } from './usageSync'
 export {
@@ -945,6 +956,7 @@ export {
   attachableAddonOverrides,
   cadenceAllowed,
   selectContractCharges,
+  splitsAcrossBillingPeriod,
 } from './contractCharges'
 export type { ContractChargeSelection } from './contractCharges'
 export {
@@ -1024,12 +1036,21 @@ export {
   totalDue,
   unitPriceLabel,
   toPortalActionUrl,
+  toPortalOpenCheckout,
+  toPortalCheckoutSessionId,
+  toPortalPropertyValues,
+  NO_USAGE_FILTER,
+  isUsageFiltered,
+  toPortalCheckoutResult,
   toPortalConfig,
   toPortalCustomer,
   toPortalGateways,
   toPortalInvoice,
   toPortalInvoices,
   toPortalPaymentMethods,
+  toPortalSavedCards,
+  chargeableCard,
+  preferGateway,
   toPortalPropertyKeys,
   toPortalQuotas,
   toPortalSpend,
@@ -1048,10 +1069,16 @@ export type {
   PortalCooldownUnit,
   PortalCustomer,
   PortalGateway,
+  PortalOpenCheckout,
+  PortalCheckoutStatus,
+  PortalUsageFilter,
+  PortalCheckoutResult,
   PortalInvoice,
   PortalInvoiceLine,
   PortalInvoiceStatus,
   PortalPaymentMethod,
+  PortalSavedCards,
+  PortalCardProviderError,
   PortalQuota,
   PortalRange,
   PortalSpend,
@@ -1165,3 +1192,9 @@ export { DOCS } from './docsLinks'
 export { eventPropertyNames, expressionProblem } from './featureExpression'
 export { invoiceProviderUrl } from './invoice'
 export { OPEN_START_DATE, isOpenStart } from './price'
+
+export { spendingAllowanceSchema, emptySpendingAllowance } from './spendingAllowance'
+export type { SpendingAllowance } from './spendingAllowance'
+
+export { zohoPaymentGateways, zohoPaymentGatewaysSchema } from './integrationConnect'
+export type { ZohoPaymentGateways } from './integrationConnect'

@@ -168,21 +168,15 @@
       "story": "./src/compositions/detail/ActivityLog.stories.tsx"
     },
     "AddCardDialog": {
-      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "file": "src/pages/customers/AddCardDialog.tsx",
       "layer": "surface",
       "composes": [
-        "CardLogo",
-        "CheckoutLinkPanel",
         "Composer",
-        "ConfirmDialog",
         "Field",
         "FormDialog",
-        "Money",
-        "RadioRows"
+        "OptionSelect"
       ],
-      "usedBy": [
-        "CustomerPortalView"
-      ],
+      "usedBy": [],
       "story": "./src/pages/customers/AddCardDialog.stories.tsx"
     },
     "AddChargeDialog": {
@@ -206,6 +200,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -230,6 +225,7 @@
         "ChargeCouponDialog",
         "ChoiceCards",
         "Composer",
+        "ConfirmDialog",
         "ContractChargeDialog",
         "CreditGrantCreateForm",
         "DateInput",
@@ -249,6 +245,7 @@
         "PriceOverrideForm",
         "RowActionsMenu",
         "SimpleTable",
+        "SpendingAllowancesSection",
         "UserIcon",
         "UsersIcon",
         "WalletIcon"
@@ -711,6 +708,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -1070,14 +1068,33 @@
       ],
       "story": null
     },
+    "CardLinkDialog": {
+      "file": "src/pages/customer-portal/PortalDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "CardLogo",
+        "CheckoutLinkPanel",
+        "Composer",
+        "ConfirmDialog",
+        "Field",
+        "FormDialog",
+        "IntegrationMark",
+        "Money",
+        "RadioRows"
+      ],
+      "usedBy": [
+        "CustomerPortalView"
+      ],
+      "story": null
+    },
     "CardLogo": {
       "file": "src/pages/customer-portal/CardLogo.tsx",
       "layer": "surface",
       "composes": [],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "DownloadDialog",
         "PayInvoiceDialog",
         "PortalOverview",
@@ -1305,8 +1322,10 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ContractSectionDialogs",
         "UsageTermsFields",
-        "WebhookEventTypePicker"
+        "WebhookEventTypePicker",
+        "ZohoGatewayFields"
       ],
       "story": "./src/compositions/forms/CheckboxRow.stories.tsx"
     },
@@ -1351,6 +1370,7 @@
         "Loaded",
         "Mark",
         "OverviewTiles",
+        "PaymentLink",
         "PlanAiSetupView",
         "PlanPreviewCard",
         "PortalEmpty",
@@ -1381,9 +1401,9 @@
         "Pill"
       ],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "DownloadDialog",
         "PayInvoiceDialog",
         "RemoveCardDialog"
@@ -1632,10 +1652,12 @@
         "AddCreditsDialog",
         "AddonChargesDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "ChargeAlertForm",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ContractChargeDialog",
+        "ContractHierarchyEditor",
         "ContractIntegrations",
         "ContractQuantityDialog",
         "ContractSectionDialogs",
@@ -1650,6 +1672,9 @@
         "PayInvoiceDialog",
         "PaymentStatusDialog",
         "RemoveCardDialog",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
+        "SubscriptionDetailView",
         "SubscriptionForm",
         "TaxAssociationSection",
         "TaxDialog"
@@ -1661,11 +1686,14 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
+        "AddonChargesDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "ChargeSheet",
         "ConnectionExports",
+        "ContractBenefitsEditor",
+        "ContractHierarchyEditor",
         "ContractIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",
@@ -1680,6 +1708,7 @@
         "RemoveCardDialog",
         "S3ConnectionList",
         "SubscriptionDetailView",
+        "SubscriptionForm",
         "TaxAssociationSection",
         "TaxDialog",
         "WebhookEndpointDetail"
@@ -1698,7 +1727,9 @@
         "SyncOptions",
         "TriangleAlert",
         "WebhookGuide",
-        "WorkflowStepper"
+        "WorkflowStepper",
+        "WriteGate",
+        "ZohoGatewayFields"
       ],
       "usedBy": [],
       "story": "./src/pages/integrations/ConnectIntegrationSheet.stories.tsx"
@@ -1785,6 +1816,25 @@
       ],
       "story": "./src/pages/product-catalog/charges/ContractAmountCalculator.stories.tsx"
     },
+    "ContractBenefitsEditor": {
+      "file": "src/pages/contracts/ContractBenefitsEditor.tsx",
+      "layer": "surface",
+      "composes": [
+        "ConfirmDialog",
+        "DetailTable",
+        "EntitlementCreateForm",
+        "EntitlementEditForm",
+        "EntitlementUsageTable",
+        "FormDialog",
+        "PlusIcon",
+        "RowActionsMenu",
+        "Section",
+        "SectionEmpty",
+        "SpendingAllowanceForm"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/contracts/ContractBenefitsEditor.stories.tsx"
+    },
     "ContractChargeDialog": {
       "file": "src/pages/contracts/ContractChargeDialog.tsx",
       "layer": "surface",
@@ -1804,6 +1854,25 @@
       ],
       "story": "./src/pages/contracts/ContractChargeDialog.stories.tsx"
     },
+    "ContractHierarchyEditor": {
+      "file": "src/pages/contracts/ContractHierarchyEditor.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "ConfirmDialog",
+        "DetailTable",
+        "Field",
+        "FormDialog",
+        "OptionCombobox",
+        "PencilIcon",
+        "PlusIcon",
+        "RowActionsMenu",
+        "Section",
+        "SectionEmpty"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/contracts/ContractHierarchyEditor.stories.tsx"
+    },
     "ContractIntegrations": {
       "file": "src/pages/contracts/ContractIntegrations.tsx",
       "layer": "surface",
@@ -1816,6 +1885,7 @@
         "IntegrationMark",
         "LabelWithHint",
         "OptionSelect",
+        "Pill",
         "PlusIcon"
       ],
       "usedBy": [
@@ -1845,11 +1915,15 @@
       "layer": "surface",
       "composes": [
         "AddonChargesDialog",
+        "CheckboxRow",
         "Composer",
         "CreditGrantCreateForm",
+        "DateInput",
         "EntitlementCreateForm",
+        "Field",
         "FormDialog",
         "LabelWithHint",
+        "OptionCombobox",
         "OptionSelect",
         "PlusIcon",
         "TaxDialog"
@@ -1959,6 +2033,7 @@
         "MetadataCard",
         "OverviewTiles",
         "PaymentGrid",
+        "PaymentLink",
         "PlanGrid",
         "PortalEmpty",
         "PriceUnitGrid",
@@ -2457,9 +2532,9 @@
       "file": "src/pages/customer-portal/CustomerPortalView.tsx",
       "layer": "surface",
       "composes": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "DownloadDialog",
         "PayInvoiceDialog",
         "PortalCredits",
@@ -2694,6 +2769,7 @@
         "ContractAddChargeForm",
         "ContractChargeDialog",
         "ContractQuantityDialog",
+        "ContractSectionDialogs",
         "CouponCreateForm",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
@@ -2705,6 +2781,9 @@
         "InvoiceLinesEditor",
         "RunExportDialog",
         "S3ConnectionDialog",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
+        "SubscriptionDetailView",
         "SubscriptionForm"
       ],
       "story": "./src/compositions/forms/DateInput.stories.tsx"
@@ -2895,6 +2974,8 @@
         "AddonChargesDialog",
         "AddonSubscriptionsView",
         "ChargeTable",
+        "ContractBenefitsEditor",
+        "ContractHierarchyEditor",
         "CouponRedemptionsView",
         "CreditGrantTable",
         "CustomerAnalyticsView",
@@ -2914,6 +2995,8 @@
         "PortalCredits",
         "PortalInvoices",
         "RevenueReport",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
         "SubscriptionDetailView",
         "SubscriptionForm",
         "SubscriptionJournal",
@@ -3033,6 +3116,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -3181,6 +3265,7 @@
         "PlusIcon"
       ],
       "usedBy": [
+        "ContractBenefitsEditor",
         "ContractSectionDialogs",
         "PlanForm"
       ],
@@ -3198,7 +3283,9 @@
         "OptionCombobox",
         "PlusIcon"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "ContractBenefitsEditor"
+      ],
       "story": "./src/pages/product-catalog/entitlements/EntitlementForm.stories.tsx"
     },
     "EntitlementTable": {
@@ -3240,6 +3327,7 @@
         "UsageMeter"
       ],
       "usedBy": [
+        "ContractBenefitsEditor",
         "CustomerDetail",
         "CustomerEntitlementUsage",
         "SubscriptionDetailView"
@@ -3801,6 +3889,7 @@
         "AddonChargesDialog",
         "AutoTopupDialog",
         "BillingEntityField",
+        "CardLinkDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChargeForm",
@@ -3808,7 +3897,9 @@
         "ContractAddChargeForm",
         "ContractAmountCalculator",
         "ContractChargeDialog",
+        "ContractHierarchyEditor",
         "ContractQuantityDialog",
+        "ContractSectionDialogs",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
@@ -3842,12 +3933,16 @@
         "SignInForm",
         "SignUpScreen",
         "SpecField",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
+        "SubscriptionDetailView",
         "SubscriptionForm",
         "SyncOptions",
         "UpgradeView",
         "UsageTermsFields",
         "WebhookEndpointDetail",
-        "WebhookGuide"
+        "WebhookGuide",
+        "ZohoGatewayFields"
       ],
       "story": "./src/compositions/forms/Field.stories.tsx"
     },
@@ -3923,7 +4018,8 @@
       "usedBy": [
         "CustomerDetail",
         "DetailTable",
-        "EntityList"
+        "EntityList",
+        "PortalUsage"
       ],
       "story": "./src/compositions/tables/FilterBar.stories.tsx"
     },
@@ -4207,9 +4303,12 @@
         "AddCreditsDialog",
         "AddonChargesDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
+        "ContractBenefitsEditor",
         "ContractChargeDialog",
+        "ContractHierarchyEditor",
         "ContractIntegrations",
         "ContractQuantityDialog",
         "ContractSectionDialogs",
@@ -4229,6 +4328,8 @@
         "RemoveCardDialog",
         "RunExportDialog",
         "S3ConnectionDialog",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
         "SubscriptionDetailView",
         "SubscriptionForm",
         "TaxAssociationSection",
@@ -4783,8 +4884,14 @@
       "layer": "surface",
       "composes": [],
       "usedBy": [
+        "AddCreditsDialog",
+        "AutoTopupDialog",
+        "CardLinkDialog",
         "ContractIntegrations",
-        "CustomerDetail"
+        "CustomerDetail",
+        "DownloadDialog",
+        "PayInvoiceDialog",
+        "RemoveCardDialog"
       ],
       "story": null
     },
@@ -4948,9 +5055,7 @@
       "composes": [
         "Pill"
       ],
-      "usedBy": [
-        "SubscriptionDetailView"
-      ],
+      "usedBy": [],
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
     },
     "InvoiceStatusPill": {
@@ -5384,7 +5489,9 @@
         "SpecField",
         "SyncOptions",
         "TriangleAlert",
-        "WebhookGuide"
+        "WebhookGuide",
+        "WriteGate",
+        "ZohoGatewayFields"
       ],
       "usedBy": [],
       "story": "./src/pages/integrations/ManageConnectionSheet.stories.tsx"
@@ -5590,10 +5697,10 @@
       "layer": "surface",
       "composes": [],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "ApiCard",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "CustomerDetail",
         "DashboardHome",
         "DownloadDialog",
@@ -5742,6 +5849,8 @@
         "AddressPicker",
         "BillingEntityForm",
         "ChargeForm",
+        "ContractHierarchyEditor",
+        "ContractSectionDialogs",
         "CustomerForm",
         "EntitlementCreateForm",
         "EntitlementEditForm",
@@ -5757,6 +5866,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "AddCardDialog",
         "AddonChargesDialog",
         "BillingEntityField",
         "BonusSlabTable",
@@ -5787,6 +5897,8 @@
         "RunExportDialog",
         "S3ConnectionDialog",
         "SpecField",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
         "SubscriptionForm",
         "SyncOptions",
         "TaxAssociationSection",
@@ -5795,7 +5907,8 @@
         "TaxRateEditForm",
         "UsageTermsFields",
         "WebhookEndpointDetail",
-        "WebhookGuide"
+        "WebhookGuide",
+        "ZohoGatewayFields"
       ],
       "story": "./src/compositions/forms/OptionSelect.stories.tsx"
     },
@@ -5989,6 +6102,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -6023,7 +6137,10 @@
     "PaymentLink": {
       "file": "src/compositions/feedback/PaymentLink.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [],
       "story": "./src/compositions/feedback/PaymentLink.stories.tsx"
     },
@@ -6072,6 +6189,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonGrid",
+        "ContractHierarchyEditor",
         "CostSheetGrid",
         "CouponGrid",
         "CreateWithAiButton",
@@ -6097,7 +6215,6 @@
         "PriceUnitGrid",
         "RowActionsMenu",
         "Status",
-        "SubscriptionDetailView",
         "SubscriptionForm",
         "TaxRateGrid"
       ],
@@ -6156,6 +6273,7 @@
         "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
+        "ContractIntegrations",
         "CreditNoteDetailView",
         "CustomerActivityView",
         "CustomerDetail",
@@ -6186,6 +6304,7 @@
         "SubscriptionStatusPill",
         "SummaryCell",
         "UsageSyncDetailSheet",
+        "WalletLedgerTable",
         "WebhookEndpointDetail",
         "WebhookEventCatalog",
         "WebhookStatusPill",
@@ -6428,6 +6547,8 @@
         "ChargeSheet",
         "ChargeTable",
         "ConnectionExports",
+        "ContractBenefitsEditor",
+        "ContractHierarchyEditor",
         "ContractIntegrations",
         "ContractSectionDialogs",
         "CostSheetGrid",
@@ -6466,6 +6587,8 @@
         "S3ConnectionList",
         "ShellCreateMenu",
         "ShellSearch",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
         "SubscriptionDetailView",
         "SubscriptionForm",
         "SubscriptionGrid",
@@ -6473,6 +6596,7 @@
         "TaxDialog",
         "TaxRateGrid",
         "TierTable",
+        "UsageTermsFields",
         "WebhookEndpointDetail",
         "WebhookEndpointGrid"
       ],
@@ -6594,6 +6718,7 @@
       "composes": [
         "Calendar",
         "CalendarIcon",
+        "FilterBar",
         "Loaded",
         "MeterTrack",
         "Money",
@@ -6833,9 +6958,9 @@
         "Pill"
       ],
       "usedBy": [
-        "AddCardDialog",
         "AddCreditsDialog",
         "AutoTopupDialog",
+        "CardLinkDialog",
         "DownloadDialog",
         "PayInvoiceDialog",
         "RemoveCardDialog"
@@ -6922,6 +7047,7 @@
         "ConfirmDialog",
         "Field",
         "FormDialog",
+        "IntegrationMark",
         "Money",
         "RadioRows"
       ],
@@ -7101,6 +7227,8 @@
         "AddonChargesDialog",
         "BillingEntityIntegrations",
         "ChargeTable",
+        "ContractBenefitsEditor",
+        "ContractHierarchyEditor",
         "CreditGrantTable",
         "CustomerDetail",
         "EntitlementTable",
@@ -7108,6 +7236,8 @@
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "ProviderConnections",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
         "SubscriptionDetailView",
         "SubscriptionForm"
       ],
@@ -7274,6 +7404,8 @@
         "ChargeTable",
         "ConnectionExports",
         "ContextualSection",
+        "ContractBenefitsEditor",
+        "ContractHierarchyEditor",
         "CostMarginCard",
         "CouponRedemptionsView",
         "CreditGrantTable",
@@ -7307,6 +7439,8 @@
         "RevenueRecognitionNotEnabled",
         "RevenueRecognitionReport",
         "S3ConnectionList",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
         "SubscriptionDetailView",
         "SubscriptionJournal",
         "SubscriptionRevenue",
@@ -7326,12 +7460,16 @@
       ],
       "usedBy": [
         "ConnectionExports",
+        "ContractBenefitsEditor",
+        "ContractHierarchyEditor",
         "DataExportDetail",
         "ExportRunList",
         "ExportsOverview",
         "RevenueRecognitionNotEnabled",
         "RevenueReport",
         "S3ConnectionList",
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection",
         "SubTabState",
         "UsageBillingView"
       ],
@@ -7716,6 +7854,7 @@
         "ProviderConnections",
         "RevenueRecognitionReport",
         "S3ConnectionList",
+        "SubscriptionDetailView",
         "SubscriptionForm",
         "SubscriptionRevenue",
         "TierTable",
@@ -7833,6 +7972,47 @@
         "ManageConnectionSheet"
       ],
       "story": null
+    },
+    "SpendingAllowanceForm": {
+      "file": "src/pages/contracts/SpendingAllowancesSection.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "DateInput",
+        "DetailTable",
+        "Field",
+        "FormDialog",
+        "OptionSelect",
+        "PlusIcon",
+        "RowActionsMenu",
+        "Section",
+        "SectionEmpty"
+      ],
+      "usedBy": [
+        "ContractBenefitsEditor"
+      ],
+      "story": "./src/pages/contracts/SpendingAllowancesSection.stories.tsx"
+    },
+    "SpendingAllowancesSection": {
+      "file": "src/pages/contracts/SpendingAllowancesSection.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "DateInput",
+        "DetailTable",
+        "Field",
+        "FormDialog",
+        "OptionSelect",
+        "PlusIcon",
+        "RowActionsMenu",
+        "Section",
+        "SectionEmpty"
+      ],
+      "usedBy": [
+        "AddonChargesDialog",
+        "SubscriptionForm"
+      ],
+      "story": "./src/pages/contracts/SpendingAllowancesSection.stories.tsx"
     },
     "SpendingLimit": {
       "file": "src/components/blocks/app-shell-3/components/spending-limit.tsx",
@@ -7961,32 +8141,34 @@
         "ChargeAlertForm",
         "ChargeSheet",
         "ChargeTable",
+        "Composer",
         "ConfirmDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
         "ContractSectionDialogs",
         "CopyIcon",
+        "DateInput",
         "DetailMoreMenu",
         "DetailShell",
         "DetailTable",
         "DetailTabs",
         "EntitlementUsageTable",
         "EntityLink",
+        "Field",
         "FormDialog",
-        "InvoiceStatusBadge",
         "MetadataCard",
         "OverviewTiles",
         "PackageIcon",
         "PauseContractDialog",
         "PaymentStatusBadge",
-        "PencilIcon",
         "Pill",
         "PlusIcon",
         "Properties",
         "RelatedCard",
         "RowActionsMenu",
         "Section",
+        "SimpleTable",
         "SubTabState",
         "SubscriptionStatusBadge",
         "TotalRow",
@@ -8005,6 +8187,7 @@
         "ChargeCouponDialog",
         "ChoiceCards",
         "Composer",
+        "ConfirmDialog",
         "ContractChargeDialog",
         "CreditGrantCreateForm",
         "DateInput",
@@ -8024,6 +8207,7 @@
         "PriceOverrideForm",
         "RowActionsMenu",
         "SimpleTable",
+        "SpendingAllowancesSection",
         "UserIcon",
         "UsersIcon",
         "WalletIcon"
@@ -8666,7 +8850,8 @@
       "composes": [
         "CheckboxRow",
         "Field",
-        "OptionSelect"
+        "OptionSelect",
+        "PlusIcon"
       ],
       "usedBy": [
         "ContractAddChargeForm",
@@ -8786,7 +8971,8 @@
       "file": "src/pages/customers/WalletLedgerTable.tsx",
       "layer": "surface",
       "composes": [
-        "DetailTable"
+        "DetailTable",
+        "Pill"
       ],
       "usedBy": [
         "CustomerWalletView"
@@ -9065,6 +9251,7 @@
         "BillingEntityForm",
         "BillingEntityGrid",
         "ChargeTable",
+        "ConnectIntegrationSheet",
         "CreditGrantTable",
         "CustomerDetail",
         "CustomerTaxSection",
@@ -9073,6 +9260,7 @@
         "EntityList",
         "FeatureGrid",
         "FxRatesSection",
+        "ManageConnectionSheet",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "SubscriptionDetailView",
@@ -9094,6 +9282,20 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "ZohoGatewayFields": {
+      "file": "src/pages/integrations/ZohoGatewayFields.tsx",
+      "layer": "surface",
+      "composes": [
+        "CheckboxRow",
+        "Field",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "ConnectIntegrationSheet",
+        "ManageConnectionSheet"
+      ],
+      "story": "./src/pages/integrations/ZohoGatewayFields.stories.tsx"
     }
   },
   "stories": {
@@ -9198,7 +9400,8 @@
       "title": "Building blocks/Feedback & states/ConfirmDialog",
       "component": "ConfirmDialog",
       "uses": [
-        "ConfirmDialog"
+        "ConfirmDialog",
+        "PaymentLink"
       ]
     },
     "./src/compositions/feedback/DataBoundary.stories.tsx": {
@@ -9901,11 +10104,25 @@
         "ChargeCouponDialog"
       ]
     },
+    "./src/pages/contracts/ContractBenefitsEditor.stories.tsx": {
+      "title": "Pages/Contracts/Benefits editor",
+      "component": "ContractBenefitsEditor",
+      "uses": [
+        "ContractBenefitsEditor"
+      ]
+    },
     "./src/pages/contracts/ContractChargeDialog.stories.tsx": {
       "title": "App/Contracts/Contract charge dialog",
       "component": "ContractChargeDialog",
       "uses": [
         "ContractChargeDialog"
+      ]
+    },
+    "./src/pages/contracts/ContractHierarchyEditor.stories.tsx": {
+      "title": "Pages/Contracts/Hierarchy editor",
+      "component": "ContractHierarchyEditor",
+      "uses": [
+        "ContractHierarchyEditor"
       ]
     },
     "./src/pages/contracts/ContractIntegrations.stories.tsx": {
@@ -9928,6 +10145,14 @@
       "component": "ContractSummary",
       "uses": [
         "ContractSummary"
+      ]
+    },
+    "./src/pages/contracts/SpendingAllowancesSection.stories.tsx": {
+      "title": "Pages/Contracts/Spending allowances",
+      "component": "SpendingAllowancesSection",
+      "uses": [
+        "SpendingAllowanceForm",
+        "SpendingAllowancesSection"
       ]
     },
     "./src/pages/contracts/SubscriptionDetailView.stories.tsx": {
@@ -10293,6 +10518,13 @@
       "uses": [
         "IntegrationLogo",
         "ProviderConnections"
+      ]
+    },
+    "./src/pages/integrations/ZohoGatewayFields.stories.tsx": {
+      "title": "Pages/Integrations/Zoho gateway fields",
+      "component": null,
+      "uses": [
+        "ZohoGatewayFields"
       ]
     },
     "./src/pages/product-catalog/addons/AddonDetailPage.stories.tsx": {
@@ -11752,7 +11984,10 @@
       "pattern": "Detail",
       "route": "/contracts/$subscriptionId",
       "uses": [
+        "AccessScope",
         "ConfirmDialog",
+        "ContractBenefitsEditor",
+        "ContractHierarchyEditor",
         "DateInput",
         "EntityAlertDialog",
         "OptionSelect",

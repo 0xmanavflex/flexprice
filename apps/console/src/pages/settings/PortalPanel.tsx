@@ -240,12 +240,15 @@ function PortalForm({
           )}
         </SettingsBlock>
 
-        <UsagePropertiesBlock
-          environmentId={environmentId}
-          value={draft.value.usageProperties}
-          busy={busy}
-          onChange={(patch) => draft.update((current) => withUsageProperties(current, patch))}
-        />
+        {/* Only about the Usage tab: hidden with it, as V1 does. The setting is kept either way. */}
+        {(draft.value.sections.find((section) => section.id === 'usage')?.enabled ?? true) ? (
+          <UsagePropertiesBlock
+            environmentId={environmentId}
+            value={draft.value.usageProperties}
+            busy={busy}
+            onChange={(patch) => draft.update((current) => withUsageProperties(current, patch))}
+          />
+        ) : null}
 
         <SettingsBlock
           label="Theme"

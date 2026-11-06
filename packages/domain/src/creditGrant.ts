@@ -150,6 +150,8 @@ export interface CreditGrant {
   expirationDurationUnit: CreditGrantExpiryDurationUnit | null
   /** Credits-to-currency rate, when set (amount = credits × rate). */
   conversionRate: string | null
+  /** The rate for credits bought as a top-up, when it differs from `conversionRate`. */
+  topupConversionRate?: string | null
   priority: number
   /** When the grant stops issuing credits, if it has been given an end. */
   endDate?: Date | null
@@ -203,6 +205,15 @@ export const createCreditGrantSchema = z
     conversionRate: z
       .union([z.literal(''), decimal.refine((v) => Number(v) > 0, 'Must be greater than zero')])
       .optional(),
+    /** The rate for credits bought as a top-up; empty means the same as `conversionRate`. */
+    topupConversionRate: z
+      .union([z.literal(''), decimal.refine((v) => Number(v) > 0, 'Must be greater than zero')])
+      .optional(),
+    /**
+     * `YYYY-MM-DD`: when a grant added to a running contract starts. Only that
+     * dialog asks; a plan's grant has no date, and the API refuses one.
+     */
+    startDate: z.string().optional(),
     priority: z.number().int().nonnegative('Cannot be negative'),
   })
   .superRefine((grant, ctx) => {
@@ -261,6 +272,7 @@ export function creditGrantToDraft(grant: CreditGrant): CreateCreditGrant {
       ? { expirationDurationUnit: grant.expirationDurationUnit }
       : {}),
     ...(grant.conversionRate ? { conversionRate: grant.conversionRate } : {}),
+    ...(grant.topupConversionRate ? { topupConversionRate: grant.topupConversionRate } : {}),
     priority: grant.priority,
   }
 }

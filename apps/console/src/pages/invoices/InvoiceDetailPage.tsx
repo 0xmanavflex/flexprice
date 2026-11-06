@@ -47,6 +47,7 @@ import { toInvoiceDocument } from './invoiceDocumentAdapter'
 import { billFromFor } from './invoiceParties'
 import { downloadInvoiceCsv } from './invoiceCsv'
 import { openInvoicePdf } from './useInvoiceRowActions'
+import { useSyncWatch } from '../integrations/useSyncWatch'
 
 export interface InvoiceDetailPageProps {
   invoiceId: string
@@ -74,6 +75,12 @@ export function InvoiceDetailPage({
   const pdfLink = useInvoicePdfLink()
   const activity = useActivityLog({ entityType: 'invoice', entityId: invoiceId })
   const mappings = useEntityIntegrationControls('invoice', invoiceId)
+  // A push only starts the provider syncs; this follows them to their end and
+  // then rereads the mappings and the invoice (a provider id lands in its metadata).
+  const syncWatch = useSyncWatch('invoice', invoiceId, () => {
+    void mappings.refetch()
+    void invoice.refetch()
+  })
   // "Bill from" is the signed-in tenant: `GET /tenants/{id}` only answers for
   // one's own tenant, which is also the invoice's issuer. The invoice's own
   // `tenant_id` stands in until the user record has loaded.
@@ -161,19 +168,19 @@ export function InvoiceDetailPage({
           mappings.controls
             ? {
                 ...mappings.controls,
+                syncing: mappings.push.isPending || mappings.pull.isPending,
+                syncRuns: syncWatch.runs,
                 ...(mappings.pushProviders.length > 0
                   ? {
                       pushProviders: mappings.pushProviders,
                       onPush: () =>
                         mappings.push.mutate(undefined, {
-                          onSuccess: () =>
-                            toast.success(
-                              `Pushing invoice to ${mappings.pushProviders.join(', ')}`,
-                              {
-                                description:
-                                  'The provider record is created or updated in the background.',
-                              },
-                            ),
+                          onSuccess: () => {
+                            syncWatch.watch(mappings.pushProviders)
+                            toast(`Pushing invoice to ${mappings.pushProviders.join(', ')}`, {
+                              description: 'You are told here when each provider has it.',
+                            })
+                          },
                           onError: (cause) =>
                             toast.error(
                               cause instanceof Error
@@ -190,10 +197,10 @@ export function InvoiceDetailPage({
                         mappings.pull.mutate(undefined, {
                           onSuccess: () =>
                             toast.success(
-                              `Pulling invoice from ${mappings.pullProviders.join(', ')}`,
+                              `Invoice pull queued from ${mappings.pullProviders.join(', ')}`,
                               {
                                 description:
-                                  'Payments and status recorded there update here in the background.',
+                                  'The request was accepted. Completion is not reported by this API.',
                               },
                             ),
                           onError: (cause) =>

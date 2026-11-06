@@ -28,4 +28,23 @@ describe('customerPortalLink', () => {
       }),
     ).toBe('https://admin-dev.flexprice.io/p?token=tok')
   })
+
+  it('uses the portal domain the deployment names, served at its root', () => {
+    expect(
+      customerPortalLink('tok', {
+        origin: 'https://us.app.flexprice.io',
+        region: 'us',
+        publicApiUrls: { us: 'https://us.api.flexprice.io' },
+        portalHost: 'portal.flexprice.io',
+      }),
+    ).toBe('https://portal.flexprice.io/us?token=tok')
+    expect(
+      customerPortalLink('tok', {
+        origin: 'https://admin-dev.flexprice.io',
+        region: null,
+        publicApiUrls: {},
+        portalHost: 'portal-dev.flexprice.io',
+      }),
+    ).toBe('https://portal-dev.flexprice.io/?token=tok')
+  })
 })

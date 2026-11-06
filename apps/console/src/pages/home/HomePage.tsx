@@ -15,12 +15,7 @@ import {
   UsageWindowSize,
 } from '@fp/query'
 import type { ReportQuery, ReportResult, RevenueOverview, UsageAnalytics } from '@fp/query'
-import {
-  DEFAULT_INVOICE_QUERY,
-  DEFAULT_SUBSCRIPTION_QUERY,
-  InvoiceStatus,
-  money,
-} from '@fp/domain'
+import { DEFAULT_INVOICE_QUERY, DEFAULT_SUBSCRIPTION_QUERY, InvoiceStatus, money } from '@fp/domain'
 import type { Invoice, Money, Subscription } from '@fp/domain'
 import { CUSTOM_RANGE_ID, DashboardHome } from '@fp/ui/pages'
 import { useSession } from '@/app/session'

@@ -19,6 +19,22 @@ export function formatRange(start: Date | null, end: Date | null, locale?: strin
   return `${formatDate(start, locale)} – ${formatDate(end, locale)}`
 }
 
+/**
+ * A billing period as the days it covers: "Oct 1, 2026 – Oct 31, 2026". The
+ * API's end is exclusive (Nov 1, 00:00), so the last day is the one before;
+ * both are named in UTC, the zone the backend draws periods in, as V1 did.
+ */
+export function formatPeriod(start: Date, end: Date, locale?: string): string {
+  const day = new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+  const last = new Date(Math.max(start.getTime(), end.getTime() - 1000))
+  return `${day.format(start)} – ${day.format(last)}`
+}
+
 /** "in 7 days", "today", "tomorrow", "3 days ago". */
 export function relativeDays(value: Date, now: Date): string {
   const days = Math.round((startOfDay(value) - startOfDay(now)) / DAY)

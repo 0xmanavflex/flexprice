@@ -34,7 +34,7 @@ const formatDate = (value: Date | null) =>
 function GatewayMark({ gateway }: { gateway: string }) {
   const id = gateway.toLowerCase()
   const name = id.charAt(0).toUpperCase() + id.slice(1).replaceAll('_', ' ')
-  return <IntegrationMark integration={{ id, name, providerType: id }} />
+  return <IntegrationMark integration={{ id, name }} />
 }
 
 /**

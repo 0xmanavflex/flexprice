@@ -1697,7 +1697,8 @@ export const CommitmentsStep: Story = {
     await expect(canvas.getByRole('columnheader', { name: 'Code' })).toBeVisible()
     await expect(canvas.getByText('VAT20')).toBeVisible()
     await expect(canvas.getByText('20%')).toBeVisible()
-    await expect(canvas.getByRole('combobox', { name: /^Add another/ })).toHaveTextContent(
+    await expect(canvas.getByRole('combobox', { name: /^Add another/ })).toHaveAttribute(
+      'placeholder',
       'Add another tax rate…',
     )
     await expect(canvas.getByRole('columnheader', { name: 'Allowance' })).toBeVisible()
@@ -2038,5 +2039,24 @@ export const TrialWithAddedChargeIsStopped: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await expect(await canvas.findByText(/free trial starts as trialing/)).toBeVisible()
     await expect(args.onSubmit).not.toHaveBeenCalled()
+  },
+}
+
+/** Closing a configured contract asks before losing it; keeping it preserves the choice. */
+export const ProtectsUnsavedConfiguration: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Customer/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Acme Robotics/ }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Close form' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Discard this contract?' }))
+    await expect(args.onCancel).not.toHaveBeenCalled()
+    await userEvent.click(dialog.getByRole('button', { name: 'Keep editing' }))
+    await expect(canvas.getByRole('heading', { name: /^Plan$/ })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Close form' }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Discard changes' }),
+    )
+    await expect(args.onCancel).toHaveBeenCalledTimes(1)
   },
 }

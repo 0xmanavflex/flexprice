@@ -5,8 +5,8 @@
  * one still in flight, or one that failed and needs chasing. The API's
  * `PaymentResponse` carries ~30 optional fields and a lifecycle far finer than
  * a list needs: it distinguishes `INITIATED` from `PENDING` from `PROCESSING`,
- * and `REFUNDED` from `PARTIALLY_REFUNDED`. None of those distinctions changes
- * what a billing operator does about the row, so the domain collapses them.
+ * and `REFUNDED` from `PARTIALLY_REFUNDED`. Refund states remain distinct so a
+ * partial reversal is never presented as a full refund.
  *
  * As with an invoice, the amount crosses this boundary as a domain `Money`
  * (never the API's bare `amount` string beside a separate `currency`), so no
@@ -19,8 +19,8 @@ import type { Money } from './money'
 /**
  * The state a person actually cares about.
  *
- * The wire's nine values fold to six: the three flavours of "not done yet"
- * become one `pending`, and both refund shapes become one `refunded`. What is
+ * In-flight states share `pending`: the three flavours of "not done yet"
+ * become one `pending`, while full and partial refunds remain distinct. What is
  * left is the set a collections view acts on: did it land, is it still going,
  * did it fail, was it reversed.
  */
@@ -30,6 +30,7 @@ export const PaymentStatus = {
   Overpaid: 'overpaid',
   Failed: 'failed',
   Refunded: 'refunded',
+  PartiallyRefunded: 'partially_refunded',
   Voided: 'voided',
 } as const
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus]
@@ -40,11 +41,12 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   [PaymentStatus.Overpaid]: 'Overpaid',
   [PaymentStatus.Failed]: 'Failed',
   [PaymentStatus.Refunded]: 'Refunded',
+  [PaymentStatus.PartiallyRefunded]: 'Partially refunded',
   [PaymentStatus.Voided]: 'Voided',
 }
 
 /**
- * The wire's nine payment states onto the domain's six.
+ * Payment wire states mapped to the display vocabulary.
  *
  * Lives here rather than in the transport layer because two resources need the
  * same collapse: a payment's own `payment_status`, and the `payment_status` an
@@ -63,7 +65,7 @@ const WIRE_PAYMENT_STATUS: Record<string, PaymentStatus> = {
   OVERPAID: PaymentStatus.Overpaid,
   FAILED: PaymentStatus.Failed,
   REFUNDED: PaymentStatus.Refunded,
-  PARTIALLY_REFUNDED: PaymentStatus.Refunded,
+  PARTIALLY_REFUNDED: PaymentStatus.PartiallyRefunded,
   VOIDED: PaymentStatus.Voided,
 }
 

@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  DEFAULT_GROUP_QUERY,
   DEFAULT_RAW_EVENT_QUERY,
   GroupEntityType,
   eventPropertyNames,
   type CreateFeature,
   type EditFeature,
 } from '@fp/domain'
-import { useCreateFeature, useFeature, useGroups, useRawEvents, useUpdateFeature } from '@fp/query'
+import {
+  useCreateFeature,
+  useFeature,
+  useGroupPicker,
+  useRawEvents,
+  useUpdateFeature,
+} from '@fp/query'
 import { FeatureForm } from '@fp/ui/pages'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { expressionFieldError, toSubmitError } from './featureMessages'
@@ -31,20 +36,8 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
   const create = useCreateFeature()
   const update = useUpdateFeature()
   const existing = useFeature(props.mode === 'edit' ? props.featureId : '')
-  /*
-   * Feature labels, narrowed by the server.
-   *
-   * This used to fetch the first hundred groups of *any* kind and keep the
-   * feature ones in the browser. With a hundred price groups ahead of them
-   * the picker came back empty, which reads as "there are no labels": the
-   * bug this page was reported for. `entityType` is a filter the search
-   * endpoint honours, checked against the live API.
-   */
-  const groups = useGroups({
-    ...DEFAULT_GROUP_QUERY,
-    pageSize: 100,
-    entityType: GroupEntityType.Feature,
-  })
+  // Type-filtered and paged: a label past the first hundred remains selectable.
+  const groups = useGroupPicker(GroupEntityType.Feature)
   const groupOptions = useMemo(
     () => (groups.data?.groups ?? []).map((group) => ({ value: group.id, label: group.name })),
     [groups.data],

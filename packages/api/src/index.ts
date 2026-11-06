@@ -229,8 +229,10 @@ export type {
 export {
   addPortalPaymentMethod,
   deletePortalPaymentMethod,
+  getPortalCheckoutSession,
   getPortalConfig,
   getPortalPropertyKeys,
+  getPortalPropertyValues,
   getPortalCustomer,
   getPortalIntegrations,
   getPortalInvoice,
@@ -247,7 +249,7 @@ export {
   topUpPortalWallet,
   updatePortalAutoTopup,
 } from './customerPortal'
-export type { PortalAuth } from './customerPortal'
+export type { PortalAuth, PortalUsageFilters } from './customerPortal'
 
 export {
   createBillingEntity,

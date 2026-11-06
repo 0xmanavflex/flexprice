@@ -1,3 +1,6 @@
+import { WriteGate } from '@ui/compositions/access/Access'
+import { RBAC_ENTITY } from '@fp/domain'
+import { ZohoGatewayFields } from './ZohoGatewayFields'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useState, type ReactNode } from 'react'
 import { type Resolver } from 'react-hook-form'
@@ -85,6 +88,7 @@ export const ConnectIntegrationSheetProvenance = provenance({
 
 /** What the sheet needs to show addresses it cannot know itself. */
 export interface ConnectionContext {
+  environmentType?: 'development' | 'production' | undefined
   /** The API base the provider posts webhooks to (the console's server URL). */
   webhookBaseUrl: string
   tenantId: string
@@ -244,7 +248,7 @@ function ConnectForm({
       connectionFormSchema(spec, { entity: entities !== undefined }),
     ) as unknown as Resolver<ConnectionFormValues>,
     defaultValues: {
-      ...defaultConnectionValues(spec, integration.name),
+      ...defaultConnectionValues(spec, integration.name, context.environmentType),
       ...(entities ? { billingEntityId: billingEntityId ?? firstFree?.id ?? '' } : {}),
     },
   })
@@ -253,7 +257,9 @@ function ConnectForm({
 
   const fieldNames = (step: ConnectStep) =>
     step === 'sync'
-      ? []
+      ? spec.providerType === 'zoho_books'
+        ? (['zohoPaymentGateways'] as const)
+        : []
       : [
           ...(step === 'credentials' ? (['name'] as const) : []),
           ...(step === 'credentials' && entities ? (['billingEntityId'] as const) : []),
@@ -320,178 +326,185 @@ function ConnectForm({
     spec.setup === 'oauth' ? `Continue to ${integration.name}` : `Connect ${integration.name}`
 
   return (
-    <form
-      id="connect-integration"
-      onSubmit={flow.guardSubmit(submit)}
-      noValidate
-      className="flex min-h-0 flex-1 flex-col"
-    >
-      <ConnectHeader integration={integration} logo={logo} />
+    <WriteGate entity={RBAC_ENTITY.Connection} block>
+      <form
+        id="connect-integration"
+        onSubmit={flow.guardSubmit(submit)}
+        noValidate
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <ConnectHeader integration={integration} logo={logo} />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
-        {multi ? (
-          // Centred at the width its labels need, not stretched across the sheet.
-          <div className="mx-auto w-full max-w-sm">
-            <WorkflowStepper
-              steps={flow.workflow}
-              currentStep={flow.step}
-              onStepChange={flow.goTo}
-              aria-label={`Connect ${integration.name}`}
-            />
-          </div>
-        ) : null}
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
+          {multi ? (
+            // Centred at the width its labels need, not stretched across the sheet.
+            <div className="mx-auto w-full max-w-sm">
+              <WorkflowStepper
+                steps={flow.workflow}
+                currentStep={flow.step}
+                onStepChange={flow.goTo}
+                aria-label={`Connect ${integration.name}`}
+              />
+            </div>
+          ) : null}
 
-        {error ? (
-          <Alert variant="destructive" role="alert">
-            <TriangleAlert aria-hidden="true" />
-            <AlertTitle>{integration.name} was not connected</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
+          {error ? (
+            <Alert variant="destructive" role="alert">
+              <TriangleAlert aria-hidden="true" />
+              <AlertTitle>{integration.name} was not connected</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
 
-        {step === 'credentials' ? (
-          <div className="flex flex-col gap-5">
-            {spec.prerequisites?.map((line) => (
-              <Alert key={line} variant="info">
-                <InfoIcon aria-hidden="true" />
-                <AlertDescription>{line}</AlertDescription>
-              </Alert>
-            ))}
-            {spec.setup === 'oauth' ? (
-              <CodeBlock code={context.redirectUri} language="text" label="Redirect URI">
-                <CodeBlockHeader>
-                  <CodeBlockTitle>Redirect URI</CodeBlockTitle>
-                  <CodeBlockCopyButton className="ml-auto" />
-                </CodeBlockHeader>
-              </CodeBlock>
-            ) : null}
-            {spec.providerType === 'aws_marketplace' ? (
-              <>
-                <CodeBlock code={externalId} language="text" label="External ID">
+          {step === 'credentials' ? (
+            <div className="flex flex-col gap-5">
+              {spec.prerequisites?.map((line) => (
+                <Alert key={line} variant="info">
+                  <InfoIcon aria-hidden="true" />
+                  <AlertDescription>{line}</AlertDescription>
+                </Alert>
+              ))}
+              {spec.setup === 'oauth' ? (
+                <CodeBlock code={context.redirectUri} language="text" label="Redirect URI">
                   <CodeBlockHeader>
-                    <CodeBlockTitle>External ID</CodeBlockTitle>
+                    <CodeBlockTitle>Redirect URI</CodeBlockTitle>
                     <CodeBlockCopyButton className="ml-auto" />
                   </CodeBlockHeader>
                 </CodeBlock>
-                <CodeBlock code={awsPermissionsPolicy()} language="json" label="Permissions policy">
-                  <CodeBlockHeader>
-                    <CodeBlockTitle>Permissions policy</CodeBlockTitle>
-                    <CodeBlockCopyButton className="ml-auto" />
-                  </CodeBlockHeader>
-                </CodeBlock>
-                {awsAccountId ? (
+              ) : null}
+              {spec.providerType === 'aws_marketplace' ? (
+                <>
+                  <CodeBlock code={externalId} language="text" label="External ID">
+                    <CodeBlockHeader>
+                      <CodeBlockTitle>External ID</CodeBlockTitle>
+                      <CodeBlockCopyButton className="ml-auto" />
+                    </CodeBlockHeader>
+                  </CodeBlock>
                   <CodeBlock
-                    code={awsTrustPolicy(awsAccountId, externalId)}
+                    code={awsPermissionsPolicy()}
                     language="json"
-                    label="Trust relationship"
+                    label="Permissions policy"
                   >
                     <CodeBlockHeader>
-                      <CodeBlockTitle>Trust relationship</CodeBlockTitle>
+                      <CodeBlockTitle>Permissions policy</CodeBlockTitle>
+                      <CodeBlockCopyButton className="ml-auto" />
+                    </CodeBlockHeader>
+                  </CodeBlock>
+                  {awsAccountId ? (
+                    <CodeBlock
+                      code={awsTrustPolicy(awsAccountId, externalId)}
+                      language="json"
+                      label="Trust relationship"
+                    >
+                      <CodeBlockHeader>
+                        <CodeBlockTitle>Trust relationship</CodeBlockTitle>
+                        <CodeBlockCopyButton className="ml-auto" />
+                      </CodeBlockHeader>
+                    </CodeBlock>
+                  ) : (
+                    <MarketplaceNotConfigured />
+                  )}
+                </>
+              ) : null}
+              {spec.providerType === 'gcp_marketplace' ? (
+                awsAccountId && awsRoleName ? (
+                  <CodeBlock
+                    code={gcpSetupScript(awsAccountId, awsRoleName)}
+                    language="bash"
+                    label="Cloud Shell setup"
+                  >
+                    <CodeBlockHeader>
+                      <CodeBlockTitle>Run in Cloud Shell</CodeBlockTitle>
                       <CodeBlockCopyButton className="ml-auto" />
                     </CodeBlockHeader>
                   </CodeBlock>
                 ) : (
                   <MarketplaceNotConfigured />
-                )}
-              </>
-            ) : null}
-            {spec.providerType === 'gcp_marketplace' ? (
-              awsAccountId && awsRoleName ? (
-                <CodeBlock
-                  code={gcpSetupScript(awsAccountId, awsRoleName)}
-                  language="bash"
-                  label="Cloud Shell setup"
+                )
+              ) : null}
+
+              {entities ? (
+                <BillingEntityField
+                  integration={integration}
+                  entities={entities}
+                  control={control}
+                  error={errors.billingEntityId?.message}
+                />
+              ) : null}
+              <Field label="Connection name" required error={errors.name?.message}>
+                {(aria) => <Input {...aria} autoComplete="off" {...register('name')} />}
+              </Field>
+              {fieldsForStep(spec, 'credentials', perConnectionWebhook).map((field) => (
+                <SpecField key={field.key} field={field} control={control} errors={errors} />
+              ))}
+              <p className="text-muted-foreground flex items-start gap-2 text-xs">
+                <InfoIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                {rotatableFields(spec).length > 0
+                  ? 'Keys are encrypted and never shown again. You can replace them later from Configure.'
+                  : 'Keys are encrypted and never shown again. To change one later, disconnect and connect again.'}
+              </p>
+              {spec.credentialHelp ? (
+                <a
+                  href={spec.credentialHelp}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-[13px] underline-offset-4 hover:underline"
                 >
-                  <CodeBlockHeader>
-                    <CodeBlockTitle>Run in Cloud Shell</CodeBlockTitle>
-                    <CodeBlockCopyButton className="ml-auto" />
-                  </CodeBlockHeader>
-                </CodeBlock>
-              ) : (
-                <MarketplaceNotConfigured />
-              )
-            ) : null}
-
-            {entities ? (
-              <BillingEntityField
-                integration={integration}
-                entities={entities}
-                control={control}
-                error={errors.billingEntityId?.message}
-              />
-            ) : null}
-            <Field label="Connection name" required error={errors.name?.message}>
-              {(aria) => <Input {...aria} autoComplete="off" {...register('name')} />}
-            </Field>
-            {fieldsForStep(spec, 'credentials', perConnectionWebhook).map((field) => (
-              <SpecField key={field.key} field={field} control={control} errors={errors} />
-            ))}
-            <p className="text-muted-foreground flex items-start gap-2 text-xs">
-              <InfoIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-              {rotatableFields(spec).length > 0
-                ? 'Keys are encrypted and never shown again. You can replace them later from Configure.'
-                : 'Keys are encrypted and never shown again. To change one later, disconnect and connect again.'}
-            </p>
-            {spec.credentialHelp ? (
-              <a
-                href={spec.credentialHelp}
-                target="_blank"
-                rel="noreferrer"
-                className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-[13px] underline-offset-4 hover:underline"
-              >
-                Where to find these values
-                <ArrowUpRightIcon className="size-3.5" aria-hidden="true" />
-              </a>
-            ) : null}
-          </div>
-        ) : null}
-
-        {step === 'sync' ? (
-          <div className="flex flex-col gap-3">
-            <p className="text-muted-foreground text-[13px]">
-              Choose what moves between Flexprice and {integration.name}. Nothing syncs until you
-              switch it on, and you can change this later.
-            </p>
-            <SyncOptions options={spec.sync} control={control} />
-          </div>
-        ) : null}
-
-        {step === 'webhook' && webhook ? (
-          <div className="flex flex-col gap-5">
-            <p className="text-muted-foreground text-[13px]">
-              In {integration.name}, add a webhook that posts to this address and sends these
-              events. It will give you a signing secret: enter it below so Flexprice can verify each
-              event.
-            </p>
-            <WebhookGuide spec={spec} url={webhook.url} events={webhook.events} />
-            {fieldsForStep(spec, 'webhook', perConnectionWebhook).map((field) => (
-              <SpecField key={field.key} field={field} control={control} errors={errors} />
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      <SheetFooter className="border-t">
-        <div className="flex items-center justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
-            Cancel
-          </Button>
-          {multi && !flow.isFirst ? (
-            <Button type="button" variant="outline" onClick={flow.back} disabled={isPending}>
-              Back
-            </Button>
+                  Where to find these values
+                  <ArrowUpRightIcon className="size-3.5" aria-hidden="true" />
+                </a>
+              ) : null}
+            </div>
           ) : null}
-          {flow.isLast ? (
-            <Button type="submit" disabled={isPending}>
-              {isPending ? <Spinner aria-hidden="true" /> : null}
-              {isPending ? 'Connecting…' : lastLabel}
-            </Button>
-          ) : (
-            <Button type="submit">Continue</Button>
-          )}
+
+          {step === 'sync' ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-muted-foreground text-[13px]">
+                Choose what moves between Flexprice and {integration.name}. Nothing syncs until you
+                switch it on, and you can change this later.
+              </p>
+              <SyncOptions options={spec.sync} control={control} />
+              {spec.providerType === 'zoho_books' ? <ZohoGatewayFields control={control} /> : null}
+            </div>
+          ) : null}
+
+          {step === 'webhook' && webhook ? (
+            <div className="flex flex-col gap-5">
+              <p className="text-muted-foreground text-[13px]">
+                In {integration.name}, add a webhook that posts to this address and sends these
+                events. It will give you a signing secret: enter it below so Flexprice can verify
+                each event.
+              </p>
+              <WebhookGuide spec={spec} url={webhook.url} events={webhook.events} />
+              {fieldsForStep(spec, 'webhook', perConnectionWebhook).map((field) => (
+                <SpecField key={field.key} field={field} control={control} errors={errors} />
+              ))}
+            </div>
+          ) : null}
         </div>
-      </SheetFooter>
-    </form>
+
+        <SheetFooter className="border-t">
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={isPending}>
+              Cancel
+            </Button>
+            {multi && !flow.isFirst ? (
+              <Button type="button" variant="outline" onClick={flow.back} disabled={isPending}>
+                Back
+              </Button>
+            ) : null}
+            {flow.isLast ? (
+              <Button type="submit" disabled={isPending}>
+                {isPending ? <Spinner aria-hidden="true" /> : null}
+                {isPending ? 'Connecting…' : lastLabel}
+              </Button>
+            ) : (
+              <Button type="submit">Continue</Button>
+            )}
+          </div>
+        </SheetFooter>
+      </form>
+    </WriteGate>
   )
 }
 

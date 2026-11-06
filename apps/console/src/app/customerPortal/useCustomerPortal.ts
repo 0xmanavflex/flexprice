@@ -2,7 +2,10 @@ import { ApiError, serverReason, useCreateCustomerPortalSession } from '@fp/quer
 import { toast } from '@fp/ui/pages'
 import { env } from '@/env'
 import { publicApiUrls } from '@/surfaces/publicApi'
+import { configuredPortalHost } from '@/surfaces/surface'
 import { customerPortalLink } from './portalLink'
+
+const portalHost = configuredPortalHost(import.meta.env.VITE_SURFACE_HOSTS as string | undefined)
 
 /**
  * "Open customer portal" and "Copy portal link", as V1 offers them on the
@@ -22,6 +25,7 @@ export function useCustomerPortal() {
       origin: window.location.origin,
       region: env.region,
       publicApiUrls,
+      portalHost,
     })
   }
 

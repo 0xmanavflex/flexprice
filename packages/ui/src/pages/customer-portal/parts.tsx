@@ -253,15 +253,24 @@ export function RadioRows({
 export function CheckoutLinkPanel({
   url,
   amount,
+  purpose = 'pay',
   onCopy,
   onDone,
 }: {
   url: string
-  /** "$500.00", or "nothing now" for saving a card. */
+  /** "$500.00", or null when it is not known here. Unused when saving a card. */
   amount: ReactNode
+  /**
+   * `card`: the page saves a card and charges nothing, so the words say so.
+   * `confirm`: a saved card's bank asks the customer to approve the charge. No
+   * tab was opened for it (it would have been blocked), so the words ask them to open it.
+   */
+  purpose?: 'pay' | 'card' | 'confirm'
   onCopy: () => void
   onDone: () => void
 }) {
+  const card = purpose === 'card'
+  const confirm = purpose === 'confirm'
   return (
     <div className="flex flex-col gap-5">
       <div className="bg-muted/40 flex items-start gap-3 rounded-lg border p-4">
@@ -269,10 +278,21 @@ export function CheckoutLinkPanel({
           <ExternalLinkIcon />
         </IconTile>
         <div className="flex flex-col gap-1 text-[13px]">
-          <p className="text-sm font-medium">Finish paying {amount} in the new tab</p>
+          <p className="text-sm font-medium">
+            {card ? (
+              'Enter your card details on the secure card form'
+            ) : confirm ? (
+              <>Your bank asks you to confirm{amount ? <> {amount}</> : null}</>
+            ) : (
+              <>Finish paying{amount ? <> {amount}</> : null} in the new tab</>
+            )}
+          </p>
           <p className="text-muted-foreground">
-            We opened the payment page in a new tab. If it didn’t open, use the link below. This
-            page updates by itself once the payment goes through.
+            {card
+              ? 'If the secure card form didn’t open, use the link below. Nothing is charged now; your card shows here once it is saved.'
+              : confirm
+                ? 'Open the confirmation page to approve the charge on your card. Your credits are added once the bank approves it.'
+                : 'We opened the payment page in a new tab. If it didn’t open, use the link below. This page updates by itself once the payment goes through.'}
           </p>
         </div>
       </div>
@@ -293,11 +313,11 @@ export function CheckoutLinkPanel({
           render={<a href={url} target="_blank" rel="noopener noreferrer" role="link" />}
         >
           <ExternalLinkIcon aria-hidden="true" />
-          Open payment page
+          {card ? 'Open card form' : confirm ? 'Open confirmation page' : 'Open payment page'}
         </Button>
         <Button className="h-8 px-3" onClick={onDone}>
           <CheckIcon aria-hidden="true" />
-          I’ve paid
+          {card ? 'I’ve added it' : 'I’ve paid'}
         </Button>
       </div>
     </div>
@@ -312,6 +332,7 @@ export function LedgerRow({
   incoming,
   amount,
   credits,
+  failed = false,
 }: {
   reason: string
   detail: string
@@ -319,10 +340,14 @@ export function LedgerRow({
   incoming: boolean
   amount: ReactNode
   credits: string
+  /** Nothing came of it (payment failed, checkout cancelled): struck through and muted. */
+  failed?: boolean
 }) {
-  const tone = incoming
-    ? 'text-success-foreground dark:text-success'
-    : 'text-destructive-foreground dark:text-destructive'
+  const tone = failed
+    ? 'text-muted-foreground'
+    : incoming
+      ? 'text-success-foreground dark:text-success'
+      : 'text-destructive-foreground dark:text-destructive'
   return (
     <li className="flex items-center gap-4 px-6 py-4">
       <IconTile size="default" variant="soft" className={tone} aria-hidden="true">
@@ -334,11 +359,11 @@ export function LedgerRow({
       </div>
       <span className="text-muted-foreground hidden w-28 text-xs sm:block">{date}</span>
       <div className="w-32 space-y-0.5 text-right">
-        <p className={cn('text-[15px] font-medium tabular-nums', tone)}>
+        <p className={cn('text-[15px] font-medium tabular-nums', tone, failed && 'line-through')}>
           {incoming ? '+ ' : '− '}
           {amount}
         </p>
-        <p className="text-muted-foreground text-xs tabular-nums">
+        <p className={cn('text-muted-foreground text-xs tabular-nums', failed && 'line-through')}>
           {incoming ? '+' : '−'}
           {credits} credits
         </p>

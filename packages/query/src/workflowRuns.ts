@@ -145,7 +145,7 @@ export const FINISHED_WORKFLOW_STATUSES: ReadonlySet<WorkflowStatus> = new Set([
   WorkflowStatus.TimedOut,
 ])
 
-export const isFinishedWorkflow = (run: WorkflowRun | null | undefined): boolean =>
+export const isFinishedWorkflow = (run: Pick<WorkflowRun, 'status'> | null | undefined): boolean =>
   Boolean(run?.status && FINISHED_WORKFLOW_STATUSES.has(run.status))
 
 /** How often a watched run is read, and how long it is watched before giving up. */

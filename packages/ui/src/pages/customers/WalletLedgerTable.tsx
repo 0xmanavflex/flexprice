@@ -1,6 +1,7 @@
 import { type WalletTransaction, formatMoney, money } from '@fp/domain'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { Pill } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
 
 export const WalletLedgerTableProvenance = provenance({
@@ -37,9 +38,21 @@ const toNumber = (value: string | null): number | null => {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+/**
+ * A top-up that has not landed: an invoiced or checkout purchase still waiting
+ * for its payment (`pending`), or one whose payment never came (`failed`). The
+ * API already fills its `credits_available`, but none of it can be spent.
+ */
+export function notLanded(tx: WalletTransaction): 'pending' | 'failed' | null {
+  if (tx.direction !== 'in') return null
+  if (tx.status === 'pending') return 'pending'
+  if (tx.status === 'failed') return 'failed'
+  return null
+}
+
 /** The credits still live on a top-up that has an expiry date. */
 function liveCredits(tx: WalletTransaction): number {
-  return tx.expiresAt ? (toNumber(tx.creditsAvailable) ?? 0) : 0
+  return tx.expiresAt && !notLanded(tx) ? (toNumber(tx.creditsAvailable) ?? 0) : 0
 }
 
 /** The soonest expiry inside the warning window and the credits that lapse that day, or null. */
@@ -83,6 +96,9 @@ function looksTechnical(text: string): boolean {
   if (!value) return true
   if (/[_=]/.test(value)) return true
   if (/\b(request|credit_grant|external)\b/i.test(value)) return true
+  // The API's own default notes: the reason and status pill already say this,
+  // and "pending payment" stays on the note after the payment lands.
+  if (/^purchased credits - (pending payment|auto-completed)$/i.test(value)) return true
   // A hex blob (credit_grant-d73a8d6d56298a5f). An invoice number is shorter.
   return /[0-9a-f]{10,}/i.test(value)
 }
@@ -214,6 +230,7 @@ export function WalletLedgerTable({
   const expiredOf = expiredByTopUp(ordered)
   /** The share of a top-up drawn down by usage: neither left nor lapsed. */
   const consumedShare = (tx: WalletTransaction) => {
+    if (notLanded(tx)) return null
     const left = toNumber(tx.creditsAvailable)
     const total = Number(tx.credits)
     if (left === null || !(total > 0)) return null
@@ -263,7 +280,14 @@ export function WalletLedgerTable({
                 </div>
               ) : (
                 <div>
-                  <p className="text-success-foreground dark:text-success text-sm font-medium tabular-nums">
+                  <p
+                    className={cn(
+                      'text-sm font-medium tabular-nums',
+                      notLanded(row.tx)
+                        ? 'text-muted-foreground'
+                        : 'text-success-foreground dark:text-success',
+                    )}
+                  >
                     +{formatCredits(row.tx.credits)}
                   </p>
                   <p className="text-muted-foreground text-xs tabular-nums">
@@ -276,9 +300,11 @@ export function WalletLedgerTable({
             key: 'remaining',
             header: 'Remaining',
             width: 130,
-            sortBy: sortKey((tx) => toNumber(tx.creditsAvailable) ?? -1),
+            sortBy: sortKey((tx) => (notLanded(tx) ? -1 : (toNumber(tx.creditsAvailable) ?? -1))),
             cell: (row) => {
               if (row.kind !== 'topup') return null
+              if (notLanded(row.tx))
+                return <span className="text-muted-foreground text-sm">{'—'}</span>
               const left = toNumber(row.tx.creditsAvailable)
               if (left === null) return <span className="text-muted-foreground text-sm">{'—'}</span>
               return (
@@ -298,6 +324,9 @@ export function WalletLedgerTable({
             sortBy: sortKey((tx) => consumedShare(tx) ?? -1),
             cell: (row) => {
               if (row.kind === 'debit') return null
+              const state = notLanded(row.tx)
+              if (state === 'pending') return <Pill tone="warning">Awaiting payment</Pill>
+              if (state === 'failed') return <Pill tone="danger">Payment failed</Pill>
               const expired = row.tx.expiresAt !== null && daysUntil(row.tx.expiresAt, now) < 0
               const lapsed = expiredOf.get(row.tx.id) ?? 0
               return (

@@ -3,7 +3,8 @@ import { ApiError, serverReason } from '@fp/query'
 /** The server's field complaint, as a sentence. "expression has no variables" → "Expression has no variables." */
 function complaint(error: ApiError): string | undefined {
   const said = error.details?.['error']
-  const text = said ?? Object.entries(error.details ?? {}).find(([key]) => key !== 'expression')?.[1]
+  const text =
+    said ?? Object.entries(error.details ?? {}).find(([key]) => key !== 'expression')?.[1]
   if (!text) return undefined
   const trimmed = text.trim()
   const capped = trimmed.charAt(0).toUpperCase() + trimmed.slice(1)

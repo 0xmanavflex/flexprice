@@ -57,6 +57,8 @@ export interface PortalCreditsProps {
   onAddCredits: () => void
   onAutoTopup: () => void
   onShowMore: () => void
+  /** Asks for older top-ups than the ones loaded. */
+  onShowMoreTopUps?: () => void
   locale: string | undefined
 }
 
@@ -130,7 +132,12 @@ function Wallet(props: PortalCreditsProps & { wallets: PortalWallet[]; wallet: P
           }
         >
           {view === 'topups' ? (
-            <TopUps topUps={data.topUps} wallet={wallet} locale={locale} />
+            <TopUps
+              topUps={data.topUps}
+              wallet={wallet}
+              locale={locale}
+              onShowMore={props.onShowMoreTopUps}
+            />
           ) : (
             <Transactions {...props} kind={kind} />
           )}
@@ -204,12 +211,18 @@ function WalletPanel({
         {wallet.active ? (
           <div className="flex items-center gap-2">
             {parts.autoTopup ? (
-              <Button variant="outline" className="h-8 px-3" onClick={onAutoTopup}>
+              // The dot says whether it is on; the name says it to a screen reader.
+              <Button
+                variant="outline"
+                className="h-8 px-3"
+                aria-label={`Auto top-up, ${on ? 'on' : 'off'}`}
+                onClick={onAutoTopup}
+              >
                 <span
                   className={cn('size-1.5 rounded-full', on ? 'bg-success' : 'bg-muted-foreground')}
                   aria-hidden="true"
                 />
-                Auto top-up {on ? 'on' : 'off'}
+                Auto top-up
               </Button>
             ) : null}
             <Button className="h-8 px-3.5" onClick={onAddCredits}>
@@ -332,10 +345,12 @@ function TopUps({
   topUps,
   wallet,
   locale,
+  onShowMore,
 }: {
   topUps: CustomerPortalData['topUps']
   wallet: PortalWallet
   locale: string | undefined
+  onShowMore: (() => void) | undefined
 }) {
   const worth = (credits: string) => {
     const value = creditsCost(credits, wallet.creditPrice, wallet.currency)
@@ -449,7 +464,7 @@ function TopUps({
 
   return (
     <Loaded load={topUps} label="top-ups" rows={4}>
-      {({ items }) =>
+      {({ items, total }) =>
         items.length === 0 ? (
           <PortalEmpty
             icon={<WalletIcon />}
@@ -466,6 +481,18 @@ function TopUps({
               compact
               pageSize={50}
             />
+            {onShowMore && items.length < total ? (
+              <div className="border-t px-6 py-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground h-8 px-2"
+                  onClick={onShowMore}
+                >
+                  Load older top-ups
+                </Button>
+              </div>
+            ) : null}
             <p className="text-muted-foreground border-t px-6 py-3 text-[13px]">
               Usage draws on the top-up that expires soonest, among those it is allowed to use.
             </p>
@@ -527,7 +554,11 @@ function Transactions({
                   detail={[
                     t.detail,
                     t.expiresAt ? `expires ${formatDate(t.expiresAt, locale)}` : null,
-                    t.pending ? 'pending' : null,
+                    t.failed
+                      ? 'payment failed, no credits added'
+                      : t.pending
+                        ? 'awaiting payment'
+                        : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -535,6 +566,7 @@ function Transactions({
                   incoming={t.direction === 'in'}
                   amount={<Money value={t.amount} {...(locale ? { locale } : {})} />}
                   credits={formatNumber(t.credits, locale)}
+                  failed={t.failed}
                 />
               ))}
             </ul>

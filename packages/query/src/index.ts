@@ -200,6 +200,7 @@ export {
   useGroupMembers,
   useGroups,
   usePriceGroupOptions,
+  useGroupPicker,
   toCreateGroupRequest,
   useCreateGroup,
   useDeleteGroup,
@@ -756,6 +757,7 @@ export {
   usePayPortalInvoice,
   usePortalConfig,
   usePortalPropertyKeys,
+  usePortalPropertyValues,
   usePortalCustomer,
   usePortalGateways,
   usePortalInvoice,
@@ -766,6 +768,7 @@ export {
   usePortalSpend,
   usePortalSubscriptions,
   usePortalTopUps,
+  usePortalCheckoutFollower,
   usePortalWalletFlows,
   usePortalWalletTransactionPages,
   usePortalWalletTransactions,
@@ -775,7 +778,7 @@ export {
   useTopUpPortalWallet,
   useUpdatePortalAutoTopup,
 } from './customerPortal'
-export type { PortalAction, PortalQuery } from './customerPortal'
+export type { PortalAction, PortalQuery, PortalTopUpOutcome } from './customerPortal'
 export type { PortalAuth } from '@fp/api'
 export { useCreateCustomerPortalSession } from './customerPortalSession'
 export { useInvoiceHostedLink, useInvoiceHostedUrl } from './invoiceHostedLink'
@@ -833,3 +836,36 @@ export {
   useUpdateBillingEntity,
 } from './billingEntities'
 export type { BillingEntityModeState, BillingEntityWire } from './billingEntities'
+export {
+  fetchEntitySyncRuns,
+  runsSince,
+  syncWatchDone,
+  toEntitySyncRuns,
+  useEntitySyncRuns,
+  SYNC_FIRST_RUN_MS,
+  SYNC_WATCH_MAX_MS,
+} from './entitySyncRuns'
+export type { SyncedEntityType, SyncWatch } from './entitySyncRuns'
+
+export {
+  collectPickerPages,
+  useContractPickerCustomers,
+  useContractPickerPlans,
+  useContractPickerCoupons,
+} from './contractPickers'
+
+export {
+  toSpendingAllowanceRequest,
+  useCreateSpendingAllowance,
+  useUpdateContractParent,
+  useChangeInheritedCustomers,
+  toInheritanceChangeRequest,
+} from './subscriptions'
+export {
+  useContractBenefitRecords,
+  useEditContractEntitlement,
+  useResetContractEntitlement,
+  toContractEntitlementOverride,
+} from './contractBenefits'
+
+export { useContractPickerFeatures, useContractPickerPriceUnits } from './contractPickers'

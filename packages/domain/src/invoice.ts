@@ -333,6 +333,20 @@ export const InvoiceLinePriceType = {
 } as const
 export type InvoiceLinePriceType = (typeof InvoiceLinePriceType)[keyof typeof InvoiceLinePriceType]
 
+/** One tax the API applied to an invoice (`taxes[]`), with its rate when expanded. */
+export interface InvoiceAppliedTax {
+  id: string
+  /** The rate's name ("GST"); empty when an external engine calculated it. */
+  name: string
+  code: string
+  /** Percentage as a decimal string ("2"); null for a fixed or external tax. */
+  percentage: string | null
+  /** Whether the tax was already inside the price; null when the API did not say. */
+  behavior: 'inclusive' | 'exclusive' | null
+  taxableAmount: string
+  taxAmount: string
+}
+
 /**
  * The detail read model: the list row plus what the document page adds.
  *
@@ -352,6 +366,10 @@ export interface InvoiceDetail extends Invoice {
   invoicePdfUrl: string | null
   subtotal: string
   tax: string
+  /** Each tax applied, reversals left out. Empty when none was or the API sent none. */
+  taxes: InvoiceAppliedTax[]
+  /** Why no tax was charged (`tax_summary.exemption.reason`), when that is the case. */
+  taxExemption: string | null
   prepaidCredits: string
   /** Coupons and line discounts taken off the subtotal (`total_discount`), as a positive decimal. */
   discount: string

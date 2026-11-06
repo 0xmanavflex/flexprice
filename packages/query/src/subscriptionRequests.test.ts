@@ -51,6 +51,15 @@ describe('toCreateSubscriptionRequest', () => {
     })
   })
 
+  it('asks for one line per invoice only when switched on', () => {
+    expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('lineItemGrouping')
+    expect(
+      CreateSubscriptionRequest$outboundSchema.parse(
+        toCreateSubscriptionRequest({ ...base, combineChargePeriods: true }),
+      ),
+    ).toMatchObject({ line_item_grouping: 'per_billing_period' })
+  })
+
   it('every key survives the SDK outbound schema', () => {
     const request = toCreateSubscriptionRequest({
       ...base,
@@ -690,6 +699,23 @@ describe('contract-scoped creators', () => {
     })
   })
 
+  it("sends a fixed add-on charge's quantity on its override line, or on a line of its own", () => {
+    const request = toAddAddonRequest('sub_1', {
+      addonId: 'addon_1',
+      priceOverrides: [{ priceId: 'p_storage', billingModel: 'FLAT_FEE', amount: '90' }],
+      quantities: [
+        { priceId: 'p_storage', quantity: '3' },
+        { priceId: 'p_seats', quantity: '5' },
+      ],
+    })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toMatchObject({
+      override_line_items: [
+        { price_id: 'p_storage', amount: '90', quantity: '3' },
+        { price_id: 'p_seats', quantity: '5' },
+      ],
+    })
+  })
+
   it('sends an add-on start when one was chosen', () => {
     const request = toAddAddonRequest('sub_1', {
       addonId: 'addon_1',
@@ -866,7 +892,24 @@ describe('subscriptionGrantStart', () => {
     )
   })
 
-  it('starts a recurring grant now when the period end is unknown', () => {
-    expect(subscriptionGrantStart({ cadence: CreditGrantCadence.Recurring }, null, now)).toBe(now)
+  it('refuses a recurring grant with no day chosen and no known period end', () => {
+    expect(() =>
+      subscriptionGrantStart({ cadence: CreditGrantCadence.Recurring }, null, now),
+    ).toThrow(/Choose when/)
+  })
+
+  it('starts on the chosen day: today is now, the period end its instant, else midnight UTC', () => {
+    const at = (startDate: string) =>
+      subscriptionGrantStart({ cadence: CreditGrantCadence.OneTime, startDate }, periodEnd, now)
+    expect(at('2026-10-22')).toBe(now)
+    expect(at('2026-11-01')).toBe(periodEnd)
+    expect(at('2026-10-01')).toEqual(new Date('2026-10-01T00:00:00Z'))
+    expect(
+      subscriptionGrantStart(
+        { cadence: CreditGrantCadence.Recurring, startDate: '2026-12-05' },
+        null,
+        now,
+      ),
+    ).toEqual(new Date('2026-12-05T00:00:00Z'))
   })
 })

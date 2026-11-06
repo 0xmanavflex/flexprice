@@ -156,7 +156,7 @@ export interface IntegrationConnection {
   name: string
   providerType: string
   /** Entity → which directions are on, as the connection was saved. */
-  syncConfig: Record<string, { inbound?: boolean; outbound?: boolean }>
+  syncConfig: Record<string, { inbound?: boolean; outbound?: boolean; [key: string]: unknown }>
   /** The non-secret settings saved with it (environment, redirect URLs). */
   metadata: Record<string, string>
   /** The billing entity that owns it; null when the environment has no entities or the provider is not per entity. */

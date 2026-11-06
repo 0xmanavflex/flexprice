@@ -1,12 +1,21 @@
-import { useRef } from 'react'
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   ApiError,
   type PortalAuth,
   addPortalPaymentMethod,
   deletePortalPaymentMethod,
+  getPortalCheckoutSession,
   getPortalConfig,
   getPortalPropertyKeys,
+  getPortalPropertyValues,
+  type PortalUsageFilters,
   getPortalCustomer,
   getPortalIntegrations,
   getPortalInvoice,
@@ -24,12 +33,18 @@ import {
   updatePortalAutoTopup,
 } from '@fp/api'
 import {
+  toPortalPropertyValues,
+  toPortalCheckoutResult,
+  toPortalCheckoutSessionId,
+  type PortalCheckoutResult,
   DEFAULT_PORTAL_CONFIG,
   type PortalConfig,
   type PortalCustomer,
   type PortalGateway,
+  type PortalOpenCheckout,
   type PortalInvoice,
-  type PortalPaymentMethod,
+  type PortalCooldown,
+  type PortalSavedCards,
   type PortalQuota,
   type PortalSpend,
   type PortalSubscription,
@@ -38,13 +53,14 @@ import {
   type PortalWalletTotals,
   type PortalWalletTransaction,
   toPortalActionUrl,
+  toPortalOpenCheckout,
   toPortalConfig,
   toPortalPropertyKeys,
   toPortalCustomer,
   toPortalGateways,
   toPortalInvoice,
   toPortalInvoices,
-  toPortalPaymentMethods,
+  toPortalSavedCards,
   toPortalQuotas,
   toPortalSpend,
   toPortalSubscriptions,
@@ -89,11 +105,14 @@ function usePortalQuery<T>(
   key: readonly unknown[],
   fetch: () => Promise<T>,
   enabled = true,
+  /** Keep showing the last answer while a new key loads (a longer list). */
+  keepPrevious = false,
 ): PortalQuery<T> {
   const query = useQuery({
     queryKey: queryKeys.customerPortal.part(auth.apiOrigin, auth.token, ...key),
     queryFn: fetch,
     enabled,
+    ...(keepPrevious ? { placeholderData: keepPreviousData } : {}),
     ...PORTAL_QUERY,
   })
   return {
@@ -283,7 +302,7 @@ export const usePortalWalletFlows = (
     wallet !== null && enabled,
   )
 
-/** Every credit added to a wallet, with what is left of it. */
+/** Every credit added to a wallet, with what is left of it; the newest `limit`. */
 export const usePortalTopUps = (
   auth: PortalAuth,
   wallet: PortalWallet | null,
@@ -301,14 +320,20 @@ export const usePortalTopUps = (
         }),
         wallet?.currency ?? 'USD',
       )
-      return { items: toPortalTopUps(page.items), total: page.total }
+      const items = toPortalTopUps(page.items)
+      // `total` counts checkouts still awaiting payment too, which are not top-ups yet:
+      // more remain only while the API has rows past this page.
+      return { items, total: page.items.length < page.total ? page.total : items.length }
     },
     wallet !== null,
+    // "Show more" asks for a longer list: the rows on screen stay while it loads.
+    true,
   )
 
-export const usePortalPaymentMethods = (auth: PortalAuth): PortalQuery<PortalPaymentMethod[]> =>
+/** Saved cards, and the gateways that could not list theirs (unknown, not none). */
+export const usePortalPaymentMethods = (auth: PortalAuth): PortalQuery<PortalSavedCards> =>
   usePortalQuery(auth, ['paymentMethods'], async () =>
-    toPortalPaymentMethods(await getPortalPaymentMethods(auth)),
+    toPortalSavedCards(await getPortalPaymentMethods(auth)),
   )
 
 export const usePortalQuotas = (auth: PortalAuth): PortalQuery<PortalQuota[]> =>
@@ -322,14 +347,21 @@ export const usePortalSpend = (
   enabled = true,
   /** An event property key: each feature split by its values. */
   groupBy: string | null = null,
+  /** Only these features, and only events whose properties hold these values. */
+  filter: PortalUsageFilters = {},
 ): PortalQuery<PortalSpend> => {
   const windowSize = end.getTime() - start.getTime() <= 86_400_000 ? 'HOUR' : 'DAY'
   return usePortalQuery(
     auth,
-    ['spend', start.toISOString(), end.toISOString(), groupBy],
+    ['spend', start.toISOString(), end.toISOString(), groupBy, JSON.stringify(filter)],
     async () =>
       toPortalSpend(
-        await getPortalUsageAnalytics(auth, { start, end, windowSize }, groupBy ?? undefined),
+        await getPortalUsageAnalytics(
+          auth,
+          { start, end, windowSize },
+          groupBy ?? undefined,
+          filter,
+        ),
         groupBy ?? undefined,
       ),
     enabled && end.getTime() > start.getTime(),
@@ -354,10 +386,39 @@ export const usePortalPropertyKeys = (
     enabled && end.getTime() > start.getTime(),
   )
 
+/**
+ * The values each groupable property key takes in the window, for the usage
+ * filter's choices: `POST /analytics/properties/values`, one key at a time.
+ */
+export const usePortalPropertyValues = (
+  auth: PortalAuth,
+  start: Date,
+  end: Date,
+  keys: readonly string[],
+  enabled = true,
+): PortalQuery<Record<string, string[]>> =>
+  usePortalQuery(
+    auth,
+    ['propertyValues', start.toISOString(), end.toISOString(), [...keys].sort().join(',')],
+    async () =>
+      Object.fromEntries(
+        await Promise.all(
+          keys.map(
+            async (key) =>
+              [
+                key,
+                toPortalPropertyValues(await getPortalPropertyValues(auth, { start, end }, key)),
+              ] as const,
+          ),
+        ),
+      ),
+    enabled && keys.length > 0 && end.getTime() > start.getTime(),
+  )
+
 /* ---- Actions -------------------------------------------------------------- */
 
-export interface PortalAction<A> {
-  run: (args: A) => Promise<string | null>
+export interface PortalAction<A, R = string | null> {
+  run: (args: A) => Promise<R>
   isPending: boolean
 }
 
@@ -366,19 +427,25 @@ export interface PortalAction<A> {
  * or null when it is already done (a saved card was charged); either way the
  * portal's data is refreshed.
  *
- * One idempotency key per attempt: a retry after a failure sends the same
- * key, so the backend answers with what it may already have done.
+ * One idempotency key per request: retrying the same request after a failure
+ * sends the same key, so the backend answers with what it may already have
+ * done. A changed request (another amount, wallet, gateway or invoice) is a
+ * new one and gets a new key, never the old request's answer.
  */
-function usePortalAction<A>(
+function usePortalAction<A, R = string | null>(
   auth: PortalAuth,
   call: (args: A, idempotencyKey: string) => Promise<unknown>,
-): PortalAction<A> {
+  read: (wire: unknown) => R = toPortalActionUrl as (wire: unknown) => R,
+): PortalAction<A, R> {
   const queryClient = useQueryClient()
-  const key = useRef<string | null>(null)
+  const key = useRef<{ request: string; value: string } | null>(null)
   const mutation = useMutation({
     mutationFn: async (args: A) => {
-      key.current ??= crypto.randomUUID()
-      return toPortalActionUrl(await call(args, key.current))
+      const request = JSON.stringify(args)
+      if (key.current?.request !== request) {
+        key.current = { request, value: crypto.randomUUID() }
+      }
+      return read(await call(args, key.current.value))
     },
     onSuccess: () => {
       key.current = null
@@ -395,7 +462,7 @@ function returnUrls(returnUrl: string) {
   return { success_url: returnUrl, cancel_url: returnUrl, failure_url: returnUrl }
 }
 
-export function usePayPortalInvoice(auth: PortalAuth) {
+export function usePayPortalInvoice(auth: PortalAuth, onCheckout?: (sessionId: string) => void) {
   return usePortalAction<{ invoiceId: string; provider: string | null; returnUrl: string }>(
     auth,
     ({ invoiceId, provider, returnUrl }, idempotency_key) =>
@@ -404,26 +471,69 @@ export function usePayPortalInvoice(auth: PortalAuth) {
         ...(provider ? { payment_provider: provider } : {}),
         ...returnUrls(returnUrl),
       }),
+    (wire) => {
+      const url = toPortalActionUrl(wire)
+      const session = toPortalCheckoutSessionId(wire)
+      if (url && session) onCheckout?.(session)
+      return url
+    },
   )
 }
 
-export function useTopUpPortalWallet(auth: PortalAuth) {
-  return usePortalAction<{
-    walletId: string
-    credits: string
-    /** A gateway's checkout, or null to charge the saved default card. */
-    provider: string | null
-    note: string
-    returnUrl: string
-  }>(auth, ({ walletId, credits, provider, note, returnUrl }, idempotency_key) =>
-    topUpPortalWallet(auth, walletId, {
-      credits_to_add: credits,
-      idempotency_key,
-      ...(note.trim() ? { description: note.trim() } : {}),
-      checkout: provider
-        ? { payment_provider: provider, ...returnUrls(returnUrl) }
-        : { use_saved_method: true, ...returnUrls(returnUrl) },
-    }),
+/**
+ * A top-up's outcome: the gateway page to open (null when the saved card was
+ * charged), or the checkout already open for this wallet, when the API made
+ * no new one.
+ */
+export type PortalTopUpOutcome =
+  { url: string | null; alreadyOpen: null } | { url: null; alreadyOpen: PortalOpenCheckout }
+
+export function useTopUpPortalWallet(auth: PortalAuth, onCheckout?: (sessionId: string) => void) {
+  return usePortalAction<
+    {
+      walletId: string
+      credits: string
+      /** The gateway: its checkout, or (with `savedCard`) the card saved there. */
+      provider: string
+      /** Charge the card saved at `provider` instead of opening its checkout. */
+      savedCard?: boolean
+      note: string
+      returnUrl: string
+      /** Cancel the checkout already open for this wallet and start this one. */
+      replace?: boolean
+    },
+    PortalTopUpOutcome
+  >(
+    auth,
+    ({ walletId, credits, provider, savedCard, note, returnUrl, replace }, idempotency_key) =>
+      topUpPortalWallet(auth, walletId, {
+        credits_to_add: credits,
+        idempotency_key,
+        ...(note.trim() ? { description: note.trim() } : {}),
+        // The provider goes with a saved card too: with two gateways connected the API
+        // cannot tell which card is meant, and refuses ("payment provider is ambiguous").
+        checkout: savedCard
+          ? { payment_provider: provider, use_saved_method: true, ...returnUrls(returnUrl) }
+          : {
+              payment_provider: provider,
+              ...returnUrls(returnUrl),
+              ...(replace
+                ? {
+                    entity_creation_options: {
+                      entity_creation_conflict_policies: { on_existing_entity: 'supersede' },
+                    },
+                  }
+                : {}),
+            },
+      }),
+    (wire) => {
+      const alreadyOpen = toPortalOpenCheckout(wire)
+      if (alreadyOpen) return { url: null, alreadyOpen }
+      const url = toPortalActionUrl(wire)
+      const session = toPortalCheckoutSessionId(wire)
+      if (url && session) onCheckout?.(session)
+      return { url, alreadyOpen: null }
+    },
   )
 }
 
@@ -456,7 +566,8 @@ export function useUpdatePortalAutoTopup(auth: PortalAuth) {
     enabled: boolean
     threshold: string | null
     credits: string | null
-    cooldown: { value: number; unit: 'minute' | 'hour' | 'day' } | null
+    /** Null leaves the stored wait as it is; `{value: 0}` clears it. */
+    cooldown: PortalCooldown | null
   }>(auth, async ({ walletId, enabled, threshold, credits, cooldown }) => {
     await updatePortalAutoTopup(auth, walletId, {
       enabled,
@@ -491,4 +602,92 @@ export function usePortalInvoicePdf(auth: PortalAuth) {
     run: (invoiceId: string) => mutation.mutateAsync(invoiceId),
     isPending: mutation.isPending,
   }
+}
+
+/* ---- Following a checkout -------------------------------------------------- */
+
+/** How often a checkout is read, and how long before the portal stops asking. */
+const CHECKOUT_POLL_MS = 2_000
+const CHECKOUT_WATCH_MS = 10 * 60_000
+/** Per tab, so two tabs never follow each other's checkout. */
+const CHECKOUT_STORAGE = 'flexprice.portal.checkout'
+
+interface FollowedCheckout {
+  id: string
+  since: number
+}
+
+function readFollowed(): FollowedCheckout | null {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(CHECKOUT_STORAGE) ?? 'null') as unknown
+    return value && typeof value === 'object' && 'id' in value && 'since' in value
+      ? (value as FollowedCheckout)
+      : null
+  } catch {
+    return null
+  }
+}
+
+function writeFollowed(value: FollowedCheckout | null) {
+  try {
+    if (value) sessionStorage.setItem(CHECKOUT_STORAGE, JSON.stringify(value))
+    else sessionStorage.removeItem(CHECKOUT_STORAGE)
+  } catch {
+    // Storage blocked: the checkout is followed until this page closes.
+  }
+}
+
+/**
+ * Follows the checkout the customer was just sent to. The gateway sends them
+ * back without saying how it went, and its webhook may still be on its way, so
+ * the session is read until it settles: completed, failed (cancelled too) or
+ * expired. `onSettled` then runs once, and the portal's data is read again. The
+ * checkout is kept in this tab's storage, so a reload keeps following it.
+ */
+export function usePortalCheckoutFollower(
+  auth: PortalAuth,
+  onSettled: (result: PortalCheckoutResult) => void,
+) {
+  const queryClient = useQueryClient()
+  const [followed, setFollowed] = useState<FollowedCheckout | null>(readFollowed)
+  const settled = useRef(onSettled)
+  settled.current = onSettled
+  const session = useQuery({
+    queryKey: [
+      ...queryKeys.customerPortal.all(auth.apiOrigin, auth.token),
+      'checkout',
+      followed?.id,
+    ],
+    queryFn: async () => toPortalCheckoutResult(await getPortalCheckoutSession(auth, followed!.id)),
+    enabled: followed !== null,
+    retry: false,
+    gcTime: 0,
+    refetchInterval: (query) =>
+      query.state.data && query.state.data.status !== 'pending' ? false : CHECKOUT_POLL_MS,
+  })
+  const stop = useCallback(() => {
+    writeFollowed(null)
+    setFollowed(null)
+  }, [])
+  useEffect(() => {
+    if (!followed) return
+    const result = session.data
+    if (result && result.status !== 'pending') {
+      stop()
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.customerPortal.all(auth.apiOrigin, auth.token),
+      })
+      settled.current(result)
+      return
+    }
+    // A checkout left open past the window is no longer watched; its row still says
+    // "awaiting payment" and becomes failed when the gateway lets it expire.
+    if (session.isError || Date.now() - followed.since > CHECKOUT_WATCH_MS) stop()
+  }, [followed, session.data, session.isError, session.dataUpdatedAt, stop, queryClient, auth])
+  const follow = useCallback((id: string) => {
+    const next = { id, since: Date.now() }
+    writeFollowed(next)
+    setFollowed(next)
+  }, [])
+  return { follow, following: followed !== null }
 }

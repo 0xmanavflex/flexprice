@@ -23,6 +23,7 @@ import {
   RepeatIcon,
   StarIcon,
   Trash2Icon,
+  TriangleAlertIcon,
   WalletIcon,
 } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
@@ -34,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
 import { Skeleton } from '@ui/components/primitives/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { IconTile } from '@ui/components/reui/icon-tile'
 import { type SimpleColumn, SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
@@ -56,6 +58,7 @@ export const PortalOverviewProvenance = provenance({
     'compositions/layout/Section',
     'compositions/detail/DetailKit',
     'primitives/dropdown-menu',
+    'reui/alert',
     'reui/icon-tile',
     'shared/Money',
   ],
@@ -75,7 +78,8 @@ export interface PortalOverviewProps {
   onPay: (invoice: PortalInvoice) => void
   onViewInvoice: (invoice: PortalInvoice) => void
   onAddCredits: () => void
-  onAddCard: () => void
+  /** Opens `provider`'s secure card form (in a new tab, on the click itself). */
+  onAddCard: (provider: string) => void
   onRemoveCard: (card: PortalPaymentMethod) => void
   onMakeDefault: (card: PortalPaymentMethod) => void
 }
@@ -310,30 +314,78 @@ function AccountSummary({
 /** Saved cards: default, remove, add. */
 function PaymentMethods({ data, onAddCard, onRemoveCard, onMakeDefault }: PortalOverviewProps) {
   const gateways: PortalGateway[] = data.gateways.status === 'ready' ? data.gateways.data : []
-  const canAdd = gateways.some((g) => g.savesCards)
+  const savers = gateways.filter((g) => g.savesCards)
+  const canAdd = savers.length > 0
+  const unavailable = data.cardProviderErrors ?? []
   const managed = (card: PortalPaymentMethod) =>
     gateways.some((g) => g.provider === card.provider && g.savesCards)
   return (
     <Section
       title="Payment methods"
+      description="Cards saved for invoices and automatic top-ups."
       flush
       action={
-        canAdd ? (
-          <Button variant="outline" size="sm" className="h-8 px-3" onClick={onAddCard}>
+        // V1's flow: one gateway that saves cards opens its card form straight away;
+        // with more, "Add card" lists them.
+        savers.length === 1 && savers[0] ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3"
+            onClick={() => onAddCard(savers[0]!.provider)}
+          >
             <PlusIcon aria-hidden="true" />
             Add card
           </Button>
+        ) : savers.length > 1 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="sm" className="h-8 px-3">
+                  <PlusIcon aria-hidden="true" />
+                  Add card
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              {savers.map((g) => (
+                <DropdownMenuItem key={g.provider} onClick={() => onAddCard(g.provider)}>
+                  <CreditCardIcon aria-hidden="true" />
+                  Add card ({g.label})
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : undefined
       }
     >
+      {unavailable.map((failure) => (
+        <div key={failure.provider} className="px-6 pt-4">
+          <Alert variant="warning">
+            <TriangleAlertIcon aria-hidden="true" />
+            <AlertTitle>Couldn’t load your {failure.label} cards</AlertTitle>
+            <AlertDescription>
+              {failure.message} Cards saved with {failure.label} may not be listed here.
+            </AlertDescription>
+          </Alert>
+        </div>
+      ))}
       <Loaded load={data.paymentMethods} label="payment methods">
         {(cards) =>
           cards.length === 0 ? (
-            <PortalEmpty
-              icon={<CreditCardIcon />}
-              title="No saved cards"
-              description="Save a card to pay invoices in one click and turn on automatic top-ups."
-            />
+            unavailable.length > 0 ? null : canAdd ? (
+              <PortalEmpty
+                icon={<CreditCardIcon />}
+                title="No payment methods"
+                description="Add a card to pay invoices and enable automatic top-ups."
+              />
+            ) : (
+              <PortalEmpty
+                icon={<CreditCardIcon />}
+                title="Payment methods are not available"
+                description="This account has no payment provider that supports saved cards. You can still pay each invoice from its page."
+              />
+            )
           ) : (
             // Cards live at a provider, and each provider keeps its own default:
             // with more than one, each gets its own group so the two defaults read right.

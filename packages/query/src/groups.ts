@@ -304,19 +304,38 @@ export function useGroupMembers(group: Group | undefined) {
   })
 }
 
-/** The account's price groups, as choices for a charge: the first 100, by name. */
-export function usePriceGroupOptions() {
-  const groups = useGroups({
-    page: 1,
-    pageSize: 100,
-    search: '',
-    // Only live tags are offered: an archived one cannot take a new price.
-    statuses: [GroupStatus.Published],
-    sortBy: GroupSortField.Name,
-    sortDirection: 'asc',
-    view: 'table' as GroupQuery['view'],
-    filters: [{ field: 'entity_type', op: 'in', value: [GroupEntityType.Price] }],
+/** Complete, type-filtered tags for forms, without the list screen's first-page cap. */
+export function useGroupPicker(entityType: GroupEntityType) {
+  const client = useFlexprice()
+  return useQuery({
+    queryKey: [...queryKeys.groups.all(), 'picker', entityType],
+    queryFn: async () => {
+      const groups: Group[] = []
+      for (let offset = 0; ; offset += 100) {
+        const response = await call(() =>
+          client.groups.queryGroup({
+            limit: 100,
+            offset,
+            entityType,
+            status: GroupStatus.Published,
+            sort: sortWithTieBreak('name', 'asc'),
+          } as never),
+        )
+        const items = (response.items ?? []) as GroupWire[]
+        groups.push(...items.map(toGroup))
+        if (
+          !items.length ||
+          (response.pagination?.total && groups.length >= response.pagination.total)
+        )
+          return { groups }
+      }
+    },
   })
+}
+
+/** The account's published price tags, across every page. */
+export function usePriceGroupOptions() {
+  const groups = useGroupPicker(GroupEntityType.Price)
   return (groups.data?.groups ?? [])
     .filter(
       (group) =>

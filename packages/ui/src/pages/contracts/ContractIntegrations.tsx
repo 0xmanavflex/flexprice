@@ -1,5 +1,7 @@
+import { useWriteAccess } from '@ui/compositions/access/Access'
+import { RBAC_ENTITY } from '@fp/domain'
 import { useState } from 'react'
-import type { IntegrationLink } from '@fp/domain'
+import { WorkflowStatus, type EntitySyncRun, type IntegrationLink } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -27,11 +29,11 @@ import {
 import { provenance } from '@ui/provenance'
 import { toast } from 'sonner'
 import { IntegrationMark } from '../customers/IntegrationMark'
+import { Pill, type PillTone } from '../shared/cells'
 
 /**
- * The contract header's integration marks. The mappings belong to the contract's
- * customer, so the marks say which accounting or billing system already knows
- * this customer. Hover for the provider-side id and when the link was made;
+ * Integration mappings for the entity named by the caller. A contract uses its
+ * subscription mappings; customer mappings remain customer-scoped. Hover for the provider-side id and when the link was made;
  * click for the menu that copies the id or unlinks it; the plus links a
  * connected provider that has no mapping yet.
  */
@@ -75,6 +77,13 @@ export interface ContractIntegrationsProps {
   /** Provider names a pull reads from (inbound sync on); one "Pull from {names}" action. */
   pullProviders?: string[]
   onPull?: () => void
+  /** A push or pull request is on its way: both actions wait for it. */
+  syncing?: boolean | undefined
+  /**
+   * The latest sync run per provider (a push starts one per provider and
+   * answers before any finishes). Shown under the mappings in the rows layout.
+   */
+  syncRuns?: EntitySyncRun[] | undefined
   /**
    * Where a mapping can be opened at its provider (an invoice on Stripe). A
    * row with one opens it from its name and from its menu.
@@ -95,6 +104,16 @@ const stamp = new Intl.DateTimeFormat('en-US', {
   minute: '2-digit',
 })
 
+const SYNC_STATE: Record<string, { label: string; tone: PillTone }> = {
+  [WorkflowStatus.Running]: { label: 'Syncing', tone: 'info' },
+  [WorkflowStatus.ContinuedAsNew]: { label: 'Syncing', tone: 'info' },
+  [WorkflowStatus.Completed]: { label: 'Synced', tone: 'success' },
+  [WorkflowStatus.Failed]: { label: 'Failed', tone: 'danger' },
+  [WorkflowStatus.TimedOut]: { label: 'Timed out', tone: 'danger' },
+  [WorkflowStatus.Terminated]: { label: 'Stopped', tone: 'warning' },
+  [WorkflowStatus.Canceled]: { label: 'Canceled', tone: 'neutral' },
+}
+
 function when(value: Date | null): string {
   return value && !Number.isNaN(value.getTime()) ? stamp.format(value) : 'Unknown'
 }
@@ -113,9 +132,12 @@ export function ContractIntegrations({
   onPush,
   pullProviders,
   onPull,
+  syncing = false,
+  syncRuns = [],
   providerHref,
   actionsInHeader = false,
 }: ContractIntegrationsProps) {
+  const write = useWriteAccess(RBAC_ENTITY.Integration)
   const [unlinking, setUnlinking] = useState<IntegrationLink | null>(null)
   const [internalLinking, setInternalLinking] = useState(false)
   const linking = linkOpen ?? internalLinking
@@ -123,10 +145,13 @@ export function ContractIntegrations({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const canLink = showLink && !actionsInHeader && Boolean(onLink) && linkable.length > 0
-  const pushTo = onPush && pushProviders && pushProviders.length > 0 ? pushProviders : null
+  const canLink =
+    write.allowed && showLink && !actionsInHeader && Boolean(onLink) && linkable.length > 0
+  const pushTo =
+    write.allowed && onPush && pushProviders && pushProviders.length > 0 ? pushProviders : null
   const canPush = layout === 'rows' && !actionsInHeader && pushTo !== null
-  const pullFrom = onPull && pullProviders && pullProviders.length > 0 ? pullProviders : null
+  const pullFrom =
+    write.allowed && onPull && pullProviders && pullProviders.length > 0 ? pullProviders : null
   const canPull = layout === 'rows' && !actionsInHeader && pullFrom !== null
   const none = `No integrations linked to this ${entityLabel}.`
 
@@ -135,7 +160,14 @@ export function ContractIntegrations({
   // marks have nowhere to put a sentence, so they still render nothing: unless
   // the parent opened the link dialog itself (a plan's overflow menu), which
   // has to mount even though there is nothing to show beside it.
-  if (links.length === 0 && !canLink && !linking && !canPush && !canPull) {
+  if (
+    links.length === 0 &&
+    !canLink &&
+    !linking &&
+    !canPush &&
+    !canPull &&
+    (layout !== 'rows' || syncRuns.length === 0)
+  ) {
     return layout === 'rows' ? (
       <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
     ) : null
@@ -216,7 +248,7 @@ export function ContractIntegrations({
                   link={link}
                   entityLabel={entityLabel}
                   href={providerHref?.(link) ?? null}
-                  onUnlink={onUnlink}
+                  onUnlink={write.allowed ? onUnlink : undefined}
                   onAskUnlink={() => {
                     setError(null)
                     setUnlinking(link)
@@ -254,7 +286,7 @@ export function ContractIntegrations({
               link={link}
               entityLabel={entityLabel}
               href={providerHref?.(link) ?? null}
-              onUnlink={onUnlink}
+              onUnlink={write.allowed ? onUnlink : undefined}
               onAskUnlink={() => {
                 setError(null)
                 setUnlinking(link)
@@ -307,6 +339,7 @@ export function ContractIntegrations({
           type="button"
           variant="ghost"
           className="text-muted-foreground h-auto justify-start rounded-none px-6 py-3"
+          disabled={syncing}
           onClick={onPush}
         >
           <UploadIcon aria-hidden className="size-3.5" />
@@ -318,11 +351,40 @@ export function ContractIntegrations({
           type="button"
           variant="ghost"
           className="text-muted-foreground h-auto justify-start rounded-none px-6 py-3"
+          disabled={syncing}
           onClick={onPull}
         >
           <DownloadIcon aria-hidden className="size-3.5" />
           Pull from {pullFrom.join(', ')}
         </Button>
+      ) : null}
+
+      {layout === 'rows' && syncRuns.length > 0 ? (
+        <div className="space-y-2 px-6 py-3">
+          <p className="text-muted-foreground text-xs">Last sync</p>
+          <ul className="space-y-1.5">
+            {syncRuns.map((run) => {
+              const shown = SYNC_STATE[run.status ?? ''] ?? { label: 'Unknown', tone: 'neutral' }
+              const at = run.closeTime ?? run.startTime
+              return (
+                <li
+                  key={run.providerId}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="min-w-0 truncate">{run.provider}</span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {at ? (
+                      <span className="text-muted-foreground text-xs tabular-nums">{when(at)}</span>
+                    ) : null}
+                    <Pill size="sm" tone={shown.tone}>
+                      {shown.label}
+                    </Pill>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       ) : null}
 
       <ConfirmDialog
@@ -346,7 +408,7 @@ export function ContractIntegrations({
       />
       <LinkDialog
         entityLabel={entityLabel}
-        open={linking}
+        open={linking && write.allowed}
         providers={linkable}
         pending={pending}
         error={error}

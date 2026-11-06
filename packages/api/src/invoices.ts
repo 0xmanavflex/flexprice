@@ -30,7 +30,8 @@ export async function getInvoice(
   id: string,
   signal?: AbortSignal,
 ): Promise<unknown> {
-  return request(serverURL, `/invoices/${encodeURIComponent(id)}`, {
+  // The expand attaches each applied tax's rate (name, code, percentage).
+  return request(serverURL, `/invoices/${encodeURIComponent(id)}?expand=tax_applied.tax_rate`, {
     method: 'GET',
     token,
     environmentId,

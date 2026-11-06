@@ -1,3 +1,5 @@
+import { Button } from '@ui/components/primitives/button'
+import { PlusIcon, XIcon } from '@ui/icons'
 import {
   BILLING_PERIOD_LABEL,
   BUCKET_SIZE_LABEL,
@@ -27,6 +29,8 @@ export const UsageTermsFieldsProvenance = provenance({
 })
 
 export interface UsageTermsFieldsProps {
+  allowNewWindows?: boolean
+
   value: UsageTerms
   onChange: (next: UsageTerms) => void
   errors?: ContractTermsErrors
@@ -73,6 +77,7 @@ const NEW_COMMITMENT: LineCommitment = {
 export function UsageTermsFields({
   value,
   onChange,
+  allowNewWindows = false,
   errors = {},
   disabled = false,
   unitLabel = '',
@@ -204,6 +209,135 @@ export function UsageTermsFields({
             </CheckboxRow>
           </div>
         </div>
+      ) : null}
+      {commitment && (allowNewWindows || commitment.windows !== undefined) ? (
+        <Field
+          label="Time windows (UTC)"
+          error={errors.windows}
+          hint="Each window keeps its own price. New windows use the charge’s price above."
+        >
+          {() => (
+            <div className="flex flex-col gap-4">
+              <CheckboxRow
+                checked={(commitment.windows ?? []).length > 0}
+                onCheckedChange={(checked) => {
+                  if (!checked) setCommitment({ windows: [], windowed: false })
+                }}
+                disabled={disabled || (commitment.windows ?? []).length === 0}
+              >
+                Use time windows
+              </CheckboxRow>
+              {(commitment.windows ?? []).map((window, index) => {
+                const change = (patch: Partial<typeof window>) =>
+                  setCommitment({
+                    windows: (commitment.windows ?? []).map((item, i) =>
+                      i === index ? { ...item, ...patch } : item,
+                    ),
+                  })
+                return (
+                  <div key={window.id || index} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Field label={`Window ${index + 1} start (UTC)`}>
+                      {({ id }) => (
+                        <Input
+                          id={id}
+                          placeholder="HH:MM"
+                          value={window.start}
+                          onChange={(event) => change({ start: event.target.value })}
+                        />
+                      )}
+                    </Field>
+                    <Field label={`Window ${index + 1} end (UTC)`}>
+                      {({ id }) => (
+                        <Input
+                          id={id}
+                          placeholder="HH:MM"
+                          value={window.end}
+                          onChange={(event) => change({ end: event.target.value })}
+                        />
+                      )}
+                    </Field>
+                    <Field label={`Window ${index + 1} commitment`}>
+                      {({ id }) => (
+                        <Input
+                          id={id}
+                          inputMode="decimal"
+                          value={window.value}
+                          onChange={(event) => change({ value: event.target.value })}
+                        />
+                      )}
+                    </Field>
+                    <Field label={`Window ${index + 1} commitment type`}>
+                      {({ id }) => (
+                        <OptionSelect
+                          id={id}
+                          value={window.kind ?? commitment.kind}
+                          onValueChange={(kind) => change({ kind: kind as CommitmentKind })}
+                          options={KIND_OPTIONS}
+                        />
+                      )}
+                    </Field>
+                    <Field label={`Window ${index + 1} overage factor`}>
+                      {({ id }) => (
+                        <Input
+                          id={id}
+                          inputMode="decimal"
+                          value={window.overageFactor}
+                          onChange={(event) => change({ overageFactor: event.target.value })}
+                        />
+                      )}
+                    </Field>
+                    <CheckboxRow
+                      checked={window.trueUp}
+                      onCheckedChange={(trueUp) => change({ trueUp })}
+                    >
+                      Bill unused window commitment
+                    </CheckboxRow>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() =>
+                        setCommitment({
+                          windows: (commitment.windows ?? []).filter((_, i) => i !== index),
+                        })
+                      }
+                    >
+                      <XIcon aria-hidden />
+                      Remove window {index + 1}
+                    </Button>
+                  </div>
+                )
+              })}
+              {allowNewWindows ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={() =>
+                    setCommitment({
+                      windowed: true,
+                      windows: [
+                        ...(commitment.windows ?? []),
+                        {
+                          id: '',
+                          start: '00:00',
+                          end: '24:00',
+                          value: commitment.value,
+                          kind: commitment.kind,
+                          overageFactor: commitment.overageFactor,
+                          trueUp: commitment.trueUp,
+                        },
+                      ],
+                    })
+                  }
+                >
+                  <PlusIcon aria-hidden />
+                  Add time window
+                </Button>
+              ) : null}
+            </div>
+          )}
+        </Field>
       ) : null}
     </fieldset>
   )

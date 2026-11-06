@@ -492,7 +492,57 @@ export function syncKey(option: SyncOption): string {
   return `${option.entity}:${option.direction}`
 }
 
+export const zohoPaymentGatewaysSchema = z
+  .object({
+    enabled: z.boolean(),
+    gateways: z.array(z.string().min(1)),
+    paypalPaymentMethod: z.enum(['standard', 'adaptive']),
+  })
+  .refine((value) => !value.enabled || value.gateways.length > 0, {
+    message: 'Choose at least one payment gateway',
+    path: ['gateways'],
+  })
+export type ZohoPaymentGateways = z.infer<typeof zohoPaymentGatewaysSchema>
+
+export function zohoPaymentGateways(connection?: IntegrationConnection): ZohoPaymentGateways {
+  const settings = connection?.syncConfig['invoice_sync_settings']?.['payment_gateways'] as
+    Record<string, unknown> | undefined
+  return {
+    enabled: settings?.['enabled'] === true,
+    gateways: Array.isArray(settings?.['gateways'])
+      ? settings['gateways'].filter((value): value is string => typeof value === 'string')
+      : [],
+    paypalPaymentMethod:
+      settings?.['paypal_payment_method'] === 'adaptive' ? 'adaptive' : 'standard',
+  }
+}
+
+function withZohoGateways(
+  config: Record<string, unknown>,
+  value: ZohoPaymentGateways,
+): Record<string, unknown> {
+  const settings = (config['invoice_sync_settings'] ?? {}) as Record<string, unknown>
+  const existing = (settings['payment_gateways'] ?? {}) as Record<string, unknown>
+  const { paypal_payment_method: _, ...keep } = existing
+  return {
+    ...config,
+    invoice_sync_settings: {
+      ...settings,
+      payment_gateways: {
+        ...keep,
+        enabled: value.enabled,
+        gateways: value.gateways,
+        ...(value.gateways.includes('paypal')
+          ? { paypal_payment_method: value.paypalPaymentMethod }
+          : {}),
+      },
+    },
+  }
+}
+
 export type ConnectionFormValues = {
+  zohoPaymentGateways?: ZohoPaymentGateways
+
   name: string
   fields: Record<string, string>
   sync: Record<string, boolean>
@@ -503,10 +553,21 @@ export type ConnectionFormValues = {
 export function defaultConnectionValues(
   spec: ConnectionSpec,
   providerName: string,
+  environmentType?: 'development' | 'production',
 ): ConnectionFormValues {
   return {
     name: providerName,
-    fields: Object.fromEntries(spec.fields.map((f) => [f.key, f.defaultValue ?? ''])),
+    ...(spec.providerType === 'zoho_books' ? { zohoPaymentGateways: zohoPaymentGateways() } : {}),
+    fields: Object.fromEntries(
+      spec.fields.map((f) => [
+        f.key,
+        spec.providerType === 'quickbooks' && f.key === 'environment' && environmentType
+          ? environmentType === 'production'
+            ? 'production'
+            : 'sandbox'
+          : (f.defaultValue ?? ''),
+      ]),
+    ),
     sync: Object.fromEntries(spec.sync.map((o) => [syncKey(o), o.defaultOn ?? false])),
   }
 }
@@ -551,6 +612,7 @@ export function connectionFormSchema(spec: ConnectionSpec, { entity = false } = 
       }
     }),
     sync: z.record(z.string(), z.boolean()),
+    zohoPaymentGateways: zohoPaymentGatewaysSchema.optional(),
   })
 }
 
@@ -589,12 +651,14 @@ export function toConnectionPayload(
     else secrets[field.key] = value
   }
 
-  const syncConfig: Record<string, unknown> = {}
+  let syncConfig: Record<string, unknown> = {}
   for (const option of spec.sync) {
     const on = values.sync[syncKey(option)] ?? false
     const current = (syncConfig[option.entity] ?? {}) as Record<string, boolean>
     syncConfig[option.entity] = { ...current, [option.direction]: on }
   }
+  if (spec.providerType === 'zoho_books' && values.zohoPaymentGateways)
+    syncConfig = withZohoGateways(syncConfig, values.zohoPaymentGateways)
   if (spec.providerType === 'aws_marketplace') {
     syncConfig['aws_marketplace'] = syncExtra
     // The role's trust policy names this value; the API checks it with STS AssumeRole.
@@ -703,6 +767,9 @@ export function connectionToFormValues(
 ): ConnectionFormValues {
   return {
     name: connection.name,
+    ...(spec.providerType === 'zoho_books'
+      ? { zohoPaymentGateways: zohoPaymentGateways(connection) }
+      : {}),
     fields: Object.fromEntries(editableFields(spec, perConnectionWebhook).map((f) => [f.key, ''])),
     sync: Object.fromEntries(
       spec.sync.map((o) => [syncKey(o), connection.syncConfig[o.entity]?.[o.direction] ?? false]),
@@ -731,6 +798,7 @@ export function manageFormSchema(spec: ConnectionSpec) {
         })
     }),
     sync: z.record(z.string(), z.boolean()),
+    zohoPaymentGateways: zohoPaymentGatewaysSchema.optional(),
   })
 }
 
@@ -764,6 +832,7 @@ export function toConnectionChanges(
   const perConnectionWebhook = entities !== undefined
   const initial = connectionToFormValues(spec, connection, perConnectionWebhook)
   if (spec.sync.some((o) => values.sync[syncKey(o)] !== initial.sync[syncKey(o)])) {
+    // Start from what was saved, so provider settings this form does not edit are sent back as they were.
     const next: Record<string, unknown> = { ...connection.syncConfig }
     for (const option of spec.sync) {
       const current = (next[option.entity] ?? {}) as Record<string, boolean>
@@ -773,6 +842,17 @@ export function toConnectionChanges(
       }
     }
     changes.sync_config = next
+  }
+
+  if (
+    spec.providerType === 'zoho_books' &&
+    values.zohoPaymentGateways &&
+    JSON.stringify(values.zohoPaymentGateways) !== JSON.stringify(initial.zohoPaymentGateways)
+  ) {
+    changes.sync_config = withZohoGateways(
+      changes.sync_config ?? connection.syncConfig,
+      values.zohoPaymentGateways,
+    )
   }
 
   const secrets: Record<string, string> = {}

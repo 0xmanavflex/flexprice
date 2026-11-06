@@ -483,7 +483,7 @@ const INTEGRATION_LINKS: IntegrationLink[] = [
     name: 'Stripe',
     providerType: 'stripe',
     mappingId: 'map_1',
-    providerEntityId: 'cus_Qx81nKd02',
+    providerEntityId: 'sub_Qx81nKd02',
     createdAt: date('2026-03-04'),
     updatedAt: date('2026-09-18'),
   },
@@ -623,13 +623,7 @@ export const MoreMenu: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
     const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent?.trim())
-    await expect(items).toEqual([
-      'Copy ID',
-      'Edit contract',
-      'Alert settings',
-      'Pause contract',
-      'Cancel contract',
-    ])
+    await expect(items).toEqual(['Copy ID', 'Alert settings', 'Pause contract', 'Cancel contract'])
     await userEvent.click(screen.getByRole('menuitem', { name: 'Alert settings' }))
     await expect(args.onAlertSettings).toHaveBeenCalledOnce()
     await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
@@ -651,19 +645,6 @@ export const PausesContract: Story = {
     await userEvent.click(dialog.getByRole('button', { name: 'Pause contract' }))
     await waitFor(() =>
       expect(args.onPause).toHaveBeenCalledWith({ prorate: true, reason: 'Customer on holiday' }),
-    )
-  },
-}
-
-/** "Edit contract" opens the Charges tab, where V2 edits what V1's edit page did. */
-export const EditContractOpensCharges: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Contract actions' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit contract' }))
-    await expect(canvas.getByRole('tab', { name: /Charges/ })).toHaveAttribute(
-      'aria-selected',
-      'true',
     )
   },
 }
@@ -1311,7 +1292,7 @@ export const AddonsCouponsTaxesEmpty: Story = {
     await expect(canvas.getByText('No coupons')).toBeVisible()
     await expect(canvas.getByText('No taxes')).toBeVisible()
     for (const [heading, button, empty] of [
-      ['Add-ons', 'Add add-on', 'No add-ons'],
+      ['Add-ons', 'Modify add-ons', 'No add-ons'],
       ['Coupons', 'Add coupon', 'No coupons'],
       ['Taxes', 'Add tax', 'No taxes'],
     ] as const) {
@@ -1325,7 +1306,7 @@ export const AddonsCouponsTaxesEmpty: Story = {
     for (const name of [
       'Add entitlement',
       'Add credit grant',
-      'Add add-on',
+      'Modify add-ons',
       'Add coupon',
       'Add tax',
     ]) {
@@ -1352,7 +1333,7 @@ export const SectionAddButtons: Story = {
     for (const [heading, name] of [
       ['Entitlements', 'Add entitlement'],
       ['Credit grants', 'Add credit grant'],
-      ['Add-ons', 'Add add-on'],
+      ['Add-ons', 'Modify add-ons'],
       ['Coupons', 'Add coupon'],
       ['Taxes', 'Add tax'],
     ] as const) {
@@ -1379,13 +1360,16 @@ export const AddAddon: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Modify add-ons' }))
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
-    await userEvent.click(dialog.getByRole('button', { name: 'Add add-on' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
-      expect(args.onAddAddon).toHaveBeenCalledWith([{ addonId: 'addon_support' }]),
+      // Starts now and prorates unless the dialog says otherwise, as V1's add-on timing.
+      expect(args.onAddAddon).toHaveBeenCalledWith([
+        { addonId: 'addon_support', changeAt: 'immediate', prorate: true },
+      ]),
     )
   },
 }
@@ -1404,7 +1388,7 @@ export const AddSeveralAddons: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Modify add-ons' }))
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
@@ -1416,11 +1400,71 @@ export const AddSeveralAddons: Story = {
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await expect(screen.queryByRole('option', { name: 'Priority support' })).toBeNull()
     await userEvent.click(await screen.findByRole('option', { name: 'SSO' }))
-    await userEvent.click(dialog.getByRole('button', { name: 'Add 2 add-ons' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
-        { addonId: 'addon_support' },
-        { addonId: 'addon_sso' },
+        { addonId: 'addon_support', changeAt: 'immediate', prorate: true },
+        { addonId: 'addon_sso', changeAt: 'immediate', prorate: true },
+      ]),
+    )
+  },
+}
+
+/** V1's "Configure": an attached add-on lists its charges here, each opening the charge editor. */
+export const ConfigureAddon: Story = {
+  parameters: menuA11y,
+  args: {
+    lines: ready([
+      ...LINES,
+      {
+        ...(LINES[0] as SubscriptionLine),
+        id: 'line_support',
+        name: 'Support retainer',
+        source: 'addon',
+        addonAssociationId: 'sa_1',
+        charge: lineCharge({
+          id: 'line_support',
+          name: 'Support retainer',
+          kind: 'fixed',
+          amount: money('300', 'USD'),
+          pricing: flat(),
+        }),
+      },
+    ]),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(
+      await canvas.findByRole('button', { name: 'Actions for Priority support' }),
+    )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Configure' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Configure Priority support' }))
+    await expect(dialog.getByText('Support retainer')).toBeVisible()
+    await expect(dialog.queryByText('Platform fee')).toBeNull()
+    await userEvent.click(dialog.getByRole('button', { name: 'Edit' }))
+    // The add-on's fixed charge opens the same quantity editor as on the Charges tab.
+    await expect(await screen.findByRole('dialog', { name: 'Edit charge' })).toBeVisible()
+  },
+}
+
+/** V1's timing: an add-on can start at period end without proration, and removals say when. */
+export const AddonTimingAndRemoval: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Modify add-ons' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Starts/ }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'At the end of the current period' }),
+    )
+    await userEvent.click(dialog.getByRole('switch', { name: 'Prorate the current period' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
+    await waitFor(() =>
+      expect(args.onAddAddon).toHaveBeenCalledWith([
+        { addonId: 'addon_support', changeAt: 'end_of_period', prorate: false },
       ]),
     )
   },
@@ -1455,7 +1499,7 @@ export const AddAddonWithCommitment: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Modify add-ons' }))
     let dialog = within(await screen.findByRole('dialog'))
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
@@ -1472,14 +1516,14 @@ export const AddAddonWithCommitment: Story = {
     await userEvent.type(price.getByLabelText(/^Amount/), '40')
     await userEvent.click(price.getByRole('button', { name: 'Save override' }))
 
-    dialog = within(await screen.findByRole('dialog', { name: 'Add add-on' }))
+    dialog = within(await screen.findByRole('dialog', { name: 'Modify add-ons' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Actions for Support tickets' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Add commitment' }))
     const commitment = within(await screen.findByRole('dialog'))
     await userEvent.type(await commitment.findByRole('textbox', { name: /^Commitment \(/ }), '500')
     await userEvent.click(commitment.getByRole('button', { name: 'Save commitment' }))
-    const back = within(await screen.findByRole('dialog', { name: 'Add add-on' }))
-    await userEvent.click(back.getByRole('button', { name: 'Add add-on' }))
+    const back = within(await screen.findByRole('dialog', { name: 'Modify add-ons' }))
+    await userEvent.click(back.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
         expect.objectContaining({
@@ -1500,12 +1544,12 @@ export const AddAddonWaitsForCharges: Story = {
   args: { sectionOptions: { ...SECTION_OPTIONS, addonCharges: () => undefined } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Modify add-ons' }))
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
     await expect(await dialog.findByText(/Loading the add-on's charges/)).toBeVisible()
-    await expect(dialog.getByRole('button', { name: 'Add add-on' })).toBeDisabled()
+    await expect(dialog.getByRole('button', { name: 'Apply add-on changes' })).toBeDisabled()
     await expect(args.onAddAddon).not.toHaveBeenCalled()
   },
 }
@@ -1522,7 +1566,7 @@ export const AddAddonChargesFailed: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Modify add-ons' }))
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
@@ -1542,6 +1586,29 @@ export const AddCoupon: Story = {
     await userEvent.click(await screen.findByRole('option', { name: 'Launch 10% off' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Add coupon' }))
     await waitFor(() => expect(args.onAddCoupon).toHaveBeenCalledWith({ couponCode: 'LAUNCH10' }))
+  },
+}
+
+/** V1's "Apply to": a coupon from the Coupons section can go on one charge instead. */
+export const AddCouponToOneCharge: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add coupon' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Coupon/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Launch 10% off' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Apply to/ }))
+    const options = await screen.findAllByRole('option')
+    await expect(options[0]).toHaveTextContent('Whole contract')
+    await userEvent.click(options[1]!)
+    await userEvent.click(dialog.getByRole('button', { name: 'Add coupon' }))
+    await waitFor(() =>
+      expect(args.onAddCoupon).toHaveBeenCalledWith({
+        couponCode: 'LAUNCH10',
+        lineItemId: 'line_1',
+      }),
+    )
   },
 }
 
@@ -1630,7 +1697,7 @@ export const HeaderIntegrations: Story = {
     const mark = await canvas.findByRole('button', { name: 'Stripe integration' })
     await userEvent.hover(mark)
     const details = await waitFor(() => {
-      const match = screen.getAllByText('cus_Qx81nKd02').find((node) => node.closest('dl'))
+      const match = screen.getAllByText('sub_Qx81nKd02').find((node) => node.closest('dl'))
       expect(match).toBeDefined()
       return match!.closest('dl')!
     })
@@ -1672,7 +1739,7 @@ export const LinkIntegration: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('button', { name: 'Link integration' }))
     const dialog = within(await screen.findByRole('dialog'))
-    await userEvent.type(dialog.getByLabelText(/Customer ID at the provider/), 'qb_42')
+    await userEvent.type(dialog.getByLabelText(/Contract ID at the provider/), 'qb_42')
     await userEvent.click(dialog.getByRole('button', { name: 'Link' }))
     await waitFor(() =>
       expect(args.onLinkIntegration).toHaveBeenCalledWith({

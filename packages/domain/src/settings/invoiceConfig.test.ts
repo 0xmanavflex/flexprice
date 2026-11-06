@@ -115,3 +115,37 @@ describe('invoiceConfigSchema', () => {
     expect(result.error?.issues[0]?.path).toEqual(['suffixLength'])
   })
 })
+
+describe('configured timezone preview', () => {
+  const on = new Date('2026-12-31T23:30:00Z')
+  it('uses the configured local calendar date at a year boundary', () => {
+    expect(
+      previewInvoiceNumber(
+        { ...defaultInvoiceConfig(), timezone: 'Asia/Kolkata', format: 'YYYYMMDD' },
+        on,
+      ),
+    ).toBe('INV-20270101-00001')
+    expect(
+      previewInvoiceNumber(
+        { ...defaultInvoiceConfig(), timezone: 'America/Los_Angeles', format: 'YYYYMMDD' },
+        on,
+      ),
+    ).toBe('INV-20261231-00001')
+  })
+  it('resolves abbreviations as the backend does, including daylight saving', () => {
+    expect(
+      previewInvoiceNumber({ ...defaultInvoiceConfig(), timezone: 'ist', format: 'YYYYMMDD' }, on),
+    ).toBe('INV-20270101-00001')
+    expect(
+      previewInvoiceNumber(
+        { ...defaultInvoiceConfig(), timezone: 'GMT', format: 'YYYYMMDD' },
+        new Date('2026-06-30T23:30:00Z'),
+      ),
+    ).toBe('INV-20260701-00001')
+  })
+  it('does not present a UTC number as a configured preview for an unknown zone', () => {
+    expect(previewInvoiceNumber({ ...defaultInvoiceConfig(), timezone: 'Unknown/Zone' }, on)).toBe(
+      'Preview unavailable for this timezone',
+    )
+  })
+})

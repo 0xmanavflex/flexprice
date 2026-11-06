@@ -8,6 +8,7 @@ import {
   toInvoice,
   toInvoiceFilter,
   type InvoiceWire,
+  toInvoiceDetail,
 } from './invoices'
 
 describe('toInvoiceFilter: domain vocabulary out, transport in', () => {
@@ -125,9 +126,20 @@ describe('toInvoice: a narrow model out of a 45-field optional response', () => 
     const invoice = toInvoice({})
 
     expect(invoice.total).toEqual({ amount: '0', currency: 'USD' })
-    expect(invoice.status).toBe(InvoiceStatus.Paid)
+    // No balance on the response is not proof it was paid.
+    expect(invoice.status).toBe(InvoiceStatus.Open)
     expect(invoice.dueDate).toBeNull()
     expect(invoice.customerName).toBe('Unknown')
+  })
+
+  it('does not read a missing balance as paid', () => {
+    const unpaid = { ...wire, amountRemaining: undefined }
+    expect(toInvoice(unpaid, new Date('2025-12-15T00:00:00Z')).status).toBe(InvoiceStatus.Open)
+    expect(
+      toInvoice({ ...unpaid, amountDue: undefined }, new Date('2025-12-15T00:00:00Z')).status,
+    ).toBe(InvoiceStatus.Open)
+    expect(toInvoice({ ...unpaid, amountDue: '0' }).status).toBe(InvoiceStatus.Paid)
+    expect(toInvoice({ ...unpaid, paymentStatus: 'SUCCEEDED' }).status).toBe(InvoiceStatus.Paid)
   })
 
   it('treats a zero remaining balance as paid, whatever the payment status says', () => {
@@ -414,5 +426,38 @@ describe('the customer an invoice bills', () => {
       toInvoice({ id: 'inv_2', customerId: 'cust_1', customer: { id: 'cust_1', name: 'Acme' } })
         .customerName,
     ).toBe('Acme')
+  })
+})
+
+describe('toInvoiceDetail taxes', () => {
+  it('keeps each applied tax with its rate, leaves reversals out and carries the exemption', () => {
+    const detail = toInvoiceDetail({
+      id: 'inv_1',
+      currency: 'usd',
+      totalTax: '2.2',
+      taxes: [
+        {
+          id: 'ta_1',
+          taxableAmount: '110',
+          taxAmount: '2.2',
+          taxBehavior: 'exclusive',
+          taxRate: { name: 'GST', code: 'gst', percentageValue: '2' },
+        },
+        { id: 'ta_2', taxAmount: '2.2', taxTransactionType: 'reversal' },
+      ],
+      taxSummary: { exemption: { reason: 'Reverse charge' } },
+    })
+    expect(detail.taxes).toEqual([
+      {
+        id: 'ta_1',
+        name: 'GST',
+        code: 'gst',
+        percentage: '2',
+        behavior: 'exclusive',
+        taxableAmount: '110',
+        taxAmount: '2.2',
+      },
+    ])
+    expect(detail.taxExemption).toBe('Reverse charge')
   })
 })

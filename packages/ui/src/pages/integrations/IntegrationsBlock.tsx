@@ -1,3 +1,5 @@
+import { useWriteAccess } from '@ui/compositions/access/Access'
+import { RBAC_ENTITY } from '@fp/domain'
 import { useMemo, useState } from 'react'
 import { SearchIcon } from '@ui/icons'
 import type { Integration } from '@fp/domain'
@@ -115,7 +117,11 @@ export function IntegrationLogo({ integration }: { integration: Integration }) {
   return src ? (
     <>
       <img src={src} alt="" className="max-h-full max-w-full object-contain dark:hidden" />
-      <img src={darkSrc} alt="" className="hidden max-h-full max-w-full object-contain dark:block" />
+      <img
+        src={darkSrc}
+        alt=""
+        className="hidden max-h-full max-w-full object-contain dark:block"
+      />
     </>
   ) : (
     <span aria-hidden className="text-base font-medium">
@@ -134,6 +140,7 @@ export function IntegrationsBlock({
   isRetrying,
   entities,
 }: IntegrationsBlockProps) {
+  const write = useWriteAccess(RBAC_ENTITY.Connection)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState(ALL)
 
@@ -168,6 +175,7 @@ export function IntegrationsBlock({
       docsUrl={integration.docsUrl}
       logo={<IntegrationLogo integration={integration} />}
       connected={isConnected(integration)}
+      connectDisabled={!write.allowed}
       onConnect={() => onConnect?.(integration)}
       onConfigure={() => onConfigure?.(integration)}
       configureLabel={entities && isConnected(integration) ? 'Manage' : undefined}

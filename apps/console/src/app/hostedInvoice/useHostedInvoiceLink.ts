@@ -32,7 +32,6 @@ export function useHostedInvoiceLink() {
     }
   }
 
-
   return { open, isPending: link.isPending }
 }
 

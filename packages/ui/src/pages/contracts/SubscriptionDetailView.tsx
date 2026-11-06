@@ -1,4 +1,9 @@
+import { Field } from '@ui/compositions/forms/Field'
+import { DateInput } from '@ui/compositions/forms/DateInput'
+import { Composer, SimpleTable } from '@ui/compositions/detail/DetailKit'
 import {
+  INVOICE_DOCUMENT_STATUS_LABEL,
+  invoiceDocumentStatus,
   RBAC_ENTITY,
   type PauseSubscription,
   type RbacEntity,
@@ -18,7 +23,6 @@ import {
   ScaleIcon,
   BellIcon,
   CopyIcon,
-  PencilIcon,
   TicketPercentIcon,
   PackageIcon,
   PlusIcon,
@@ -27,6 +31,7 @@ import {
   InfoIcon,
   PlayIcon,
   RefreshCwIcon,
+  SlidersHorizontalIcon,
   XCircleIcon,
 } from '@ui/icons'
 import {
@@ -49,6 +54,7 @@ import {
   type CreateTaxAssociation,
   type CreateTaxRate,
   type AddContractAddon,
+  type RemoveContractAddon,
   type AddContractCoupon,
   commitmentPeriodNoun,
   ChargeSection,
@@ -115,9 +121,9 @@ import type { EmptyScene } from '../../compositions/feedback/SceneIllustration'
 import { SubTabState } from '@ui/compositions/detail/SubTabState'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
 import { EntityLink, Pill } from '../shared/cells'
+import { INVOICE_DOCUMENT_STATUS_TONE } from '../shared/statusTones'
 import { EntitlementUsageTable, entitlementRowsForContract } from '../shared/EntitlementUsage'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
-import { InvoiceStatusBadge } from '../shared/StatusBadge'
 import { PaymentStatusBadge } from '../collections/payments/PaymentStatusBadge'
 import type { InvoiceActivity } from '../billing/invoices/invoiceDocument'
 import type { MeterOption, PriceUnitOption } from '../product-catalog/charges/ChargeForm'
@@ -206,6 +212,8 @@ export interface SubscriptionDetailViewProps {
         onRetry?: (() => void) | undefined
       }
     | undefined
+  benefitsEditor?: ReactNode
+  hierarchyEditor?: ReactNode
   entitlements: SubscriptionPart<SubscriptionEntitlement[]>
   /**
    * The customer's usage against this contract's entitlements
@@ -242,7 +250,9 @@ export interface SubscriptionDetailViewProps {
    */
   onAddEntitlement?: ((draft: CreateEntitlement) => Promise<unknown> | void) | undefined
   onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
-  onAddAddon?: ((drafts: AddContractAddon[]) => Promise<unknown> | void) | undefined
+  onAddAddon?:
+    | ((drafts: AddContractAddon[], removals?: RemoveContractAddon[]) => Promise<unknown> | void)
+    | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
   /**
    * Save the thresholds of an alert already watching one charge.
@@ -284,7 +294,8 @@ export interface SubscriptionDetailViewProps {
   /** Row menus: take an add-on off, stop a tax, end a credit grant. Each resolves when done. */
   onRemoveAddon?: ((addon: SubscriptionAddon) => Promise<unknown>) | undefined
   onRemoveTax?: ((tax: SubscriptionTax) => Promise<unknown>) | undefined
-  onCancelCreditGrant?: ((grant: CreditGrant) => Promise<unknown>) | undefined
+  onCancelCreditGrant?:
+    ((grant: CreditGrant, effectiveDate: string) => Promise<unknown>) | undefined
   /** What the Add dialogs offer. */
   sectionOptions?: Partial<ContractSectionOptions> | undefined
   onBack?: () => void
@@ -462,6 +473,8 @@ export function SubscriptionDetailView({
   lineHistory,
   onOpenLine,
   openLineHistory,
+  benefitsEditor,
+  hierarchyEditor,
   entitlements,
   entitlementUsage,
   creditGrants,
@@ -539,6 +552,8 @@ export function SubscriptionDetailView({
   const [section, setSection] = useState<ContractSectionKind | null>(null)
   /** Set while Change coupon is open, so the submit is scoped to that charge. */
   const [couponLineId, setCouponLineId] = useState<string | null>(null)
+  /** V1's "Configure": the attached add-on whose charges are listed to edit. */
+  const [configuring, setConfiguring] = useState<SubscriptionAddon | null>(null)
   /** The alert being edited; no `settingId` while a new one is being added. */
   const [alertEdit, setAlertEdit] = useState<{
     settingId?: string
@@ -552,6 +567,8 @@ export function SubscriptionDetailView({
     confirmLabel: string
     run: () => Promise<unknown>
   } | null>(null)
+  const [grantEndDate, setGrantEndDate] = useState('')
+  const [endingGrant, setEndingGrant] = useState<CreditGrant | null>(null)
   const [removing, setRemoving] = useState(false)
   const [removalError, setRemovalError] = useState<string | null>(null)
   const askRemoval = (next: NonNullable<typeof removal>) => {
@@ -932,6 +949,7 @@ export function SubscriptionDetailView({
       leading={
         integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
           <ContractIntegrations
+            entityLabel="contract"
             showLink={false}
             links={integrationLinks}
             linkable={linkableProviders}
@@ -973,18 +991,9 @@ export function SubscriptionDetailView({
                   },
                 ]
               : []),
-            // V1's "Edit Subscription" opened a page of charges; here the charges
-            // are edited in place, on their tab.
-            ...(canEditCharges
-              ? [
-                  {
-                    id: 'edit',
-                    label: 'Edit contract',
-                    icon: <PencilIcon aria-hidden="true" className="size-4" />,
-                    onSelect: () => setTab('charges'),
-                  },
-                ]
-              : []),
+            // No "Edit contract": V1's opened a page of charges, and here every part
+            // is edited where it is shown (its tab, its section), so the item only
+            // switched tabs and read as a missing editor.
             ...(onAlertSettings
               ? [
                   {
@@ -1079,7 +1088,8 @@ export function SubscriptionDetailView({
                   <InfoIcon aria-hidden="true" />
                   <AlertTitle>Inherited from a parent contract</AlertTitle>
                   <AlertDescription>
-                    Its charges and billing follow the parent contract, so it can't be changed here.
+                    Its charges and billing follow the parent contract. Use Contract hierarchy to
+                    change its parent.
                   </AlertDescription>
                   {s.parentSubscriptionId && onOpenContract ? (
                     <AlertAction>
@@ -1095,7 +1105,10 @@ export function SubscriptionDetailView({
                   ) : null}
                 </Alert>
               ) : null}
-              {inheritedContracts && (inheritedContracts.data?.length ?? 0) > 0 ? (
+              {hierarchyEditor}
+              {!hierarchyEditor &&
+              inheritedContracts &&
+              (inheritedContracts.data?.length ?? 0) > 0 ? (
                 <Section table showTitle title="Inherited contracts">
                   <DetailTable<Subscription>
                     compact
@@ -1253,7 +1266,7 @@ export function SubscriptionDetailView({
                 {
                   id: 'entitlements',
                   empty: knownEmpty(entitlements),
-                  node: (
+                  node: benefitsEditor ?? (
                     <>
                       <PartSection
                         entity={RBAC_ENTITY.Entitlement}
@@ -1346,14 +1359,11 @@ export function SubscriptionDetailView({
                                 (row) => row.name,
                                 'End grant',
                                 onCancelCreditGrant
-                                  ? (grant) =>
-                                      askRemoval({
-                                        title: `End ${grant.name}?`,
-                                        description:
-                                          'The grant stops today. Credits it already gave stay in the wallet; no further credits are granted.',
-                                        confirmLabel: 'End grant',
-                                        run: () => onCancelCreditGrant(grant),
-                                      })
+                                  ? (grant) => {
+                                      setGrantEndDate(new Date().toISOString().slice(0, 10))
+                                      setSaveError(null)
+                                      setEndingGrant(grant)
+                                    }
                                   : null,
                               ),
                             ]}
@@ -1377,7 +1387,7 @@ export function SubscriptionDetailView({
                         create={
                           s.status === SubscriptionStatus.Active ||
                           isUnstartedSubscription(s.status)
-                            ? createFor('addon', 'Add add-on', onAddAddon)
+                            ? createFor('addon', 'Modify add-ons', onAddAddon)
                             : undefined
                         }
                         failure="Add-ons could not be loaded"
@@ -1418,20 +1428,41 @@ export function SubscriptionDetailView({
                                 header: 'Ends',
                                 cell: (row) => <Muted>{day(row.endDate)}</Muted>,
                               },
-                              ...removeColumn<SubscriptionAddon>(
-                                (row) => row.name,
-                                'Remove add-on',
-                                onRemoveAddon
-                                  ? (addon) =>
-                                      askRemoval({
-                                        title: `Remove ${addon.name}?`,
-                                        description:
-                                          'The add-on comes off this contract at the end of the current period. Charges already billed are unaffected.',
-                                        confirmLabel: 'Remove add-on',
-                                        run: () => onRemoveAddon(addon),
-                                      })
-                                  : null,
-                              ),
+                              ...(canEditCharges
+                                ? [
+                                    {
+                                      key: 'actions',
+                                      header: '',
+                                      width: 48,
+                                      cell: (row: SubscriptionAddon) =>
+                                        row.active ? (
+                                          <RowActionsMenu
+                                            label={row.name}
+                                            extra={[
+                                              {
+                                                label: 'Configure',
+                                                icon: <SlidersHorizontalIcon aria-hidden />,
+                                                onSelect: () => setConfiguring(row),
+                                              },
+                                            ]}
+                                            {...(onRemoveAddon
+                                              ? {
+                                                  onRemove: () =>
+                                                    askRemoval({
+                                                      title: `Remove ${row.name}?`,
+                                                      description:
+                                                        'The add-on comes off this contract at the end of the current period. Charges already billed are unaffected.',
+                                                      confirmLabel: 'Remove add-on',
+                                                      run: () => onRemoveAddon(row),
+                                                    }),
+                                                  removeLabel: 'Remove add-on',
+                                                }
+                                              : {})}
+                                          />
+                                        ) : null,
+                                    },
+                                  ]
+                                : []),
                             ]}
                           />
                         )}
@@ -1618,6 +1649,7 @@ export function SubscriptionDetailView({
               <RelatedCard items={related}>
                 {integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
                   <ContractIntegrations
+                    entityLabel="contract"
                     layout="rows"
                     links={integrationLinks}
                     linkable={linkableProviders}
@@ -1838,12 +1870,23 @@ export function SubscriptionDetailView({
                     sortBy: (row) => row.dueDate?.getTime() ?? 0,
                     cell: (row) => <Muted>{invoiceDay(row.dueDate)}</Muted>,
                   },
+                  // The document's own state (Draft, Finalized, Voided), as the invoice list
+                  // shows it: what the money did is the Payment column beside it. "Open"
+                  // was a state worked out here, which a finalized invoice never reads as.
                   {
                     key: 'status',
                     header: 'Status',
-                    sortBy: (row) => sentence(words(row.status)),
-                    text: (row) => sentence(words(row.status)),
-                    cell: (row) => <InvoiceStatusBadge status={row.status} />,
+                    sortBy: (row) =>
+                      INVOICE_DOCUMENT_STATUS_LABEL[invoiceDocumentStatus(row.status)],
+                    text: (row) => INVOICE_DOCUMENT_STATUS_LABEL[invoiceDocumentStatus(row.status)],
+                    cell: (row) => {
+                      const status = invoiceDocumentStatus(row.status)
+                      return (
+                        <Pill tone={INVOICE_DOCUMENT_STATUS_TONE[status]}>
+                          {INVOICE_DOCUMENT_STATUS_LABEL[status]}
+                        </Pill>
+                      )
+                    },
                   },
                   {
                     key: 'payment',
@@ -1927,18 +1970,142 @@ export function SubscriptionDetailView({
             .finally(() => setRemoving(false))
         }}
       />
+      {/* V1's "Configure" on an add-on: its charges on this contract, each edited with
+          the same dialogs as the Charges tab (price, quantity, commitment, coupon). */}
+      <FormDialog
+        open={configuring !== null}
+        onOpenChange={(next) => (next ? undefined : setConfiguring(null))}
+        title={configuring ? `Configure ${configuring.name}` : 'Configure add-on'}
+        description="Change this add-on's charges for this contract only. The add-on itself keeps its prices."
+        size="lg"
+      >
+        {configuring ? (
+          <SimpleTable
+            rows={chargeRows.charges.filter((charge) => {
+              const line = chargeRows.lineOf.get(charge.id)
+              return (
+                line?.addonAssociationId === configuring.id &&
+                (!charge.endDate || charge.endDate > new Date())
+              )
+            })}
+            getRowId={(charge) => charge.id}
+            empty="This add-on has no live charges on this contract."
+            columns={[
+              {
+                key: 'name',
+                header: 'Charge',
+                cell: (charge) => chargeRows.lineOf.get(charge.id)?.name ?? charge.id,
+              },
+              {
+                key: 'type',
+                header: 'Type',
+                cell: (charge) => (charge.type === PriceType.Usage ? 'Usage' : 'Fixed'),
+              },
+              {
+                key: 'price',
+                header: 'Price',
+                cell: (charge) => {
+                  const line = chargeRows.lineOf.get(charge.id)
+                  return line ? formatMoney(line.amount) : '—'
+                },
+              },
+              {
+                key: 'edit',
+                header: '',
+                cell: (charge) => {
+                  const line = chargeRows.lineOf.get(charge.id)
+                  return line && canEditLine(line) ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setConfiguring(null)
+                        editCharge(charge)
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  ) : null
+                },
+              },
+            ]}
+          />
+        ) : null}
+      </FormDialog>
+      <FormDialog
+        open={endingGrant !== null}
+        onOpenChange={(open) => !open && !saving && setEndingGrant(null)}
+        title="End credit grant"
+        isPending={saving}
+      >
+        <Composer
+          submitLabel="End grant"
+          submitting={saving}
+          disabled={!grantEndDate}
+          onCancel={() => setEndingGrant(null)}
+          onSubmit={async () => {
+            if (!endingGrant || !grantEndDate) return
+            setSaving(true)
+            setSaveError(null)
+            try {
+              await onCancelCreditGrant?.(endingGrant, grantEndDate)
+              setEndingGrant(null)
+            } catch (error) {
+              setSaveError(error instanceof Error ? error.message : 'Could not end grant')
+            } finally {
+              setSaving(false)
+            }
+          }}
+        >
+          <Field
+            label="Effective date"
+            hint="Credits already issued stay in the wallet. The grant stops issuing credits on this date."
+          >
+            {({ id }) => <DateInput id={id} value={grantEndDate} onValueChange={setGrantEndDate} />}
+          </Field>
+          {saveError ? (
+            <p role="alert" className="text-destructive text-sm">
+              {saveError}
+            </p>
+          ) : null}
+        </Composer>
+      </FormDialog>
       <ContractSectionDialogs
         kind={section}
         options={{
           features: sectionOptions?.features ?? [],
           addons: sectionOptions?.addons ?? [],
+          existingAddons: (addons?.data ?? [])
+            .filter((addon) => addon.active)
+            .map((addon) => ({
+              id: addon.id,
+              name: addon.name,
+              ...(addon.addonId ? { addonId: addon.addonId } : {}),
+            })),
           addonCharges: sectionOptions?.addonCharges,
           addonChargesFailed: sectionOptions?.addonChargesFailed,
           meters,
           currency: s.currency,
           billingPeriod: s.billingPeriod ?? undefined,
           coupons: sectionOptions?.coupons ?? [],
+          // From the Coupons section the coupon may go on one charge instead (V1's "Apply to");
+          // from a charge's own menu, that charge is the scope.
+          ...(couponLineId
+            ? {}
+            : {
+                couponLines: chargeRows.charges
+                  .filter((charge) => !charge.endDate || charge.endDate > new Date())
+                  .flatMap((charge) => {
+                    const line = chargeRows.lineOf.get(charge.id)
+                    return line ? [{ id: line.id, name: line.name }] : []
+                  }),
+              }),
           taxRates: sectionOptions?.taxRates ?? [],
+          grantStartDates: {
+            oneTime: new Date().toISOString().slice(0, 10),
+            recurring: s.currentPeriodEnd ? s.currentPeriodEnd.toISOString().slice(0, 10) : null,
+          },
         }}
         actions={{
           onAddEntitlement,
@@ -1946,14 +2113,23 @@ export function SubscriptionDetailView({
           onAddAddon,
           onAddCoupon: onAddCoupon
             ? (draft) => {
+                // From the Coupons section (whole contract, or a charge chosen there) it adds;
+                // only a charge's own "Change coupon" replaces what that charge has.
                 if (!couponLineId) return onAddCoupon(draft)
+                const lineId = couponLineId
                 const current = (coupons?.data ?? []).filter(
-                  (coupon) => coupon.active && coupon.lineItemId === couponLineId,
+                  (coupon) => coupon.active && coupon.lineItemId === lineId,
                 )
-                if (current.length === 1 && current[0]?.code === draft.couponCode) return
+                if (
+                  current.length === 1 &&
+                  current[0]?.code === draft.couponCode &&
+                  !draft.startDate &&
+                  !draft.endDate
+                )
+                  return
                 return onAddCoupon({
-                  couponCode: draft.couponCode,
-                  lineItemId: couponLineId,
+                  ...draft,
+                  lineItemId: lineId,
                   ...(current.length
                     ? { replaceAssociationIds: current.map((coupon) => coupon.id) }
                     : {}),

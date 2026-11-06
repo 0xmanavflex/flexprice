@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import {
   ApiError,
+  useEnvironmentList,
   useConnectIntegration,
   useDisconnectIntegration,
   useFlexpriceServerURL,
@@ -46,6 +47,10 @@ export function useIntegrationSheets(
 } {
   const { session, environmentId } = useSession()
   const serverURL = useFlexpriceServerURL()
+  const environmentList = useEnvironmentList(env.apiKey ?? session?.token ?? null)
+  const activeEnvironment = environmentList.data?.find(
+    (environment) => environment.id === environmentId,
+  )
 
   const [connecting, setConnecting] = useState<{
     integrationId: string
@@ -67,6 +72,7 @@ export function useIntegrationSheets(
 
   const context: ConnectionContext = {
     webhookBaseUrl: serverURL,
+    environmentType: activeEnvironment?.type,
     tenantId: session?.tenantId ?? '',
     environmentId: environmentId ?? '',
     redirectUri: oauthRedirectUri(window.location.origin),
@@ -106,8 +112,13 @@ export function useIntegrationSheets(
   const connectError = connect.error ?? startOAuth.error
 
   return {
-    openConnect: (integrationId, billingEntityId) =>
-      setConnecting({ integrationId, billingEntityId }),
+    openConnect: (integrationId, billingEntityId) => {
+      if (integrationId === 'quickbooks' && !activeEnvironment) {
+        toast('Wait for the environment to load before connecting QuickBooks.')
+        return
+      }
+      setConnecting({ integrationId, billingEntityId })
+    },
     openManage: (integrationId, connectionId) => setManaging({ integrationId, connectionId }),
     sheets: (
       <>

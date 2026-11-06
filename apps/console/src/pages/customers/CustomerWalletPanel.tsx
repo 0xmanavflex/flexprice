@@ -193,43 +193,31 @@ export function CustomerWalletPanel({ customerId, readOnly = false }: CustomerWa
         open={checkoutLink !== null}
         onOpenChange={(open) => (open ? undefined : setCheckoutLink(null))}
         title="Checkout link ready"
-        description={
-          <>
-            Send this link to the customer. The credits land once they pay.
-            <PaymentLink url={checkoutLink} />
-          </>
-        }
-        confirmLabel="Copy link"
-        cancelLabel="Done"
-        onConfirm={() =>
-          void navigator.clipboard
-            ?.writeText(checkoutLink ?? '')
-            .then(() => toast.success('Checkout link copied'))
-            .catch(() => toast.error('Copy failed'))
-        }
-      />
+        description="Send this link to the customer. The credits land once they pay."
+        confirmLabel="Done"
+        cancelLabel={null}
+        onConfirm={() => setCheckoutLink(null)}
+      >
+        <PaymentLink url={checkoutLink} label="Checkout link" />
+      </ConfirmDialog>
       <ConfirmDialog
         open={blocked !== null}
         onOpenChange={(open) => (open || topUp.isPending ? undefined : setBlocked(null))}
         title="A checkout is already open"
         description={
-          <>
-            This wallet already has an unfinished checkout
-            {blocked?.session.expiresAt
-              ? `, open until ${blocked.session.expiresAt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`
-              : ''}
-            . Nothing new was created. The customer may be paying it now — send them this link, or
-            cancel it and start a new checkout for this top-up.
-            {blocked?.session.url ? <PaymentLink url={blocked.session.url} /> : null}
-          </>
+          blocked?.session.expiresAt
+            ? `This wallet has an unfinished checkout, open until ${blocked.session.expiresAt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}. The customer may be paying it now: send them this link, or replace it with a new checkout for this top-up.`
+            : 'This wallet has an unfinished checkout. The customer may be paying it now: send them this link, or replace it with a new checkout for this top-up.'
         }
-        confirmLabel="Cancel and create new"
-        pendingLabel="Creating…"
-        destructive
+        confirmLabel="Replace checkout"
+        cancelLabel="Keep it"
+        pendingLabel="Replacing…"
         isPending={topUp.isPending}
         error={failure(topUp.error, 'create the checkout')}
         onConfirm={() => blocked && void runTopUp(blocked.draft, true).catch(() => undefined)}
-      />
+      >
+        <PaymentLink url={blocked?.session.url} label="Checkout link" />
+      </ConfirmDialog>
     </>
   )
 }

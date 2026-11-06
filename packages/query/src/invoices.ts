@@ -218,6 +218,17 @@ function billedCustomer<C extends { id?: string | undefined }>(wire: {
   return customer.id && wire.customerId && customer.id !== wire.customerId ? undefined : customer
 }
 
+/**
+ * Whether money is still owed. The balance left decides; without it, the
+ * amount due. With neither, the invoice is not assumed settled: a missing
+ * field read as zero once showed unpaid invoices as Paid.
+ */
+function outstanding(wire: Pick<InvoiceWire, 'amountRemaining' | 'amountDue' | 'currency'>) {
+  const balance = wire.amountRemaining ?? wire.amountDue
+  if (balance === undefined || balance === null || balance === '') return true
+  return !isZeroMoney(moneyOr(balance, wire.currency))
+}
+
 export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
   const currency = wire.currency
   const amountRemaining = moneyOr(wire.amountRemaining, currency)
@@ -236,7 +247,7 @@ export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
       invoiceStatus: wire.invoiceStatus,
       paymentStatus: wire.paymentStatus,
       dueDate: wire.dueDate ?? null,
-      hasOutstandingBalance: !isZeroMoney(amountRemaining),
+      hasOutstandingBalance: outstanding(wire),
       ...(now ? { now } : {}),
     }),
     // The same field `deriveInvoiceStatus` reads above, kept rather than
@@ -347,6 +358,24 @@ export interface InvoiceDetailWire extends InvoiceWire {
   invoicePdfUrl?: string | undefined
   subtotal?: string | undefined
   totalTax?: string | undefined
+  taxes?:
+    | {
+        id?: string | undefined
+        taxableAmount?: string | undefined
+        taxAmount?: string | undefined
+        taxBehavior?: string | undefined
+        taxTransactionType?: string | undefined
+        taxRate?:
+          | {
+              name?: string | undefined
+              code?: string | undefined
+              percentageValue?: string | undefined
+            }
+          | undefined
+      }[]
+    | null
+    | undefined
+  taxSummary?: { exemption?: { reason?: string | undefined } | null | undefined } | null | undefined
   totalPrepaidCreditsApplied?: string | undefined
   totalDiscount?: string | undefined
   amountPaid?: string | undefined
@@ -404,6 +433,22 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
     invoicePdfUrl: wire.invoicePdfUrl || null,
     subtotal: wire.subtotal ?? '0',
     tax: wire.totalTax ?? '0',
+    // A reversal un-files a tax; it is not one the invoice charges.
+    taxes: (wire.taxes ?? [])
+      .filter((tax) => tax.taxTransactionType !== 'reversal')
+      .map((tax, index) => ({
+        id: tax.id ?? `tax_${index}`,
+        name: tax.taxRate?.name ?? '',
+        code: tax.taxRate?.code ?? '',
+        percentage: tax.taxRate?.percentageValue ?? null,
+        behavior:
+          tax.taxBehavior === 'inclusive' || tax.taxBehavior === 'exclusive'
+            ? tax.taxBehavior
+            : null,
+        taxableAmount: tax.taxableAmount ?? '0',
+        taxAmount: tax.taxAmount ?? '0',
+      })),
+    taxExemption: wire.taxSummary?.exemption?.reason || null,
     prepaidCredits: wire.totalPrepaidCreditsApplied ?? '0',
     discount: wire.totalDiscount ?? '0',
     amountPaid: wire.amountPaid ?? '0',

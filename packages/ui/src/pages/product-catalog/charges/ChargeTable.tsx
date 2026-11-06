@@ -368,12 +368,35 @@ export function ChargeTable({
     }
   }, [charges, details])
 
-  // Only charges billing now (or only scheduled so far) are rows: one whose
-  // end date has passed is history, reached from its charge's History, never
-  // a row of its own. The summary lists the first few (changed first, so they
-  // lead) and "Show all charges" goes to the rest. Unchanged charges are still
-  // charges: a contract on its plan's prices must not read as empty.
-  const rows = variant === 'summary' ? active.slice(0, SUMMARY_ROWS) : active
+  // Charges billing now (or only scheduled so far) are the rows. A charge that
+  // has ended stays out of the way, but the full table can list them on request:
+  // an ended charge was otherwise nowhere to be found. The summary lists the
+  // first few (changed first, so they lead) and "Show all charges" goes to the
+  // rest. Unchanged charges are still charges: a contract on its plan's prices
+  // must not read as empty.
+  const [showEnded, setShowEnded] = useState(false)
+  const rows =
+    variant === 'summary'
+      ? active.slice(0, SUMMARY_ROWS)
+      : showEnded
+        ? [...active, ...ended]
+        : active
+  const endedToggle =
+    variant === 'full' && ended.length > 0 ? (
+      <div className="px-6 py-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-pressed={showEnded}
+          onClick={() => setShowEnded((on) => !on)}
+        >
+          {showEnded
+            ? 'Hide ended charges'
+            : `Show ${ended.length} ended charge${ended.length === 1 ? '' : 's'}`}
+        </Button>
+      </div>
+    ) : null
   const statusOf = (charge: Charge) =>
     hasEnded(charge) ? 'Ended' : isChargeCustomised(details?.get(charge.id)) ? 'Changed' : 'Active'
 
@@ -614,51 +637,59 @@ export function ChargeTable({
           {...(headerAction && (showTitle || rows.length === 0) ? { action: headerAction } : {})}
         >
           {rows.length === 0 ? (
-            <SubTabState
-              hasData={false}
-              isLoading={false}
-              columns={4}
-              loadingLabel="Loading charges"
-              empty={{
-                scene: 'catalog',
-                // Charges that have all ended are not a record without charges:
-                // say none are live.
-                ...(ended.length > 0
-                  ? {
-                      title: 'No active charges',
-                      description: 'Every charge here has ended.',
-                    }
-                  : { title: 'No charges yet' }),
-              }}
-            >
-              {null}
-            </SubTabState>
+            <>
+              <SubTabState
+                hasData={false}
+                isLoading={false}
+                columns={4}
+                loadingLabel="Loading charges"
+                empty={{
+                  scene: 'catalog',
+                  // Charges that have all ended are not a record without charges:
+                  // say none are live.
+                  ...(ended.length > 0
+                    ? {
+                        title: 'No active charges',
+                        description: 'Every charge here has ended.',
+                      }
+                    : { title: 'No charges yet' }),
+                }}
+              >
+                {null}
+              </SubTabState>
+              {endedToggle}
+            </>
           ) : (
-            <DetailTable
-              compact
-              label="Charges"
-              // The summary is a few rows; filtering or sorting them would only
-              // reorder what is shown, so those live on the full table.
-              toolbar={variant === 'full'}
-              // The billing model left the columns for the grey line under the
-              // name, but it is still what someone narrows a long list by, so the
-              // filter keeps it.
-              facets={[
-                {
-                  id: 'model',
-                  label: 'Billing model',
-                  value: (charge: Charge) => modelLabel(charge),
-                },
-                // Active or Changed: ended charges are not rows, so not a status.
-                ...(variant === 'full' ? [{ id: 'status', label: 'Status', value: statusOf }] : []),
-                ...(facets ?? []),
-              ]}
-              noun="charges"
-              {...(!showTitle && headerAction ? { action: headerAction } : {})}
-              rows={rows}
-              columns={columns}
-              onRowClick={onRowClick ?? ((charge: Charge) => openAt(charge))}
-            />
+            <>
+              <DetailTable
+                compact
+                label="Charges"
+                // The summary is a few rows; filtering or sorting them would only
+                // reorder what is shown, so those live on the full table.
+                toolbar={variant === 'full'}
+                // The billing model left the columns for the grey line under the
+                // name, but it is still what someone narrows a long list by, so the
+                // filter keeps it.
+                facets={[
+                  {
+                    id: 'model',
+                    label: 'Billing model',
+                    value: (charge: Charge) => modelLabel(charge),
+                  },
+                  // Active, Changed, and Ended once ended charges are shown.
+                  ...(variant === 'full'
+                    ? [{ id: 'status', label: 'Status', value: statusOf }]
+                    : []),
+                  ...(facets ?? []),
+                ]}
+                noun="charges"
+                {...(!showTitle && headerAction ? { action: headerAction } : {})}
+                rows={rows}
+                columns={columns}
+                onRowClick={onRowClick ?? ((charge: Charge) => openAt(charge))}
+              />
+              {endedToggle}
+            </>
           )}
         </Section>
 

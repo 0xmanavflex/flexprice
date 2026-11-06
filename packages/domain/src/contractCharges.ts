@@ -56,6 +56,21 @@ function divides(
   return subMonths % itemMonths === 0
 }
 
+/**
+ * Whether a charge bills more often than the contract, so each invoice carries
+ * several lines for it (a monthly price on a quarterly contract: three). Only
+ * then does `line_item_grouping` change anything. Mirrors V1's
+ * `chargeSplitsAcrossBillingPeriod`.
+ */
+export function splitsAcrossBillingPeriod(
+  contract: { billingPeriod: BillingPeriod; billingPeriodCount: number },
+  charge: { billingPeriod: BillingPeriod; billingPeriodCount: number },
+): boolean {
+  const subMonths = (MONTHS[contract.billingPeriod] ?? 0) * Math.max(1, contract.billingPeriodCount)
+  const itemMonths = (MONTHS[charge.billingPeriod] ?? 0) * Math.max(1, charge.billingPeriodCount)
+  return subMonths > 0 && itemMonths > 0 && subMonths > itemMonths && subMonths % itemMonths === 0
+}
+
 /** The API's `IsCadenceAllowed`: equal, dividing, or a whole multiple. */
 export function cadenceAllowed(
   subPeriod: BillingPeriod,

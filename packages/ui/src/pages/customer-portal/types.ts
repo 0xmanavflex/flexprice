@@ -1,7 +1,10 @@
 import type {
+  PortalUsageFilter,
   PortalParts,
+  PortalCardProviderError,
   PortalCustomer,
   PortalGateway,
+  PortalOpenCheckout,
   PortalInvoice,
   PortalPaymentMethod,
   PortalQuota,
@@ -21,7 +24,17 @@ export type Load<T> =
   { status: 'loading' } | { status: 'error'; retry: () => void } | { status: 'ready'; data: T }
 
 /** How a top-up is paid: the saved default card now, or a gateway's checkout page. */
-export type PayVia = { kind: 'saved' } | { kind: 'checkout'; provider: string }
+export type PayVia =
+  /** The saved card's own gateway: with two connected, the API cannot guess which card. */
+  | { kind: 'saved'; provider: string }
+  /** `replace`: cancel the checkout already open for this wallet and start this one. */
+  | { kind: 'checkout'; provider: string; replace?: boolean }
+
+/**
+ * What adding credits came to: a gateway page to finish on, null when the
+ * saved card was charged, or the checkout already open for the wallet.
+ */
+export type AddCreditsResult = string | null | { alreadyOpen: PortalOpenCheckout }
 
 export interface CustomerPortalData {
   customer: Load<PortalCustomer>
@@ -29,6 +42,8 @@ export interface CustomerPortalData {
   invoices: Load<PortalInvoice[]>
   wallets: Load<PortalWallet[]>
   paymentMethods: Load<PortalPaymentMethod[]>
+  /** Gateways whose saved cards could not be listed: their cards are unknown, not absent. */
+  cardProviderErrors?: readonly PortalCardProviderError[]
   gateways: Load<PortalGateway[]>
   quotas: Load<PortalQuota[]>
   spend: Load<PortalSpend>
@@ -60,6 +75,8 @@ export interface CustomerPortalActions {
   onCustomRange: (start: Date, end: Date) => void
   /** Group the usage breakdown by an event property key, or by feature (null). */
   onGroupByChange?: (key: string | null) => void
+  /** Narrow the usage view to some features and property values. */
+  onUsageFilterChange?: (filter: PortalUsageFilter) => void
   onWalletChange: (walletId: string) => void
   onShowMoreTransactions: () => void
   onShowMoreTopUps: () => void
@@ -72,7 +89,7 @@ export interface CustomerPortalActions {
     credits: string,
     via: PayVia,
     note: string,
-  ) => Promise<string | null>
+  ) => Promise<AddCreditsResult>
   addCard: (provider: string) => Promise<string | null>
   saveAutoTopup: (wallet: PortalWallet, settings: AutoTopupSettings) => Promise<void>
   removeCard: (card: PortalPaymentMethod) => Promise<void>
@@ -108,6 +125,12 @@ export interface CustomerPortalViewProps {
   groupKeys?: readonly string[]
   /** The key the breakdown is grouped by, or null for by feature. */
   groupBy?: string | null
+  /** What the usage view is narrowed to; nothing when absent. */
+  usageFilter?: PortalUsageFilter
+  /** Every feature used in the window, unfiltered: the feature filter's choices. */
+  usageFeatures?: { id: string; name: string }[] | undefined
+  /** The usage filter's choices: each groupable key's values in the window. */
+  propertyValues?: Record<string, string[]>
   range: PortalRange
   /** A calendar range, which replaces `range` when set. */
   customRange: { start: Date; end: Date } | null

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import type { SubscriptionLine } from '@fp/domain'
+import { BillingModel, BillingPeriod, CommitmentKind, type SubscriptionLine } from '@fp/domain'
 import { ContractChargeDialog } from './ContractChargeDialog'
 
 const LINE: SubscriptionLine = {
@@ -72,5 +72,111 @@ export const EndsOnADay: Story = {
     await expect(dialog.getByRole('button', { name: 'Ends on' })).not.toHaveTextContent('Now')
     await userEvent.click(dialog.getByRole('button', { name: 'End charge' }))
     await expect(args.onEnd).toHaveBeenCalledWith(LINE, { effectiveFrom: FIFTEENTH })
+  },
+}
+
+const USAGE_LINE: SubscriptionLine = {
+  ...LINE,
+  id: 'li_api',
+  name: 'API calls',
+  kind: 'usage',
+  quantity: '',
+  amount: { amount: '0.02', currency: 'USD' },
+  priceId: 'price_api',
+  amountEditable: false,
+  pricing: {
+    billingModel: 'FLAT_FEE',
+    tierMode: null,
+    tiers: [],
+    divideBy: null,
+    priceUnit: '',
+    meterId: 'meter_api',
+    billingPeriod: 'MONTHLY',
+    currency: 'USD',
+    terms: { bucketSize: '', commitment: null },
+  },
+} as SubscriptionLine
+
+/** Saving a metered charge as it was sends nothing: a save would still start a new price. */
+export const EditWithoutChangesSendsNothing: Story = {
+  args: {
+    state: { mode: 'edit', line: USAGE_LINE },
+    meters: [{ id: 'meter_api', name: 'API calls' }],
+  } as never,
+  play: async ({ args }) => {
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save charge' }))
+    await expect(await dialog.findByText(/Nothing has changed/)).toBeVisible()
+    await expect(args.onEdit).not.toHaveBeenCalled()
+  },
+}
+
+const WINDOW_LINE: SubscriptionLine = {
+  ...LINE,
+  id: 'usage-line',
+  name: 'API calls',
+  kind: 'usage',
+  quantity: '',
+  amount: { amount: '0.05', currency: 'USD' },
+  pricing: {
+    billingModel: BillingModel.FlatFee,
+    tierMode: null,
+    tiers: [],
+    divideBy: null,
+    priceUnit: '',
+    meterId: 'api-meter',
+    currency: 'USD',
+    billingPeriod: BillingPeriod.Monthly,
+    terms: {
+      bucketSize: '',
+      commitment: {
+        kind: CommitmentKind.Amount,
+        value: '100',
+        windowed: true,
+        overageFactor: '1',
+        trueUp: false,
+        windows: [
+          {
+            id: 'keep-bucket-id',
+            start: '08:00',
+            end: '17:00',
+            value: '100',
+            overageFactor: '1',
+            trueUp: false,
+            priceId: 'keep-price-id',
+          },
+        ],
+      },
+    },
+  },
+}
+export const EditExistingTimeWindow: Story = {
+  args: {
+    state: { mode: 'edit', line: WINDOW_LINE },
+    billingPeriod: BillingPeriod.Monthly,
+    meters: [{ id: 'api-meter', name: 'API calls' }],
+  },
+  play: async ({ args }) => {
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.clear(dialog.getByRole('textbox', { name: 'Window 1 start (UTC)' }))
+    await userEvent.type(dialog.getByRole('textbox', { name: 'Window 1 start (UTC)' }), '08:30')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save charge' }))
+    await expect(args.onEdit).toHaveBeenCalledWith(
+      WINDOW_LINE,
+      expect.objectContaining({
+        priceChanged: false,
+        terms: expect.objectContaining({
+          commitment: expect.objectContaining({
+            windows: [
+              expect.objectContaining({
+                id: 'keep-bucket-id',
+                priceId: 'keep-price-id',
+                start: '08:30',
+              }),
+            ],
+          }),
+        }),
+      }),
+    )
   },
 }

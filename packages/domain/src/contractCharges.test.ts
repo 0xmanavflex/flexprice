@@ -6,6 +6,7 @@ import {
   attachableAddonOverrides,
   cadenceAllowed,
   selectContractCharges,
+  splitsAcrossBillingPeriod,
 } from './contractCharges'
 
 const charge = (id: string, billingPeriod: BillingPeriod, extra: Partial<Charge> = {}): Charge =>
@@ -145,5 +146,30 @@ describe('attachableAddonOverrides', () => {
 
   it('keeps every override while the charges are unknown', () => {
     expect(attachableAddonOverrides(overrides, undefined, monthly)).toEqual(overrides)
+  })
+})
+
+describe('splitsAcrossBillingPeriod', () => {
+  const quarterly = { billingPeriod: BillingPeriod.Quarterly, billingPeriodCount: 1 }
+  it('is true only for a charge billed more often than the contract', () => {
+    expect(
+      splitsAcrossBillingPeriod(quarterly, {
+        billingPeriod: BillingPeriod.Monthly,
+        billingPeriodCount: 1,
+      }),
+    ).toBe(true)
+    expect(splitsAcrossBillingPeriod(quarterly, quarterly)).toBe(false)
+    expect(
+      splitsAcrossBillingPeriod(quarterly, {
+        billingPeriod: BillingPeriod.Annual,
+        billingPeriodCount: 1,
+      }),
+    ).toBe(false)
+    expect(
+      splitsAcrossBillingPeriod(quarterly, {
+        billingPeriod: BillingPeriod.OneTime,
+        billingPeriodCount: 1,
+      }),
+    ).toBe(false)
   })
 })

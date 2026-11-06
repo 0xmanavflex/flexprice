@@ -1,3 +1,4 @@
+import { spendingAllowanceSchema } from './spendingAllowance'
 import { FilterOp, type ListFilter, type ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
@@ -64,6 +65,8 @@ export interface Subscription {
   customerId: string
   /** Display name, already resolved. The UI never joins data. */
   customerName: string
+  /** The customer's id in the tenant's own system, when the read expanded the customer. */
+  customerExternalId?: string | undefined
   planId: string
   planName: string
   status: SubscriptionStatus
@@ -497,6 +500,13 @@ export const INHERITANCE_BLOCK_LABEL: Record<InheritanceBlock, string> = {
   [InheritanceBlock.OtherParent]: "Inherits another customer's contract",
 }
 
+/** A fixed add-on charge's quantity on one contract: a whole number of at least one. */
+export const addonQuantitySchema = z.object({
+  priceId: z.string().min(1),
+  quantity: z.string().regex(/^[1-9]\d*$/, 'Enter a whole number of at least 1'),
+})
+export type AddonQuantity = z.infer<typeof addonQuantitySchema>
+
 /**
  * The rules for starting a contract, in the order the form asks them: V1's:
  * customer and plan with the contract's dates; phases, each with its own
@@ -540,6 +550,7 @@ export const createSubscriptionSchema = z
     ),
     enableTrueUp: z.boolean(),
     chargeCommitments: z.array(chargeCommitmentSchema),
+    spendingAllowances: z.array(spendingAllowanceSchema).optional(),
     entitlementOverrides: z.array(
       z.object({
         entitlementId: z.string().min(1),
@@ -595,10 +606,18 @@ export const createSubscriptionSchema = z
         /** New prices for the add-on's own charges (`override_line_items`). */
         priceOverrides: z.array(priceOverrideSchema).optional(),
         commitments: z.array(chargeCommitmentSchema).optional(),
+        /** How many of each fixed charge, when not the add-on's own (an override's `quantity`). */
+        quantities: z.array(addonQuantitySchema).optional(),
         /** When this add-on starts. Blank starts it with the contract. An instant, or a day. */
         startDate: z.string().optional(),
       }),
     ),
+    /**
+     * Bill a charge at a shorter cadence as one line per invoice rather than
+     * one per its own period (`line_item_grouping: per_billing_period`). The
+     * total is the same either way.
+     */
+    combineChargePeriods: z.boolean().optional(),
     // Billing configuration.
     billingCycle: z.enum([BillingCycle.Anniversary, BillingCycle.Calendar]),
     /** `YYYY-MM-DD`: the day cycles are anchored to; blank follows the start date. */
@@ -942,6 +961,8 @@ export interface SubscriptionLine {
   endDate: Date | null
   /** Where the charge comes from: the plan (shared by every contract on it), an add-on, or this contract alone. */
   source: SubscriptionLineSource
+  /** On an add-on's line: which attachment of it (`SubscriptionAddon.id`). */
+  addonAssociationId?: string | undefined
   priceId: string
   /** Only a flat-fee price in a real currency can be repriced through a quantity change. */
   amountEditable: boolean
@@ -1261,6 +1282,8 @@ export interface InvoicePreview {
 
 /** An add-on attached to a contract. */
 export interface SubscriptionAddon {
+  addonId?: string
+
   id: string
   name: string
   active: boolean
@@ -1299,12 +1322,36 @@ export interface AddContractAddon {
   /** New prices for the add-on's own charges, sent as `override_line_items`. */
   priceOverrides?: PriceOverride[]
   commitments?: ChargeCommitment[]
+  /** How many of each fixed charge, when not the add-on's own. */
+  quantities?: AddonQuantity[]
   /** When the add-on starts. Blank starts it now, with the contract. */
   startDate?: string
+  /**
+   * On a running contract, with no `startDate`: start now or at the end of the
+   * current period (V1's timing). The API takes this or a date, never both.
+   */
+  changeAt?: AddonChangeAt
+  /** Charge or credit the part of the period it is on for. Absent: the API's default. */
+  prorate?: boolean
+}
+
+export type AddonChangeAt = 'immediate' | 'end_of_period'
+
+/** Take an add-on off a running contract, when and how V1 offers it. */
+export interface RemoveContractAddon {
+  /** The add-on's association with this contract. */
+  id: string
+  /** Now or at the end of the period; with neither this nor `effectiveDate`, the API's default. */
+  changeAt?: AddonChangeAt
+  /** A day to remove it on, `YYYY-MM-DD`; replaces `changeAt`. */
+  effectiveDate?: string
+  prorate?: boolean
 }
 
 /** Apply a coupon to one contract, or replace the coupons on one of its charges. */
 export interface AddContractCoupon {
+  startDate?: string
+  endDate?: string
   couponCode: string
   /**
    * Apply to this charge only.

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchIntegrations, toIntegrations } from './integrations'
+import { fetchIntegrations, toIntegrations, toIntegrationConnection } from './integrations'
 
 describe('toIntegrations', () => {
   it('lists the whole catalogue, matching zoho to its zoho_books connections', () => {
@@ -83,4 +83,12 @@ describe('fetchIntegrations', () => {
     expect(offsets).toEqual(['0', '100'])
     expect(integrations.find((i) => i.providerType === 'stripe')?.connections).toHaveLength(130)
   })
+})
+
+it('retains provider-specific sync settings rather than projecting only directions', () => {
+  const sync_config = {
+    invoice: { outbound: true, future: { enabled: true } },
+    invoice_sync_settings: { payment_gateways: { enabled: true, gateways: ['stripe'] } },
+  }
+  expect(toIntegrationConnection({ sync_config }).syncConfig).toEqual(sync_config)
 })

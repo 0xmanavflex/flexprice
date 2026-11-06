@@ -9,6 +9,7 @@ export interface ConnectorCardProps {
   description: string
   logo: ReactNode
   docsUrl?: string | undefined
+  connectDisabled?: boolean | undefined
   connected: boolean
   onConnect: () => void
   onConfigure: () => void
@@ -30,6 +31,7 @@ export function ConnectorCard({
   logo,
   docsUrl,
   connected,
+  connectDisabled,
   onConnect,
   onConfigure,
   configureLabel = 'Configure',
@@ -95,6 +97,7 @@ export function ConnectorCard({
               variant="outline"
               className="h-7 px-2.5"
               aria-label={`Connect ${name}`}
+              disabled={connectDisabled}
               onClick={onConnect}
             >
               Connect

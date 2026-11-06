@@ -11,7 +11,8 @@ export function IntegrationMark({
   integration,
   className,
 }: {
-  integration: CustomerIntegration
+  /** Only the provider id (`stripe`) and its name are read, so a payment gateway fits too. */
+  integration: Pick<CustomerIntegration, 'id' | 'name'>
   /** Overrides the 28px tray, e.g. `size-6` for a table cell. */
   className?: string
 }) {

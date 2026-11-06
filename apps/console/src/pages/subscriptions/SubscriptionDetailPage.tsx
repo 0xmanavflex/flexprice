@@ -4,11 +4,11 @@ import { useSession } from '@/app/session'
 import { SubscriptionJournalPanel } from './SubscriptionJournalPanel'
 import { SubscriptionRevenuePanel } from './SubscriptionRevenuePanel'
 import {
+  RBAC_ENTITY,
   activationStartDate,
   activationStartDay,
   AlertEntityType,
   DEFAULT_ADDON_QUERY,
-  DEFAULT_COUPON_QUERY,
   DEFAULT_TAX_RATE_QUERY,
   isUnstartedSubscription,
   PriceEntityType,
@@ -17,6 +17,15 @@ import {
   type SubscriptionLine,
 } from '@fp/domain'
 import {
+  useContractPickerCustomers,
+  useContractBenefitRecords,
+  useEditContractEntitlement,
+  useResetContractEntitlement,
+  useCreateSpendingAllowance,
+  useParentContractCandidates,
+  useUpdateContractParent,
+  useChangeInheritedCustomers,
+  useInheritanceBlocks,
   ApiError,
   useActivateSubscription,
   useRevenueRecognitionEnabled,
@@ -32,16 +41,13 @@ import {
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
   useCancelSubscription,
-  useCoupons,
+  useContractPickerCoupons,
   useCreateSubscriptionCreditGrant,
   useCreateSubscriptionEntitlement,
   useCreateSubscriptionTax,
   useCreateTaxRate,
-  useCustomerIntegrationLinks,
-  useConnections,
-  useLinkCustomerIntegration,
+  useEntityIntegrationControls,
   useTaxRates,
-  useUnlinkCustomerIntegration,
   useCreateSubscriptionLineItem,
   useDeleteSubscriptionLineItem,
   useExecuteLineChange,
@@ -71,12 +77,14 @@ import {
   serverReason,
 } from '@fp/query'
 import {
+  ContractBenefitsEditor,
+  ContractHierarchyEditor,
   EntityAlertDialog,
   SubscriptionDetailView,
   type SubscriptionPart,
   type SubscriptionTab,
 } from '@fp/ui/pages'
-import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
+import { AccessScope, ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input, Switch } from '@fp/ui/primitives'
 import { usePlanFormOptions, withMeters } from '../plans/planFormOptions'
 import { railActivity } from '@/pages/shared/activityLog'
@@ -154,6 +162,23 @@ export function SubscriptionDetailPage({
   const lineVersions = useSubscriptionLineVersions(openLine?.id ?? '')
   const chargeAlerts = useContractChargeAlerts(subscriptionId)
   const entitlements = useSubscriptionEntitlements(subscriptionId)
+  const benefitRecords = useContractBenefitRecords(subscriptionId)
+  const editBenefit = useEditContractEntitlement(subscriptionId)
+  const resetBenefit = useResetContractEntitlement(subscriptionId)
+  const createAllowance = useCreateSpendingAllowance(subscriptionId)
+  // Every customer and every parent candidate is a large read: it waits until
+  // the hierarchy editor opens a dialog that picks from them.
+  const [hierarchyOptions, setHierarchyOptions] = useState(false)
+  const hierarchyCustomers = useContractPickerCustomers(hierarchyOptions)
+  const parentCandidates = useParentContractCandidates(hierarchyOptions)
+  const parentContract = useSubscription(subscription.data?.parentSubscriptionId ?? '')
+  const updateParent = useUpdateContractParent(subscriptionId)
+  const changeInheritance = useChangeInheritedCustomers(subscriptionId)
+  const inheritanceBlocks = useInheritanceBlocks(
+    subscription.data?.customerId ?? '',
+    (hierarchyCustomers.data?.customers ?? []).map((customer) => customer.id),
+    hierarchyOptions,
+  )
   const creditGrants = useSubscriptionCreditGrants(subscriptionId)
   const usage = useSubscriptionUsage(subscriptionId)
   const invoices = useSubscriptionInvoices(subscriptionId)
@@ -184,10 +209,7 @@ export function SubscriptionDetailPage({
   // The usage against this contract's entitlements, from the endpoint the
   // customer overview reads, narrowed to this contract.
   const entitlementUsage = useContractUsageSummary(customerId, subscriptionId)
-  const integrationLinks = useCustomerIntegrationLinks(customerId)
-  const integrations = useConnections()
-  const linkIntegration = useLinkCustomerIntegration(customerId)
-  const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
+  const integrationMappings = useEntityIntegrationControls('subscription', subscriptionId)
   const createEntitlement = useCreateSubscriptionEntitlement(subscriptionId)
   const createCreditGrant = useCreateSubscriptionCreditGrant(
     subscriptionId,
@@ -201,8 +223,8 @@ export function SubscriptionDetailPage({
   const loadLineAlert = useLineItemAlertLookup(subscriptionId)
   const createTax = useCreateSubscriptionTax(subscriptionId)
   const createTaxRate = useCreateTaxRate()
-  const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
-  const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
+  const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: Number.MAX_SAFE_INTEGER })
+  const couponCatalogue = useContractPickerCoupons()
   // The charges of add-ons that have any, so attaching one can reprice them and commit on usage.
   const addonIds = (addonCatalogue.data?.addons ?? [])
     .filter((addon) => addon.status === 'published' && addon.chargeCount > 0)
@@ -218,7 +240,7 @@ export function SubscriptionDetailPage({
   const meters = withMeters(formOptions.meters, addonMeters.data ?? [])
   const taxRateCatalogue = useTaxRates({
     ...DEFAULT_TAX_RATE_QUERY,
-    pageSize: 100,
+    pageSize: Number.MAX_SAFE_INTEGER,
     statuses: ['published'],
   })
 
@@ -245,13 +267,6 @@ export function SubscriptionDetailPage({
   }
 
   const data = subscription.data
-  const linkedTypes = new Set((integrationLinks.data ?? []).map((link) => link.providerType))
-  const linkableProviders = (integrations.data ?? [])
-    .filter(
-      (integration) =>
-        integration.connections.length > 0 && !linkedTypes.has(integration.providerType),
-    )
-    .map((integration) => ({ providerType: integration.providerType, name: integration.name }))
   const close = () => setDialog(null)
 
   return (
@@ -332,6 +347,74 @@ export function SubscriptionDetailPage({
             readOnly={data.status === 'cancelled'}
           />
         }
+        benefitsEditor={
+          <AccessScope entity={RBAC_ENTITY.Entitlement}>
+            <ContractBenefitsEditor
+              subscriptionId={data.id}
+              entitlements={entitlements.data ?? []}
+              usage={entitlementUsage.data?.features}
+              records={benefitRecords.data ?? []}
+              features={formOptions.featureOptions}
+              isLoading={benefitRecords.isPending || entitlements.isPending}
+              error={
+                benefitRecords.isError || entitlements.isError
+                  ? 'Reload the entitlement data and try again.'
+                  : null
+              }
+              onRetry={() => {
+                void benefitRecords.refetch()
+                void entitlements.refetch()
+              }}
+              readOnly={data.status === 'cancelled' || data.subscriptionType === 'inherited'}
+              onCreate={(draft) => createEntitlement.mutateAsync(draft)}
+              onCreateAllowance={(draft) => createAllowance.mutateAsync(draft)}
+              onEdit={(entitlement, draft) => editBenefit.mutateAsync({ entitlement, draft })}
+              onReset={(entitlement) => resetBenefit.mutateAsync(entitlement)}
+            />
+          </AccessScope>
+        }
+        hierarchyEditor={
+          <AccessScope entity={RBAC_ENTITY.Subscription}>
+            <ContractHierarchyEditor
+              subscription={data}
+              inherited={inheritedContracts.data ?? []}
+              customers={hierarchyCustomers.data?.customers ?? []}
+              parents={parentCandidates.data ?? []}
+              blockedCustomerIds={inheritanceBlocks.data}
+              loading={data.subscriptionType === 'parent' && inheritedContracts.isPending}
+              error={
+                data.subscriptionType === 'parent' && inheritedContracts.isError
+                  ? 'Reload the contract hierarchy and try again.'
+                  : null
+              }
+              onRetry={() => {
+                void inheritedContracts.refetch()
+              }}
+              parentLabel={
+                parentContract.data
+                  ? `${parentContract.data.customerName} · ${parentContract.data.planName}`
+                  : null
+              }
+              onLoadOptions={() => setHierarchyOptions(true)}
+              optionsLoading={
+                hierarchyOptions && (hierarchyCustomers.isPending || parentCandidates.isPending)
+              }
+              optionsError={
+                hierarchyCustomers.isError || parentCandidates.isError
+                  ? 'Reload the customers and contracts to choose from, and try again.'
+                  : null
+              }
+              onRetryOptions={() => {
+                void hierarchyCustomers.refetch()
+                void parentCandidates.refetch()
+              }}
+              onParent={(parentId) => updateParent.mutateAsync(parentId)}
+              onInherit={(action, externalIds) =>
+                changeInheritance.mutateAsync({ action, externalIds })
+              }
+            />
+          </AccessScope>
+        }
         entitlements={part(entitlements)}
         entitlementUsage={entitlementUsage.data?.features}
         creditGrants={part(creditGrants)}
@@ -342,13 +425,21 @@ export function SubscriptionDetailPage({
         addons={part(addons)}
         coupons={part(coupons)}
         taxes={part(taxes)}
-        integrationLinks={integrationLinks.data ?? []}
-        linkableProviders={linkableProviders}
-        onLinkIntegration={(input) => linkIntegration.mutateAsync(input)}
-        onUnlinkIntegration={(input) => unlinkIntegration.mutateAsync(input)}
+        integrationLinks={integrationMappings.data ?? []}
+        linkableProviders={integrationMappings.controls?.linkable ?? []}
+        onLinkIntegration={(input) =>
+          integrationMappings.controls?.onLink(input) ??
+          Promise.reject(new Error('Contract mappings are not loaded.'))
+        }
+        onUnlinkIntegration={(input) =>
+          integrationMappings.controls?.onUnlink(input) ??
+          Promise.reject(new Error('Contract mappings are not loaded.'))
+        }
         onAddEntitlement={(draft) => createEntitlement.mutateAsync(draft)}
         onAddCreditGrant={(draft) => createCreditGrant.mutateAsync(draft)}
-        onAddAddon={(drafts) => addAddon.mutateAsync(drafts)}
+        onAddAddon={(drafts, removals) =>
+          addAddon.mutateAsync({ adds: drafts, removes: removals ?? [] })
+        }
         onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
         onRemoveCoupon={(coupon) => removeCoupon.mutateAsync(coupon.id)}
         onSaveChargeAlert={({ settingId, config }) =>
@@ -366,7 +457,9 @@ export function SubscriptionDetailPage({
         }}
         onRemoveAddon={(addon) => removeAddon.mutateAsync(addon.id)}
         onRemoveTax={(tax) => removeTax.mutateAsync(tax.id)}
-        onCancelCreditGrant={(grant) => endGrant.mutateAsync(grant.id)}
+        onCancelCreditGrant={(grant, effectiveDate) =>
+          endGrant.mutateAsync({ grantId: grant.id, effectiveDate })
+        }
         sectionOptions={{
           features: formOptions.featureOptions,
           addons: (addonCatalogue.data?.addons ?? [])
@@ -424,7 +517,10 @@ export function SubscriptionDetailPage({
           await addLine.mutateAsync({ id: data.id, draft })
         }}
         onEditCharge={async (line, draft) => {
-          await editLine.mutateAsync({ lineItemId: line.id, draft })
+          await editLine.mutateAsync({
+            lineItemId: line.id,
+            draft: { ...draft, subscriptionId: data.id },
+          })
         }}
         onEndCharge={async (line, draft) => {
           await endLine.mutateAsync({ lineItemId: line.id, draft })
@@ -483,7 +579,14 @@ export function SubscriptionDetailPage({
                   onCheckedChange={setFinalInvoice}
                 />
               </span>
-            ) : null}
+            ) : (
+              // The API raises a final invoice on demand only when the contract ends now;
+              // otherwise the last one comes at the end, as every period's does.
+              <span className="text-muted-foreground text-xs">
+                The last invoice is raised when the contract ends. To invoice now, cancel
+                immediately.
+              </span>
+            )}
             <label htmlFor="cancel-reason" className="flex flex-col gap-1.5 text-sm">
               Reason (optional)
               <Input
