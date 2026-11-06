@@ -1,0 +1,90 @@
+- main:
+  - navigation:
+    - button "Toggle Sidebar":
+      - generic: Toggle Sidebar
+    - generic "Billing"
+    - link "Customers":
+      - /url: /billing/customers
+    - link "PUP Acme 1792753923":
+      - /url: /billing/customers/cust_01M5M7C1WFQ91X66D56S7YVRY0
+    - link "Invoices":
+      - /url: /billing/customers/cust_01M5M7C1WFQ91X66D56S7YVRY0/invoice
+    - generic "Create"
+  - button "Toggle dark mode":
+  - combobox:
+    - generic: English
+  - button "Search or run a command (⌘K)":
+    - generic: Search...
+  - button "Help":
+    - text: Help
+  - button "Api":
+    - text: Api
+  - main:
+    - generic: Create One-off Invoice
+    - paragraph: Invoice Details
+    - paragraph: Issue Date
+    - paragraph
+    - paragraph: Currency
+    - generic: Issue Date
+    - button "Nov 06, 2026, 02:09 AM":
+      - generic: Nov 06, 2026, 02:09 AM
+    - paragraph
+    - combobox:
+      - generic: USD
+    - paragraph: Acme
+    - paragraph: Acme
+    - paragraph: zoro20014311@gmail.com
+    - paragraph: MIG 47 Bara khamba road Andkhoy FYB 211001 AF
+    - paragraph: Bill to
+    - paragraph: PUP Acme 1792753923
+    - paragraph: "--"
+    - paragraph
+    - paragraph: Order Details
+    - generic: Item Name
+    - textbox "Enter item name": Audit quantity check
+    - generic: Quantity
+    - textbox "1" [active]: "3"
+    - generic: Amount
+    - generic: $
+    - textbox "0.00": "2.3456"
+    - generic: Total
+    - generic: $
+    - textbox "0.00" [disabled]: "7.04"
+    - button:
+    - button "Add Line Item":
+      - generic: Add Line Item
+    - paragraph: Taxes
+    - paragraph: Tax Rate Overrides
+    - button "Add":
+      - text: Add
+    - table:
+      - rowgroup:
+        - row "Tax Rate Priority Auto Apply Tax Behavior Currency":
+          - columnheader "Tax Rate"
+          - columnheader "Priority"
+          - columnheader "Auto Apply"
+          - columnheader "Tax Behavior"
+          - columnheader "Currency"
+          - columnheader
+      - rowgroup:
+        - row "-- -- -- -- --":
+          - cell "--"
+          - cell "--"
+          - cell "--"
+          - cell "--"
+          - cell "--"
+          - cell
+    - paragraph: Coupons
+    - generic: Subtotal
+    - generic: $7.04
+    - generic: Tax
+    - generic: "-"
+    - generic: Total Amount
+    - generic: $7.04
+    - button "Cancel":
+      - generic: Cancel
+    - button "Create Invoice":
+      - generic: Create Invoice
+    - button:
+- iframe
+- iframe

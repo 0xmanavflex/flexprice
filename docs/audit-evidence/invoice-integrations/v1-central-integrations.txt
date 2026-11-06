@@ -1,0 +1,160 @@
+- main:
+  - navigation:
+    - button "Toggle Sidebar":
+      - generic: Toggle Sidebar
+    - generic "Tools"
+    - generic "Integrations"
+  - button "Toggle dark mode":
+  - combobox:
+    - generic: English
+  - button "Search or run a command (⌘K)":
+    - generic: Search...
+  - button "Help":
+    - text: Help
+  - button "Api":
+    - text: Api
+  - main:
+    - generic: Integrations
+    - heading "Available" [level=2]
+    - img "Stripe"
+    - heading "Stripe" [level=3]
+    - generic: Connected
+    - link "Docs":
+      - /url: https://docs.flexprice.io/integrations/stripe/
+      - text: Docs
+    - paragraph: Send invoices, calculate tax, and collect payments using our native connector to Stripe.
+    - generic: Payments
+    - generic: Invoices
+    - button:
+    - button:
+    - switch [checked]
+    - img "Razorpay"
+    - heading "Razorpay" [level=3]
+    - generic: Connected
+    - link "Docs":
+      - /url: https://docs.flexprice.io/integrations/razorpay/
+      - text: Docs
+    - paragraph: Accept, process and disburse payments using our native connector to Razorpay.
+    - generic: Payments
+    - generic: Invoices
+    - button:
+    - button:
+    - switch [checked]
+    - img "Chargebee"
+    - heading "Chargebee" [level=3]
+    - generic: Connected
+    - link "Docs":
+      - /url: https://docs.flexprice.io/integrations/chargebee/
+      - text: Docs
+    - paragraph: Sync invoices and charges/prices between Flexprice and Chargebee for seamless billing operations.
+    - generic: Payments
+    - generic: Invoices
+    - button:
+    - button:
+    - switch [checked]
+    - img "Hubspot"
+    - heading "Hubspot" [level=3]
+    - paragraph: Hubspot is a CRM, sales, marketing and customer service platform.
+    - generic: CRM
+    - generic: Sales
+    - generic: Marketing
+    - switch
+    - img "Zoho"
+    - heading "Zoho" [level=3]
+    - generic: Connected
+    - paragraph: The Zoho Books integration lets you manage critical accounting tasks directly from Flexprice.
+    - generic: Accounting
+    - generic: Invoices
+    - button:
+    - button:
+    - switch [checked]
+    - img "QuickBooks"
+    - heading "QuickBooks" [level=3]
+    - link "Docs":
+      - /url: https://docs.flexprice.io/integrations/quickbooks/
+      - text: Docs
+    - paragraph: Sync plans, customers, and invoices from Flexprice to QuickBooks Online for seamless accounting operations.
+    - generic: Accounting
+    - generic: Invoices
+    - switch
+    - img "Nomod"
+    - heading "Nomod" [level=3]
+    - link "Docs":
+      - /url: https://docs.flexprice.io/integrations/nomod
+      - text: Docs
+    - paragraph: Send invoices and collect payments using payment links through Nomod integration.
+    - generic: Payments
+    - generic: Invoices
+    - switch
+    - img "Moyasar"
+    - heading "Moyasar" [level=3]
+    - link "Docs":
+      - /url: https://docs.flexprice.io/integrations/moyasar/
+      - text: Docs
+    - paragraph: Send invoices and collect payments using Moyasar payment gateway integration.
+    - generic: Payments
+    - generic: Invoices
+    - switch
+    - img "Paddle"
+    - heading "Paddle" [level=3]
+    - paragraph: Send invoices and collect payments using Paddle payment gateway integration.
+    - generic: Payments
+    - generic: Invoices
+    - switch
+    - img "Whop"
+    - heading "Whop" [level=3]
+    - paragraph: Sync invoices to Whop with automatic payment status updates.
+    - generic: Invoices
+    - generic: Payments
+    - switch
+    - img "Tabs"
+    - heading "Tabs" [level=3]
+    - paragraph: Sync invoices to Tabs using your Tabs API key.
+    - generic: Payments
+    - generic: Invoices
+    - switch
+    - img "AWS Marketplace"
+    - heading "AWS Marketplace" [level=3]
+    - link "Docs":
+      - /url: https://docs.flexprice.io/integrations/marketplace-integration/aws/connection-setup
+      - text: Docs
+    - paragraph: Report metered usage to AWS Marketplace so your AWS buyers are billed for what they consume.
+    - generic: Marketplace
+    - generic: Usage Metering
+    - switch
+    - img "GCP Marketplace"
+    - heading "GCP Marketplace" [level=3]
+    - link "Docs":
+      - /url: https://docs.flexprice.io/integrations/marketplace-integration/gcp/connection-setup
+      - text: Docs
+    - paragraph: Report metered usage to GCP Marketplace so your GCP buyers are billed for what they consume.
+    - generic: Marketplace
+    - generic: Usage Metering
+    - switch
+    - img "Azure Marketplace"
+    - heading "Azure Marketplace" [level=3]
+    - link "Docs":
+      - /url: https://docs.flexprice.io/integrations/marketplace-integration/azure/connection-setup
+      - text: Docs
+    - paragraph: Report metered usage to Azure Marketplace so your Azure buyers are billed for what they consume.
+    - generic: Marketplace
+    - generic: Usage Metering
+    - switch
+    - paragraph: Premium add-ons
+    - img "Salesforce"
+    - heading "Salesforce" [level=3]
+    - generic: Premium
+    - paragraph: Salesforce is a customer relationship management (CRM) platform.
+    - generic: CRM
+    - generic: Accounting
+    - switch [disabled]
+    - img "PayPal"
+    - heading "PayPal" [level=3]
+    - generic: Premium
+    - paragraph: PayPal is an online payment system that supports online money transfers.
+    - generic: Payment
+    - generic: Invoice Customer
+    - switch [disabled]
+    - button:
+- iframe
+- iframe

@@ -1,0 +1,97 @@
+- main:
+  - navigation:
+    - button "Toggle Sidebar":
+      - generic: Toggle Sidebar
+    - generic "Billing"
+    - link "Invoices":
+      - /url: /billing/invoices
+    - link "INV-202611-00031":
+      - /url: /billing/invoices/inv_01M6PB0QQWC2YT4BH98636WQ74
+    - generic "Edit"
+  - button "Toggle dark mode":
+  - combobox:
+    - generic: English
+  - button "Search or run a command (⌘K)":
+    - generic: Search...
+  - button "Help":
+    - text: Help
+  - button "Api":
+    - text: Api
+  - main:
+    - generic: Edit Invoice
+    - paragraph: Invoice Details
+    - paragraph: Invoice Number
+    - paragraph: INV-202611-00031
+    - paragraph: Customer
+    - link:
+      - /url: /billing/customers/cust_01M5M7C1WFQ91X66D56S7YVRY0
+      - paragraph: PUP Acme 1792753923
+    - paragraph: Date of Issue
+    - paragraph: Nov 05, 2026
+    - paragraph: Invoice Status
+    - combobox:
+      - generic: Finalized
+    - paragraph: Payment Status
+    - combobox:
+      - generic: Pending
+    - paragraph: Currency
+    - paragraph: usd
+    - paragraph: Due Date
+    - button "Nov 06, 2026, 10:40 PM":
+      - generic: Nov 06, 2026, 10:40 PM
+    - paragraph: Period
+    - paragraph: 5 Nov 2026 - 5 Dec 2026
+    - paragraph: Description
+    - paragraph: Invoice for advance charges - subscription subs_01M6PB0QNZCZJHXZNC8593MVHP
+    - paragraph: Line Items
+    - paragraph: Editing line items marks this invoice as manually edited and turns off automatic recomputation.
+    - switch "Show Zero Charges"
+    - paragraph: Show Zero Charges
+    - paragraph
+    - table:
+      - rowgroup:
+        - row "Item Quantity Amount Service Period":
+          - columnheader "Item"
+          - columnheader "Quantity"
+          - columnheader "Amount"
+          - columnheader "Service Period"
+          - columnheader
+      - rowgroup:
+        - row "Base Base (Fixed Charge) 1 $100 5 Nov 2026 - 5 Dec 2026 Edit line item Remove line item":
+          - cell "Base Base (Fixed Charge)":
+            - paragraph: Base
+            - paragraph: Base (Fixed Charge)
+          - cell "1"
+          - cell "$100"
+          - cell "5 Nov 2026 - 5 Dec 2026"
+          - cell "Edit line item Remove line item":
+            - button "Edit line item":
+            - button "Remove line item":
+        - row "Seat Seat (Fixed Charge) 1 $10 5 Nov 2026 - 5 Dec 2026 Edit line item Remove line item":
+          - cell "Seat Seat (Fixed Charge)":
+            - paragraph: Seat
+            - paragraph: Seat (Fixed Charge)
+          - cell "1"
+          - cell "$10"
+          - cell "5 Nov 2026 - 5 Dec 2026"
+          - cell "Edit line item Remove line item":
+            - button "Edit line item":
+            - button "Remove line item":
+    - button "Add Line Item":
+      - generic: Add Line Item
+    - checkbox "Reapply coupon discounts"
+    - generic: Reapply coupon discounts
+    - paragraph: Recalculate discounts using the invoice's current coupons when saved.
+    - paragraph: Metadata
+    - textbox "Key": stripe_hosted_invoice_url
+    - textbox "Value": https://invoice.stripe.com/i/acct_1SHvkUPkGoeCGaiJ/test_YWNjdF8xU0h2a1VQa0dvZUNHYWlKLF9WWmRSYkY0WmFKRkN3dmZwT3dsdmd4cXphS2xzV243LDE4NDQzOTQxMQ0200jFfl1jVK?s=ap
+    - button "Remove":
+    - button "Add another item":
+      - generic: Add another item
+    - button "Cancel":
+      - generic: Cancel
+    - button "Save Changes" [disabled]:
+      - generic: Save Changes
+    - button:
+- iframe
+- iframe

@@ -1,0 +1,137 @@
+- main:
+  - generic: You are on the new Flexprice console.
+  - link "Go back to old UI":
+    - /url: https://dev.legacy.flexprice.io
+  - button "Toggle Sidebar":
+    - generic: Toggle Sidebar
+  - navigation "breadcrumb":
+    - list:
+      - 'button "Environment: Harshit''s home, sandbox. Change environment"':
+        - generic: Harshit's home
+      - link "New invoice" [disabled]:
+        - generic: New invoice
+  - button "Search":
+    - generic: Search everything
+    - generic: ⌘K
+  - button "Create something new":
+    - text: Create
+  - button "Close form":
+  - separator
+  - heading "New invoice" [level=1]
+  - button "Save draft":
+    - text: Save draft
+  - button "Finalize invoice":
+    - text: Finalize invoice
+  - generic: Invoice details
+  - generic: Customer, dates, items and taxes for a one-off invoice.
+  - generic: Status
+  - text: Draft
+  - generic: USD
+  - separator
+  - group "Invoice form":
+    - generic: Invoice form
+    - paragraph: Customer, dates, line items, taxes and notes.
+    - heading "Customer" [level=2]
+    - generic: Required
+    - paragraph: Who the invoice bills, and its number.
+    - generic: Customer
+    - button "More information":
+    - combobox "Customer" [active]: PUP Acme 1792753923
+    - button "Clear":
+    - textbox: PUP Acme 1792753923
+    - generic: Invoice number
+    - button "More information":
+    - textbox "Invoice number":
+      - /placeholder: Assigned automatically
+    - generic: From
+    - generic: Acme
+    - generic: zoro20014311@gmail.com
+    - generic: MIG 47
+    - generic: Bara khamba road
+    - generic: Andkhoy, FYB 211001
+    - generic: AF
+    - generic: Bill to
+    - generic: PUP Acme 1792753923
+    - separator
+    - heading "Dates and currency" [level=2]
+    - paragraph: When it is issued and due, and what it is billed in.
+    - generic: Issue date
+    - button "More information":
+    - button "Issue date":
+      - generic: Nov 6, 2026
+    - generic: Due date
+    - button "More information":
+    - button "Due date":
+      - generic: No due date
+    - generic: Currency
+    - button "More information":
+    - combobox "Currency":
+      - generic: USD
+    - textbox: USD
+    - separator
+    - heading "Line items" [level=2]
+    - generic: 1 item
+    - paragraph: "What the invoice charges for: quantity × unit price, with a note and service period."
+    - button "Add item":
+      - text: Add item
+    - table "Invoice line items":
+      - rowgroup:
+        - row "Item Qty Unit price Amount Remove":
+          - columnheader "Item"
+          - columnheader "Qty"
+          - columnheader "Unit price"
+          - columnheader "Amount"
+          - columnheader "Remove":
+            - generic: Remove
+      - rowgroup:
+        - row "Audit quantity check 3 $7.04 Remove line 1":
+          - cell "Audit quantity check":
+            - textbox "Line 1 name":
+              - /placeholder: What this line charges for
+              - text: Audit quantity check
+          - cell "3":
+            - textbox "Quantity for line 1": "3"
+          - cell:
+            - group: USD
+            - textbox "Unit price for line 1":
+              - /placeholder: "0.00"
+              - text: "2.3456"
+          - cell "$7.04":
+            - generic: $7.04
+          - cell "Remove line 1":
+            - button "Remove line 1" [disabled]:
+        - row "Period from Period to":
+          - cell "Period from Period to":
+            - textbox "Note for line 1":
+              - /placeholder: Note, printed under the line (optional)
+            - button "Period from":
+              - generic: Period from
+            - button "Period to":
+              - generic: Period to
+    - separator
+    - heading "Taxes" [level=2]
+    - generic: 0 rates
+    - paragraph: Applied by Flexprice on top of the lines. Starts from the customer's tax rates.
+    - paragraph: No taxes are applied.
+    - combobox:
+      - generic: Add a tax rate
+    - textbox
+    - separator
+    - heading "Notes" [level=2]
+    - generic: Optional
+    - paragraph: A memo printed on the invoice, and metadata for your own systems.
+    - generic: Memo
+    - button "More information":
+    - textbox "Memo"
+    - generic: Metadata
+    - button "Add key":
+      - text: Add key
+  - term: Subtotal
+  - definition: $7.04
+  - term: Tax
+  - definition: $0.00
+  - term: Total before tax
+  - definition: $7.04
+- region "Notifications alt+T"
+- region "Notifications alt+T"
+- region "Notifications alt+T"

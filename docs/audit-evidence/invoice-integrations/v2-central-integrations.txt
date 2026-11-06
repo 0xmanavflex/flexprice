@@ -1,0 +1,164 @@
+- generic "Main":
+  - generic: Acme
+  - list:
+    - button "Home":
+      - generic: Home
+    - button "Customers":
+      - generic: Customers
+    - button "Product catalog":
+      - generic: Product catalog
+    - button "Contracts":
+      - generic: Contracts
+    - button "Billing":
+      - generic: Billing
+    - button "Collections":
+      - generic: Collections
+    - button "Reports":
+      - generic: Reports
+    - button "Developers":
+      - generic: Developers
+  - region "What's new":
+    - generic: Subscriptions are now contracts
+    - paragraph: Charges split into Current, Upcoming and History, and a contract can have a parent.
+    - generic: rest
+    - link:
+      - /url: https://docs.flexprice.io/docs/subscriptions/customers-create-subscription
+      - text: Read more
+    - button: Dismiss
+    - generic: A new console
+    - paragraph: Search every record with ⌘K, and switch environments from the breadcrumb.
+    - link "Read more":
+      - /url: https://docs.flexprice.io/docs/welcome-to-flexprice
+      - text: Read more
+    - button "Dismiss"
+  - list:
+    - button "Integrations":
+      - generic: Integrations
+    - link "Documentation":
+      - /url: https://docs.flexprice.io/docs/welcome-to-flexprice
+      - generic: Documentation
+  - list:
+    - 'button "Account: demo-user-v2@flexprice.io. Open account menu"':
+      - generic: DU
+      - generic: demo-user-v2@flexprice.io
+  - button "Toggle Sidebar"
+- main:
+  - generic: You are on the new Flexprice console.
+  - link "Go back to old UI":
+    - /url: https://dev.legacy.flexprice.io
+  - navigation "breadcrumb":
+    - list:
+      - 'button "Environment: Harshit''s home, sandbox. Change environment"':
+        - generic: Harshit's home
+      - link "Integrations" [disabled]:
+        - generic: Integrations
+  - button "Search":
+    - generic: Search everything
+    - generic: ⌘K
+  - button "Create something new":
+    - text: Create
+  - textbox "Search integrations":
+    - /placeholder: Search integrations…
+  - combobox "Category":
+    - generic: Category
+    - generic: All
+  - textbox: All
+  - region "Connected":
+    - heading "Connected" [level=2]
+    - article:
+      - link "Setup guide for Stripe":
+        - /url: https://docs.flexprice.io/integrations/stripe/connection-setup
+      - heading "Stripe" [level=3]
+      - paragraph: Collect payments, sync invoices and calculate tax with Stripe.
+      - text: Connected
+      - button "Configure Stripe":
+        - text: Configure
+    - article:
+      - link "Setup guide for Razorpay":
+        - /url: https://docs.flexprice.io/integrations/razorpay/connection-setup
+      - heading "Razorpay" [level=3]
+      - paragraph: Send invoices to Razorpay and collect payment on them.
+      - text: Connected
+      - button "Configure Razorpay":
+        - text: Configure
+    - article:
+      - link "Setup guide for Chargebee":
+        - /url: https://docs.flexprice.io/integrations/chargebee/connection-setup
+      - heading "Chargebee" [level=3]
+      - paragraph: Send invoices to Chargebee.
+      - text: Connected
+      - button "Configure Chargebee":
+        - text: Configure
+    - article:
+      - heading "Zoho" [level=3]
+      - paragraph: Send invoices to Zoho Books and pull customers from it.
+      - text: Connected
+      - button "Configure Zoho":
+        - text: Configure
+  - region "Available":
+    - heading "Available" [level=2]
+    - article:
+      - heading "HubSpot" [level=3]
+      - paragraph: Push deals, quotes and invoices to HubSpot.
+      - generic: Not connected
+      - button "Connect HubSpot": Connect
+    - article:
+      - link "Setup guide for QuickBooks":
+        - /url: https://docs.flexprice.io/integrations/quickbooks/connection-setup
+      - heading "QuickBooks" [level=3]
+      - paragraph: Send invoices to QuickBooks Online and pull payments back.
+      - generic: Not connected
+      - button "Connect QuickBooks": Connect
+    - article:
+      - link "Setup guide for Nomod":
+        - /url: https://docs.flexprice.io/integrations/nomod/connection-setup
+      - heading "Nomod" [level=3]
+      - paragraph: Collect payments with Nomod payment links.
+      - generic: Not connected
+      - button "Connect Nomod": Connect
+    - article:
+      - link "Setup guide for Moyasar":
+        - /url: https://docs.flexprice.io/integrations/moyasar/connection-setup
+      - heading "Moyasar" [level=3]
+      - paragraph: Collect payments through Moyasar.
+      - generic: Not connected
+      - button "Connect Moyasar": Connect
+    - article:
+      - heading "Paddle" [level=3]
+      - paragraph: Collect payments through Paddle.
+      - generic: Not connected
+      - button "Connect Paddle": Connect
+    - article:
+      - heading "Whop" [level=3]
+      - paragraph: Sync invoices to Whop and keep payment status current.
+      - generic: Not connected
+      - button "Connect Whop": Connect
+    - article:
+      - heading "Tabs" [level=3]
+      - paragraph: Sync invoices to Tabs.
+      - generic: Not connected
+      - button "Connect Tabs": Connect
+    - article:
+      - link "Setup guide for AWS Marketplace":
+        - /url: https://docs.flexprice.io/integrations/marketplace-integration/aws/connection-setup
+      - heading "AWS Marketplace" [level=3]
+      - paragraph: Bill AWS Marketplace buyers for their metered usage.
+      - generic: Not connected
+      - button "Connect AWS Marketplace": Connect
+    - article:
+      - link "Setup guide for GCP Marketplace":
+        - /url: https://docs.flexprice.io/integrations/marketplace-integration/gcp/connection-setup
+      - heading "GCP Marketplace" [level=3]
+      - paragraph: Bill GCP Marketplace buyers for their metered usage.
+      - generic: Not connected
+      - button "Connect GCP Marketplace": Connect
+    - article:
+      - link "Setup guide for Azure Marketplace":
+        - /url: https://docs.flexprice.io/integrations/marketplace-integration/azure/connection-setup
+      - heading "Azure Marketplace" [level=3]
+      - paragraph: Bill Azure Marketplace buyers for their metered usage.
+      - generic: Not connected
+      - button "Connect Azure Marketplace": Connect
+- region "Notifications alt+T"
+- region "Notifications alt+T"
+- region "Notifications alt+T"

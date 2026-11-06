@@ -1,0 +1,171 @@
+- main:
+  - generic: You are on the new Flexprice console.
+  - link "Go back to old UI":
+    - /url: https://dev.legacy.flexprice.io
+  - button "Toggle Sidebar":
+    - generic: Toggle Sidebar
+  - navigation "breadcrumb":
+    - list:
+      - 'button "Environment: Harshit''s home, sandbox. Change environment"':
+        - generic: Harshit's home
+      - link "Invoice details" [disabled]:
+        - generic: Invoice details
+  - button "Search":
+    - generic: Search everything
+    - generic: ⌘K
+  - button "Create something new":
+    - text: Create
+  - heading "INV-202611-00031" [level=1]
+  - generic "Finalized":
+    - generic: Finalized
+  - generic "Payment pending":
+    - generic: Payment pending
+  - button "Copy ID inv_01M6PB0QQWC2YT4BH98636WQ74":
+    - generic: ID
+  - button "Chargebee integration":
+    - generic "Chargebee":
+      - generic: Chargebee
+  - button "Stripe integration":
+    - generic "Stripe":
+      - generic: Stripe
+  - button "More actions":
+  - tablist:
+    - tab "Invoice details" [selected]
+    - tab "Payments 0":
+      - text: Payments
+      - generic: "0"
+    - tab "Credit memos 0":
+      - text: Credit memos
+      - generic: "0"
+  - article:
+    - paragraph: $112.20
+    - paragraph: Amount due
+    - term: Invoice number
+    - definition: INV-202611-00031
+    - term: Date of issue
+    - definition: Nov 5, 2026
+    - term: Date due
+    - definition: Nov 6, 2026
+    - paragraph: Bill from
+    - paragraph: Acme
+    - paragraph: MIG 47
+    - paragraph: Bara khamba road
+    - paragraph: Andkhoy, FYB, 211001
+    - paragraph: AF
+    - paragraph: help@gmail.com
+    - paragraph: Bill to
+    - paragraph: PUP Acme 1792753923
+    - table "Line items":
+      - row "Description Interval Qty Unit price Amount":
+        - columnheader "Description"
+        - columnheader "Interval"
+        - columnheader "Qty"
+        - columnheader "Unit price"
+        - columnheader "Amount"
+      - row "Base Fixed charge Base (Fixed Charge) Service period November 5, 2026 – December 5, 2026 1 — $100.00":
+        - cell "Base Fixed charge Base (Fixed Charge)":
+          - generic: Base
+          - generic: Fixed charge
+          - generic: Base (Fixed Charge)
+        - cell "Service period November 5, 2026 – December 5, 2026":
+          - generic "Service period November 5, 2026 – December 5, 2026": Nov 5 – Dec 5
+        - cell "1"
+        - cell "—"
+        - cell "$100.00"
+      - row "Seat Fixed charge Seat (Fixed Charge) Service period November 5, 2026 – December 5, 2026 1 — $10.00":
+        - cell "Seat Fixed charge Seat (Fixed Charge)":
+          - generic: Seat
+          - generic: Fixed charge
+          - generic: Seat (Fixed Charge)
+        - cell "Service period November 5, 2026 – December 5, 2026":
+          - generic "Service period November 5, 2026 – December 5, 2026": Nov 5 – Dec 5
+        - cell "1"
+        - cell "—"
+        - cell "$10.00"
+    - paragraph: Memo
+    - paragraph: Invoice for advance charges - subscription subs_01M6PB0QNZCZJHXZNC8593MVHP
+    - term: Subtotal
+    - definition: $110.00
+    - term: Tax
+    - definition: $2.20
+    - term: Total
+    - definition: $112.20
+    - term: Amount due
+    - definition: $112.20
+    - generic: Payment is due on Nov 6, 2026.
+  - region "Activity":
+    - heading "Activity" [level=2]
+    - region "Activity history":
+      - list:
+        - paragraph:
+          - link "Invoice updated":
+            - /url: /invoices/inv_01M6PB0QQWC2YT4BH98636WQ74
+        - paragraph: 5 Nov · 22:40
+        - paragraph:
+          - link "INV-202611-00031":
+            - /url: /invoices/inv_01M6PB0QQWC2YT4BH98636WQ74
+          - text: · Finalized
+        - paragraph: By Workflow
+        - paragraph:
+          - link "Invoice updated":
+            - /url: /invoices/inv_01M6PB0QQWC2YT4BH98636WQ74
+        - paragraph: 5 Nov · 22:40
+        - paragraph:
+          - link "26631":
+            - /url: /invoices/inv_01M6PB0QQWC2YT4BH98636WQ74
+          - text: · Finalized
+        - paragraph: By Workflow
+        - paragraph:
+          - link "Invoice created":
+            - /url: /invoices/inv_01M6PB0QQWC2YT4BH98636WQ74
+        - paragraph: 5 Nov · 22:40
+        - paragraph:
+          - link "INV-202611-00031":
+            - /url: /invoices/inv_01M6PB0QQWC2YT4BH98636WQ74
+          - text: · Finalized
+        - paragraph: By Subrat · Dashboard
+  - region "Metadata":
+    - heading "Metadata" [level=2]
+    - button "Edit metadata":
+    - term: stripe_hosted_invoice_url
+    - definition:
+      - button "https://invoice.stripe.com/i/acct_1SHvkUPkGoeCGaiJ/test_YWNjdF8xU0h2a1VQa0dvZUNHYWlKLF9WWmRSYkY0WmFKRkN3dmZwT3dsdmd4cXphS2xzV243LDE4NDQzOTQxMQ0200jFfl1jVK?s=ap"
+      - button "Copy stripe_hosted_invoice_url":
+  - region "Related":
+    - heading "Related" [level=2]
+    - term: Customer
+    - definition:
+      - button "PUP Acme 1792753923":
+        - generic "PUP Acme 1792753923"
+      - button "Copy Customer ID":
+    - term: Contract
+    - definition:
+      - button "subs_01M6PB0QNZCZJHXZNC8593MVHP":
+        - generic "subs_01M6PB0QNZCZJHXZNC8593MVHP"
+      - button "Copy Contract ID":
+    - term: Payment page
+    - definition:
+      - link "Open hosted invoice":
+        - /url: https://invoice.stripe.com/i/acct_1SHvkUPkGoeCGaiJ/test_YWNjdF8xU0h2a1VQa0dvZUNHYWlKLF9WWmRSYkY0WmFKRkN3dmZwT3dsdmd4cXphS2xzV243LDE4NDQzOTQxMQ0200jFfl1jVK?s=ap
+        - generic "Open hosted invoice"
+    - generic "Chargebee":
+      - generic: Chargebee
+    - generic: Chargebee
+    - button "Chargebee ID 26631":
+      - generic: "26631"
+    - button "Copy invoice ID":
+    - button "Manage Chargebee integration":
+    - generic "Stripe":
+      - generic: Stripe
+    - generic: Stripe
+    - button "Stripe ID in_1UYUAuPkGoeCGaiJ0JtdWO7B":
+      - generic: in_1UYUAu…WO7B
+    - button "Copy invoice ID":
+    - button "Manage Stripe integration":
+    - button "Link integration":
+      - text: Link integration
+    - button "Push to Stripe, Razorpay, Chargebee, Zoho":
+      - text: Push to Stripe, Razorpay, Chargebee, Zoho
+- region "Notifications alt+T"
+- region "Notifications alt+T"
+- region "Notifications alt+T"

@@ -1,0 +1,249 @@
+- generic "Main":
+  - generic: Acme
+  - list:
+    - button:
+      - generic: Home
+    - button:
+      - generic: Customers
+    - button:
+      - generic: Product catalog
+    - button:
+      - generic: Contracts
+    - button:
+      - generic: Billing
+    - button:
+      - generic: Collections
+    - button:
+      - generic: Reports
+    - button:
+      - generic: Developers
+  - region "What's new":
+    - generic: Subscriptions are now contracts
+    - paragraph: Charges split into Current, Upcoming and History, and a contract can have a parent.
+    - generic: rest
+    - link:
+      - /url: https://docs.flexprice.io/docs/subscriptions/customers-create-subscription
+      - text: Read more
+    - button: Dismiss
+    - generic: A new console
+    - paragraph: Search every record with ⌘K, and switch environments from the breadcrumb.
+    - link:
+      - /url: https://docs.flexprice.io/docs/welcome-to-flexprice
+      - text: Read more
+    - button: Dismiss
+  - list:
+    - button:
+      - generic: Integrations
+    - link:
+      - /url: https://docs.flexprice.io/docs/welcome-to-flexprice
+      - generic: Documentation
+  - list:
+    - button:
+      - generic: DU
+      - generic: demo-user-v2@flexprice.io
+  - button
+- main:
+  - generic: You are on the new Flexprice console.
+  - link:
+    - /url: https://dev.legacy.flexprice.io
+    - text: Go back to old UI
+  - navigation:
+    - list:
+      - button:
+        - generic: Harshit's home
+      - link [disabled]:
+        - generic: Integrations
+  - button:
+    - generic: Search everything
+    - generic: ⌘K
+  - button:
+    - text: Create
+  - textbox:
+    - /placeholder: Search integrations…
+  - combobox:
+    - generic: Category
+    - generic: All
+  - textbox: All
+  - region:
+    - heading [level=2]: Connected
+    - article:
+      - link:
+        - /url: https://docs.flexprice.io/integrations/stripe/connection-setup
+      - heading [level=3]: Stripe
+      - paragraph: Collect payments, sync invoices and calculate tax with Stripe.
+      - text: Connected
+      - button:
+        - text: Configure
+    - article:
+      - link:
+        - /url: https://docs.flexprice.io/integrations/razorpay/connection-setup
+      - heading [level=3]: Razorpay
+      - paragraph: Send invoices to Razorpay and collect payment on them.
+      - text: Connected
+      - button:
+        - text: Configure
+    - article:
+      - link:
+        - /url: https://docs.flexprice.io/integrations/chargebee/connection-setup
+      - heading [level=3]: Chargebee
+      - paragraph: Send invoices to Chargebee.
+      - text: Connected
+      - button:
+        - text: Configure
+    - article:
+      - heading [level=3]: Zoho
+      - paragraph: Send invoices to Zoho Books and pull customers from it.
+      - text: Connected
+      - button:
+        - text: Configure
+  - region:
+    - heading [level=2]: Available
+    - article:
+      - heading [level=3]: HubSpot
+      - paragraph: Push deals, quotes and invoices to HubSpot.
+      - generic: Not connected
+      - button: Connect
+    - article:
+      - link:
+        - /url: https://docs.flexprice.io/integrations/quickbooks/connection-setup
+      - heading [level=3]: QuickBooks
+      - paragraph: Send invoices to QuickBooks Online and pull payments back.
+      - generic: Not connected
+      - button: Connect
+    - article:
+      - link:
+        - /url: https://docs.flexprice.io/integrations/nomod/connection-setup
+      - heading [level=3]: Nomod
+      - paragraph: Collect payments with Nomod payment links.
+      - generic: Not connected
+      - button: Connect
+    - article:
+      - link:
+        - /url: https://docs.flexprice.io/integrations/moyasar/connection-setup
+      - heading [level=3]: Moyasar
+      - paragraph: Collect payments through Moyasar.
+      - generic: Not connected
+      - button: Connect
+    - article:
+      - heading [level=3]: Paddle
+      - paragraph: Collect payments through Paddle.
+      - generic: Not connected
+      - button: Connect
+    - article:
+      - heading [level=3]: Whop
+      - paragraph: Sync invoices to Whop and keep payment status current.
+      - generic: Not connected
+      - button: Connect
+    - article:
+      - heading [level=3]: Tabs
+      - paragraph: Sync invoices to Tabs.
+      - generic: Not connected
+      - button: Connect
+    - article:
+      - link:
+        - /url: https://docs.flexprice.io/integrations/marketplace-integration/aws/connection-setup
+      - heading [level=3]: AWS Marketplace
+      - paragraph: Bill AWS Marketplace buyers for their metered usage.
+      - generic: Not connected
+      - button: Connect
+    - article:
+      - link:
+        - /url: https://docs.flexprice.io/integrations/marketplace-integration/gcp/connection-setup
+      - heading [level=3]: GCP Marketplace
+      - paragraph: Bill GCP Marketplace buyers for their metered usage.
+      - generic: Not connected
+      - button: Connect
+    - article:
+      - link:
+        - /url: https://docs.flexprice.io/integrations/marketplace-integration/azure/connection-setup
+      - heading [level=3]: Azure Marketplace
+      - paragraph: Bill Azure Marketplace buyers for their metered usage.
+      - generic: Not connected
+      - button: Connect
+- region "Notifications alt+T"
+- region "Notifications alt+T"
+- region "Notifications alt+T"
+- dialog "Stripe":
+  - heading "Stripe" [level=2]
+  - paragraph: Connected Oct 1, 2026
+  - region "General":
+    - heading "General" [level=3]
+    - text: Connection name
+    - generic: "*"
+    - textbox "Connection name" [active]: Test
+  - region "Sync":
+    - heading "Sync" [level=3]
+    - list "What to sync":
+      - paragraph: Push customers
+      - paragraph: Create a Stripe customer for each Flexprice customer. Stripe Tax needs it to calculate tax.
+      - switch "Push customers"
+      - checkbox
+      - paragraph: Pull plans
+      - paragraph: Import Stripe products as Flexprice plans.
+      - switch "Pull plans" [checked]
+      - checkbox [checked]
+      - paragraph: Pull subscriptions
+      - paragraph: Create Flexprice subscriptions from Stripe ones.
+      - switch "Pull subscriptions" [checked]
+      - checkbox [checked]
+      - paragraph: Push invoices
+      - paragraph: Send Flexprice invoices to the provider when they are finalised.
+      - switch "Push invoices" [checked]
+      - checkbox [checked]
+      - paragraph: Push prices
+      - paragraph: Create matching Stripe prices for Flexprice ones.
+      - switch "Push prices" [checked]
+      - checkbox [checked]
+  - region "Webhook":
+    - heading "Webhook" [level=3]
+    - generic: Webhook URL
+    - button "Copy code":
+    - status
+    - region "Webhook URL":
+      - code:
+        - generic: https://api-dev.cloud.flexprice.io/v1/webhooks/stripe/00000000-0000-0000-0000-000000000000/env_01M1DQKFMP700552AXFSWFJ032
+    - generic: Events to send
+    - button "Copy code":
+    - status
+    - region "Webhook events":
+      - code:
+        - generic: checkout.session.completed
+        - generic: checkout.session.async_payment_succeeded
+        - generic: checkout.session.async_payment_failed
+        - generic: checkout.session.expired
+        - generic: customer.created
+        - generic: payment_intent.payment_failed
+        - generic: payment_intent.succeeded
+        - generic: setup_intent.succeeded
+        - generic: product.created
+        - generic: product.updated
+        - generic: product.deleted
+        - generic: invoice_payment.paid
+        - generic: customer.subscription.created
+        - generic: customer.subscription.updated
+        - generic: customer.subscription.deleted
+  - region "Keys":
+    - heading "Keys" [level=3]
+    - paragraph:
+      - text: Keys are stored encrypted and cannot be shown. You can replace the ones below; to change any other key, disconnect and connect again.
+    - generic: Secret key
+    - textbox "Secret key":
+      - /placeholder: Leave blank to keep the current value
+    - button "Show Secret key":
+    - generic: Publishable key
+    - textbox "Publishable key":
+      - /placeholder: Leave blank to keep the current value
+    - generic: Webhook signing secret
+    - button "More information":
+    - textbox "Webhook signing secret":
+      - /placeholder: Leave blank to keep the current value
+    - button "Show Webhook signing secret":
+    - paragraph: Created at the provider when you register the webhook URL above.
+  - region "Disconnect":
+    - heading "Disconnect" [level=3]
+    - paragraph: Flexprice stops syncing with Stripe and archives this connection. Nothing is deleted in Stripe. Connect again whenever you like.
+    - button "Disconnect Stripe"
+  - button "Close"
+  - button "Save changes" [disabled]
+  - button "Close":
+    - generic: Close

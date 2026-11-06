@@ -1,0 +1,491 @@
+- main:
+  - navigation:
+    - button "Toggle Sidebar":
+      - generic: Toggle Sidebar
+    - generic "Billing"
+    - link "Customers":
+      - /url: /billing/customers
+    - link "grp-parent-1791813398":
+      - /url: /billing/customers/cust_01M4R6DC070ZEJ4N0SG0RZV88X
+    - link "Subscription":
+      - /url: /billing/customers/cust_01M4R6DC070ZEJ4N0SG0RZV88X
+    - generic "GRP Plan 1791813384"
+  - button "Toggle dark mode":
+  - combobox:
+    - generic: English
+  - button "Search or run a command (⌘K)":
+    - generic: Search...
+  - button "Help":
+    - text: Help
+  - button "Api":
+    - text: Api
+  - main:
+    - generic: GP
+    - generic: Grp Parent 1791813398
+    - button "Copy Customer ID":
+    - navigation "Tabs":
+      - tab "Overview" [selected]
+      - tab "Wallet"
+      - tab "Invoice"
+      - tab "Information"
+      - tab "Tax"
+      - tab "Analytics"
+      - tab "Usage Events"
+    - paragraph: Subscription details
+    - button:
+    - paragraph: Subscription name
+    - paragraph: GRP Plan 1791813384
+    - paragraph: Status
+    - button "Active":
+      - generic: Active
+    - paragraph: Billing cycle
+    - paragraph: anniversary
+    - paragraph: Commitment Period
+    - paragraph: "--"
+    - paragraph: Payment terms
+    - paragraph: "--"
+    - paragraph: Timezone
+    - paragraph: UTC
+    - paragraph: Start date
+    - paragraph: Oct 2, 2026
+    - heading "Integrations" [level=3]
+    - table:
+      - rowgroup:
+        - row "Integration Integration Subscription ID Created At Updated At":
+          - columnheader "Integration"
+          - columnheader "Integration Subscription ID"
+          - columnheader "Created At"
+          - columnheader "Updated At"
+          - columnheader
+          - columnheader
+      - rowgroup:
+        - row "razorpay Razorpay — — — Integration actions":
+          - cell "razorpay Razorpay":
+            - img "razorpay"
+            - generic: Razorpay
+          - cell "—":
+            - generic: —
+          - cell "—":
+            - generic: —
+          - cell "—":
+            - generic: —
+          - cell
+          - cell "Integration actions":
+            - button "Integration actions":
+        - row "chargebee Chargebee — — — Integration actions":
+          - cell "chargebee Chargebee":
+            - img "chargebee"
+            - generic: Chargebee
+          - cell "—":
+            - generic: —
+          - cell "—":
+            - generic: —
+          - cell "—":
+            - generic: —
+          - cell
+          - cell "Integration actions":
+            - button "Integration actions":
+        - row "stripe Stripe — — — Integration actions":
+          - cell "stripe Stripe":
+            - img "stripe"
+            - generic: Stripe
+          - cell "—":
+            - generic: —
+          - cell "—":
+            - generic: —
+          - cell "—":
+            - generic: —
+          - cell
+          - cell "Integration actions":
+            - button "Integration actions":
+        - row "zoho_books Zoho Books — — — Integration actions":
+          - cell "zoho_books Zoho Books":
+            - img "zoho_books"
+            - generic: Zoho Books
+          - cell "—":
+            - generic: —
+          - cell "—":
+            - generic: —
+          - cell "—":
+            - generic: —
+          - cell
+          - cell "Integration actions":
+            - button "Integration actions":
+    - paragraph: Upcoming Invoices
+    - paragraph: This is a preview of the invoice that will be billed on Dec 2, 2026. It may change if subscription is updated.
+    - button:
+    - switch "Show Zero Charges"
+    - paragraph: Show Zero Charges
+    - paragraph
+    - table:
+      - rowgroup:
+        - row "Subscription Description Interval Quantity Amount":
+          - columnheader "Subscription"
+          - columnheader "Description"
+          - columnheader "Interval"
+          - columnheader "Quantity"
+          - columnheader "Amount"
+      - rowgroup:
+        - row "Platform Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $10":
+          - cell "Platform"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$10"
+        - row "monthly Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $30":
+          - cell "monthly"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$30"
+        - row "Analytics Export Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $30":
+          - cell "Analytics Export"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$30"
+        - row "Analytics Core Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $50":
+          - cell "Analytics Core"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$50"
+        - row "Backup Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $40":
+          - cell "Backup"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$40"
+        - row "Base Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $100":
+          - cell "Base"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$100"
+        - row "Seat Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $10":
+          - cell "Seat"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$10"
+        - row "Analytics Export Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $30":
+          - cell "Analytics Export"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$30"
+        - row "Analytics Core Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $50":
+          - cell "Analytics Core"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$50"
+        - row "Base Fixed charge 2 Dec 2026 - 1 Jan 2027 3 $300":
+          - cell "Base"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "3"
+          - cell "$300"
+        - row "Storage Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $80":
+          - cell "Storage"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$80"
+        - row "Seat Fixed charge 2 Dec 2026 - 1 Jan 2027 1 $10":
+          - cell "Seat"
+          - cell "Fixed charge"
+          - cell "2 Dec 2026 - 1 Jan 2027"
+          - cell "1"
+          - cell "$10"
+    - generic: Subtotal
+    - generic: $740
+    - generic: Discount
+    - generic: −$458
+    - generic: Tax
+    - button "Show tax breakdown":
+    - generic: $0
+    - generic: Net payable
+    - generic: $282
+    - paragraph: Upcoming Credits
+    - table:
+      - rowgroup:
+        - row "Credits Scheduled For Subscription Status":
+          - columnheader "Credits"
+          - columnheader "Scheduled For"
+          - columnheader "Subscription"
+          - columnheader "Status"
+      - rowgroup:
+        - row "30 Dec 2, 2026 Scheduled":
+          - cell "30":
+            - generic: "30"
+          - cell "Dec 2, 2026":
+            - generic: Dec 2, 2026
+          - cell:
+            - link:
+              - /url: /billing/customers/cust_01M4R6DC070ZEJ4N0SG0RZV88X/subscription/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC
+              - text: subs_01M4R6DCJHKBARJ9TKKRWZ5NKC
+          - cell "Scheduled":
+            - button "Scheduled":
+              - generic: Scheduled
+    - heading "Charges" [level=3]
+    - button "Filter":
+      - generic: Filter
+    - button "Sort":
+      - generic: Sort
+    - table:
+      - rowgroup:
+        - row "Display Name Price Type Billing Period Bucket Size Source Status Quantity Charge":
+          - columnheader "Display Name"
+          - columnheader "Price Type"
+          - columnheader "Billing Period"
+          - columnheader "Bucket Size"
+          - columnheader "Source"
+          - columnheader "Status"
+          - columnheader "Quantity"
+          - columnheader "Charge"
+          - columnheader
+      - rowgroup:
+        - row "Platform Fixed charge Monthly -- Subscription Active 1 $10":
+          - cell "Platform":
+            - generic: Platform
+          - cell "Fixed charge":
+            - generic: Fixed charge
+          - cell "Monthly":
+            - generic: Monthly
+          - cell "--":
+            - generic: "--"
+          - cell "Subscription":
+            - button "Subscription":
+              - generic: Subscription
+          - cell "Active":
+            - button "Active":
+              - generic: Active
+          - cell "1":
+            - generic: "1"
+          - cell "$10":
+            - generic "$10"
+          - cell
+        - row "monthly Fixed charge Monthly -- Addon Active 1 $30":
+          - cell "monthly":
+            - generic: monthly
+          - cell "Fixed charge":
+            - generic: Fixed charge
+          - cell "Monthly":
+            - generic: Monthly
+          - cell "--":
+            - generic: "--"
+          - cell "Addon":
+            - button "Addon":
+              - generic: Addon
+          - cell "Active":
+            - button "Active":
+              - generic: Active
+          - cell "1":
+            - generic: "1"
+          - cell "$30":
+            - generic "$30"
+          - cell
+        - row "Analytics Export Fixed charge Monthly -- Addon Active 1 $30":
+          - cell "Analytics Export":
+            - generic: Analytics Export
+          - cell "Fixed charge":
+            - generic: Fixed charge
+          - cell "Monthly":
+            - generic: Monthly
+          - cell "--":
+            - generic: "--"
+          - cell "Addon":
+            - button "Addon":
+              - generic: Addon
+          - cell "Active":
+            - button "Active":
+              - generic: Active
+          - cell "1":
+            - generic: "1"
+          - cell "$30":
+            - generic "$30"
+          - cell
+        - row "Analytics Core Fixed charge Monthly -- Addon Active 1 $50":
+          - cell "Analytics Core":
+            - generic: Analytics Core
+          - cell "Fixed charge":
+            - generic: Fixed charge
+          - cell "Monthly":
+            - generic: Monthly
+          - cell "--":
+            - generic: "--"
+          - cell "Addon":
+            - button "Addon":
+              - generic: Addon
+          - cell "Active":
+            - button "Active":
+              - generic: Active
+          - cell "1":
+            - generic: "1"
+          - cell "$50":
+            - generic "$50"
+          - cell
+        - row "Backup Fixed charge Monthly -- Addon Active 1 $40":
+          - cell "Backup":
+            - generic: Backup
+          - cell "Fixed charge":
+            - generic: Fixed charge
+          - cell "Monthly":
+            - generic: Monthly
+          - cell "--":
+            - generic: "--"
+          - cell "Addon":
+            - button "Addon":
+              - generic: Addon
+          - cell "Active":
+            - button "Active":
+              - generic: Active
+          - cell "1":
+            - generic: "1"
+          - cell "$40":
+            - generic "$40"
+          - cell
+        - row "Base Fixed charge Monthly -- Plan Active 1 $100":
+          - cell "Base":
+            - generic: Base
+          - cell "Fixed charge":
+            - generic: Fixed charge
+          - cell "Monthly":
+            - generic: Monthly
+          - cell "--":
+            - generic: "--"
+          - cell "Plan":
+            - button "Plan":
+              - generic: Plan
+          - cell "Active":
+            - button "Active":
+              - generic: Active
+          - cell "1":
+            - generic: "1"
+          - cell "$100":
+            - generic "$100"
+          - cell
+        - row "Seat Fixed charge Monthly -- Plan Active 1 $10":
+          - cell "Seat":
+            - generic: Seat
+          - cell "Fixed charge":
+            - generic: Fixed charge
+          - cell "Monthly":
+            - generic: Monthly
+          - cell "--":
+            - generic: "--"
+          - cell "Plan":
+            - button "Plan":
+              - generic: Plan
+          - cell "Active":
+            - button "Active":
+              - generic: Active
+          - cell "1":
+            - generic: "1"
+          - cell "$10":
+            - generic "$10"
+          - cell
+    - heading "Addons" [level=3]
+    - table:
+      - rowgroup:
+        - row "Name Quantity Charges":
+          - columnheader "Name"
+          - columnheader "Quantity"
+          - columnheader "Charges"
+          - columnheader
+      - rowgroup:
+        - row "monthly 1 $30.00":
+          - cell "monthly":
+            - generic: monthly
+          - cell "1":
+            - generic: "1"
+          - cell "$30.00":
+            - generic: $30.00
+          - cell
+        - row "Analytics 1791813384 1, 1 $80.00":
+          - cell "Analytics 1791813384":
+            - generic: Analytics 1791813384
+          - cell "1, 1":
+            - generic: 1, 1
+          - cell "$80.00":
+            - generic: $80.00
+          - cell
+        - row "Backup 1791813384 1 $40.00":
+          - cell "Backup 1791813384":
+            - generic: Backup 1791813384
+          - cell "1":
+            - generic: "1"
+          - cell "$40.00":
+            - generic: $40.00
+          - cell
+    - paragraph: Subscriptions Inheritance
+    - table:
+      - rowgroup:
+        - row "Customer Type Plan Start date Renewal date":
+          - columnheader "Customer"
+          - columnheader "Type"
+          - columnheader "Plan"
+          - columnheader "Start date"
+          - columnheader "Renewal date"
+      - rowgroup:
+        - row "Grouped invoicing Oct 02, 2026 Dec 02, 2026":
+          - cell:
+            - link:
+              - /url: /billing/customers/cust_01M4R6DC4S7VZPZNASZFHTTJHV
+              - text: Grp Child 1791813398
+          - cell "Grouped invoicing":
+            - button "Grouped invoicing":
+              - generic: Grouped invoicing
+          - cell:
+            - link:
+              - /url: /billing/customers/cust_01M4R6DC4S7VZPZNASZFHTTJHV/subscription/subs_01M4R6DD2W9AE4VJTCGB183F73
+              - text: GRP Plan 1791813384
+          - cell "Oct 02, 2026":
+            - generic: Oct 02, 2026
+          - cell "Dec 02, 2026":
+            - generic: Dec 02, 2026
+    - heading "Coupon Associations" [level=3]
+    - table:
+      - rowgroup:
+        - row "Coupon Name Coupon Code Discount Scope Start Date End Date":
+          - columnheader "Coupon Name"
+          - columnheader "Coupon Code"
+          - columnheader "Discount"
+          - columnheader "Scope"
+          - columnheader "Start Date"
+          - columnheader "End Date"
+      - rowgroup:
+        - row "GRP 50pct 1791813384 grp501791813384 50% Subscription Nov 5, 2026 Forever":
+          - cell "GRP 50pct 1791813384":
+            - link "GRP 50pct 1791813384":
+              - /url: /product-catalog/coupons/coupon_01M4R6D25ATR8D03DKQ5R7Q4Y1
+          - cell "grp501791813384":
+            - code: grp501791813384
+          - cell "50%":
+            - generic: 50%
+          - cell "Subscription":
+            - button "Subscription":
+              - generic: Subscription
+          - cell "Nov 5, 2026":
+            - generic: Nov 5, 2026
+          - cell "Forever":
+            - generic: Forever
+        - row "GRP 15 off 1791813449 grp151791813449 $15 Subscription Nov 5, 2026 Forever":
+          - cell "GRP 15 off 1791813449":
+            - link "GRP 15 off 1791813449":
+              - /url: /product-catalog/coupons/coupon_01M4R6EXQ71YWC1CREN6E27P10
+          - cell "grp151791813449":
+            - code: grp151791813449
+          - cell "$15":
+            - generic: $15
+          - cell "Subscription":
+            - button "Subscription":
+              - generic: Subscription
+          - cell "Nov 5, 2026":
+            - generic: Nov 5, 2026
+          - cell "Forever":
+            - generic: Forever
+    - button:
+- iframe
+- iframe
