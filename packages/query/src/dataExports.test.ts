@@ -13,6 +13,7 @@ import {
   fetchDataExports,
   toCreateDataExportRequest,
   toCreateS3ConnectionRequest,
+  toUpdateS3ConnectionRequest,
   toDataExport,
   toDataExportFilter,
   toExportRun,
@@ -151,6 +152,33 @@ describe('V1 exports flow: requests', () => {
       name: 'Managed',
       provider_type: 's3',
       sync_config: { s3: { is_flexprice_managed: true } },
+    })
+  })
+
+  it('updates the name alone, or rotates only the keys that were entered', () => {
+    expect(toUpdateS3ConnectionRequest({ ...emptyS3Connection(), name: ' Lake ' })).toEqual({
+      name: 'Lake',
+    })
+    expect(
+      toUpdateS3ConnectionRequest({
+        ...emptyS3Connection(),
+        name: 'Lake',
+        accessKeyId: ' AKIANEW ',
+        secretAccessKey: 'new-secret',
+      }),
+    ).toEqual({
+      name: 'Lake',
+      encrypted_secret_data: {
+        provider_type: 's3',
+        aws_access_key_id: 'AKIANEW',
+        aws_secret_access_key: 'new-secret',
+      },
+    })
+    expect(
+      toUpdateS3ConnectionRequest({ ...emptyS3Connection(), name: 'Lake', sessionToken: 'tok' }),
+    ).toEqual({
+      name: 'Lake',
+      encrypted_secret_data: { provider_type: 's3', aws_session_token: 'tok' },
     })
   })
 

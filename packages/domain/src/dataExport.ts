@@ -278,3 +278,15 @@ export function validateS3Connection(draft: CreateS3Connection): S3ConnectionErr
   }
   return errors
 }
+
+/** On edit the keys are optional; a new pair needs both halves. */
+export function validateS3ConnectionEdit(draft: CreateS3Connection): S3ConnectionErrors {
+  const errors: S3ConnectionErrors = {}
+  if (!draft.name.trim()) errors.name = 'Name the connection'
+  const accessKeyId = draft.accessKeyId.trim()
+  const secretAccessKey = draft.secretAccessKey.trim()
+  if (secretAccessKey && !accessKeyId) errors.accessKeyId = 'Enter the new AWS access key ID'
+  if (accessKeyId && !secretAccessKey)
+    errors.secretAccessKey = 'Enter the new AWS secret access key'
+  return errors
+}
