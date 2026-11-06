@@ -78,7 +78,7 @@ export function useContractBenefitRecords(subscriptionId: string) {
             expand: 'features',
             limit: 100,
             offset,
-          } as never),
+          }),
         )
         const items = (page.items ?? []) as EntitlementWire[]
         for (const wire of items) {
