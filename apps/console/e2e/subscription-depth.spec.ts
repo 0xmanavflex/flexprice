@@ -68,7 +68,7 @@ test('contract detail overview keeps every add section and adds a coupon', async
   for (const name of [
     'Add entitlement',
     'Add credit grant',
-    'Add add-on',
+    'Modify add-ons',
     'Add coupon',
     'Add tax',
   ]) {
