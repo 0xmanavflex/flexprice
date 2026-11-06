@@ -474,3 +474,35 @@ This update describes local implementation after the audit. It does not change t
 | Picker truncation | Customers, plans, coupons, features, price units and parent candidates are fetched in bounded pages to completion. Existing complete add-on/tax scans are no longer sliced to 100 in contract forms. Search covers the resulting complete catalogues; loading/failure is explicit. |
 
 Validation includes domain rules, SDK outbound serialization (including new versus existing bucket prices), full domain/query/console unit suites, focused browser stories, and local browser staging against Harshit’s home sandbox read data. No contract, entitlement, add-on, coupon or credit-grant mutation from this implementation was submitted to the live API. Successful live persistence, proration and rollback therefore remain a separate verification step.
+
+## Live persistence and UI follow-up — 6 November 2026
+
+This section supersedes the preceding update's statement that no mutations were submitted. Requests were sent directly to the deployed API using isolated `qa-contract-parity-20261106104229` resources in Harshit's home (`env_01M1DQKFMP700552AXFSWFJ032`). The API calls this environment `development`; the console labels it sandbox. Existing user contracts were read only. QA resources remain available for inspection. No payment or provider sync was performed.
+
+V1 source and its edit UI were inspected; these are direct API probes of the V1 request contracts, not a claim that every request was captured from a V1 UI submission. Sanitized request/status/error evidence is in [the API evidence file](audit-evidence/contract-api-parity-2026-11-06.json). It contains no authentication material.
+
+| Flow | Payload and live result |
+| --- | --- |
+| Create parent with several inherited customers | `POST /subscriptions`, `external_customer_ids_to_inherit_subscription` with two IDs: 201. |
+| Add several inherited customers | `POST /subscriptions/{id}/modify/execute`, `type: inheritance`, `inheritance_params.action: add`, array of two external IDs: 200. Readback found four children. |
+| Detach one child | `PUT /subscriptions/{child}`, `parent_subscription_id: ""`: 200; readback cleared its parent. An omitted value keeps the parent. V2 removes by known child contract ID even when its external customer ID is unavailable. |
+| Fixed quantity | Line-item-change preview and execute with quantity `"2"`: 200; readback preserved history and the new quantity. |
+| Entitlement override/edit/reset | Feature and plan entitlement created (201); linked subscription override created (201), updated (200), reset (200); plan source readback unchanged. |
+| Dated coupon | Coupon modification with start/end dates: 200; association readback retained both dates. Future coupons now display Scheduled and remain removable, rather than appearing Ended. |
+| Combined add-on changes | Two initial additions: 200. One combined add/remove with `change_at: immediate`: 200, new association read back. A first probe's effective timestamp preceded the association by a few seconds and was correctly rejected. |
+| Credit-grant end date | Grant created (201), cancellation with future `effective_date` (200); readback included end date. |
+| Usage commitment | Usage line created (201), commitment update (200). Changes version line items; subsequent edits must target the newest successor. V2 groups the full history and edits that newest version. |
+| Existing charge windows | New HOUR bucket/window on SUM meter: 200. Editing an existing window with its bucket ID and **without** a new price: 200. V2 already uses this mutually exclusive ID/price mapping. |
+
+Window probes also confirmed backend validation: COUNT meters cannot use bucketing, window duration must be a multiple of bucket size, and an existing bucket must send its ID without a replacement price. Earlier rejected probes are retained in evidence; they are not counted as successful tests.
+
+### UX and availability changes
+
+- Both create and edit use a searchable multiselect for inherited customers. One contract still has one parent; several customers may inherit that parent. Parent candidates must be active and must not already inherit another parent. A parent with children cannot acquire its own parent.
+- Entitlements appear once per feature, with effective value/usage and source-aware edit/reset actions in the same table. Missing effective data is labeled Not reported rather than assumed unlimited.
+- Spending allowance is a monetary quota shared across usage charges, not a feature ID. Its form validates a positive finite number, displays currency, and omits timed-window fields for billing-period resets. Existing allowance edits send quota only, matching V1.
+- The deployed environment reported allowances unavailable. `VITE_SPENDING_ALLOWANCES_ENABLED` defaults false; create controls and empty allowance sections stay hidden. Existing saved allowances remain readable. No automatic write probe or invented capability endpoint is used. Enable only when the deployment supports it.
+
+This is not proof of every billing outcome. Mixed tier/custom-unit window consumption, backdated prorations, invoice totals after every mutation, cancellation rollback, and every environment/role combination were not live-tested. Backend-disabled allowances and the separate invoice/integration backend decisions remain outside frontend completion.
+
+Validation for this follow-up: domain 676 tests, query 759 tests, 87 focused allowance/hierarchy/entitlement/form stories, 101 contract-detail/integration stories plus the corrected scheduled-coupon story, and 7 mocked creation/detail browser journeys passed. Typecheck and lint passed across domain/query/UI/console; console production build passed. Vendor, page matrix, anatomy and whitespace checks passed. A shared in-progress integration edit briefly broke rendering through missing prop/state declarations; restoring those declarations allowed the final checks and live browser verification to pass. The two-customer selection was staged and cancelled in the live UI; live persistence was exercised only with the isolated QA customers described above.
