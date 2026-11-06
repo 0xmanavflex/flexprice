@@ -159,8 +159,8 @@ importers:
   packages/api:
     dependencies:
       '@flexprice/sdk':
-        specifier: 2.1.47-dev.23
-        version: 2.1.47-dev.23
+        specifier: 2.1.47-dev.28
+        version: 2.1.47-dev.28
     devDependencies:
       typescript:
         specifier: ~5.9.2
@@ -217,8 +217,8 @@ importers:
         version: 5.103.2(react@19.3.0)
     devDependencies:
       '@flexprice/sdk':
-        specifier: 2.1.47-dev.23
-        version: 2.1.47-dev.23
+        specifier: 2.1.47-dev.28
+        version: 2.1.47-dev.28
       '@types/react':
         specifier: ^19.2.14
         version: 19.3.0
@@ -1393,8 +1393,8 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@flexprice/sdk@2.1.47-dev.23':
-    resolution: {integrity: sha512-BzpjhP0vGZoxXFA6DZ9/eDLsj8FXZLJ63Aj3MJEZZkngqC0PiR5soVHEhz9daoYq2rWMD3TjytidBak5MAngKA==}
+  '@flexprice/sdk@2.1.47-dev.28':
+    resolution: {integrity: sha512-kUzwQKWtcurg9/X07U6lcMc4GcUeH6MDyhwCKAt/SnePm5EwndGx6G8V8D7pNp8i9IfpcmpSQasRxvmZ0tw0eA==}
     engines: {node: '>=18'}
 
   '@floating-ui/core@1.8.0':
@@ -6038,8 +6038,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.22.0:
-    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+  ws@8.22.1:
+    resolution: {integrity: sha512-oyL6OPYme/CmiFvNuGzeoxCJ4nOrZE2O1FwM9MWM1AsGri6nLXB2pg+lNA8aLeXMSav0J6eIVS1j6vUPzUtK9g==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -7305,7 +7305,7 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
-  '@flexprice/sdk@2.1.47-dev.23':
+  '@flexprice/sdk@2.1.47-dev.28':
     dependencies:
       zod: 4.6.7
 
@@ -9931,7 +9931,7 @@ snapshots:
       buffer-image-size: 0.6.4
       entities: 7.0.1
       whatwg-mimetype: 3.0.0
-      ws: 8.22.0
+      ws: 8.22.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -12155,7 +12155,7 @@ snapshots:
 
   ws@8.21.3: {}
 
-  ws@8.22.0:
+  ws@8.22.1:
     optional: true
 
   wsl-utils@0.1.0:
