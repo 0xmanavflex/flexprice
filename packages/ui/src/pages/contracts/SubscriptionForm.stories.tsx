@@ -659,8 +659,8 @@ export const PhaseCharges: Story = {
     await userEvent.click(dialog.getByRole('button', { name: 'Save commitment' }))
     await expect(await dialog.findByText('Enter a commitment greater than zero.')).toBeVisible()
     await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
-    // A new contract is one set of charges, as the reference: no phases to add.
-    await expect(canvas.queryByRole('button', { name: 'Add phase' })).toBeNull()
+    // A second phase needs an explicit boundary first.
+    await expect(canvas.getByRole('button', { name: 'Add phase' })).toBeDisabled()
   },
 }
 
@@ -2060,5 +2060,20 @@ export const ProtectsUnsavedConfiguration: Story = {
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Discard changes' }),
     )
     await expect(args.onCancel).toHaveBeenCalledTimes(1)
+  },
+}
+
+export const AddsSecondPhase: Story = {
+  args: { prefilled: true, noTrial: true, step: 'phases', endDate: '2027-01-01' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add phase' }))
+    await expect(canvas.getByRole('heading', { name: 'Phase 2' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await expect(
+      canvas.getByText(
+        'A draft contract cannot have phases. Create the contract instead, or keep a single phase.',
+      ),
+    ).toBeVisible()
   },
 }

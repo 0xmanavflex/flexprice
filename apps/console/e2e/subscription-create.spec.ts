@@ -94,10 +94,18 @@ test('creates a contract that other customers inherit', async ({ page }) => {
   // V1's term. A customer with a contract of its own cannot inherit, so it is
   // listed but not choosable; pick the first one that can.
   const picker = page.getByRole('combobox', { name: /^Inherited customers/ })
-  await expect(picker).toHaveAttribute('placeholder', 'Add customers to inherit…')
+  await expect(picker).toHaveAttribute('placeholder', 'Search and select customers…')
   await picker.click()
-  await page.locator('[role="option"]:not([aria-disabled="true"])').first().click()
-  await expect(page.getByRole('button', { name: /^Remove / })).toHaveCount(1)
+  await page
+    .locator('[role="option"]:not([aria-disabled="true"]):not([aria-selected="true"])')
+    .first()
+    .click()
+  await page
+    .locator('[role="option"]:not([aria-disabled="true"]):not([aria-selected="true"])')
+    .first()
+    .click()
+  await picker.press('Escape')
+  await expect(page.getByRole('button', { name: /^Remove / })).toHaveCount(2)
 
   await page.getByRole('button', { name: 'Next' }).click()
   await expect(page).toHaveURL(/step=review/, { timeout: 15_000 })
@@ -112,7 +120,7 @@ test('creates a contract that other customers inherit', async ({ page }) => {
   const { inheritance } = (await (await response).json()) as {
     inheritance?: Record<string, unknown>
   }
-  expect(inheritance?.['external_customer_ids_to_inherit_subscription']).toHaveLength(1)
+  expect(inheritance?.['external_customer_ids_to_inherit_subscription']).toHaveLength(2)
   expect(inheritance).not.toHaveProperty('invoicing_customer_external_id')
   await expect(page).toHaveURL(/\/contracts$/)
 })

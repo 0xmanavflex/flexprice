@@ -369,3 +369,14 @@ describe('V1 spending allowance API contract', () => {
     })
   })
 })
+
+it('serializes multiple inherited customer selections together by external ID', () => {
+  expect(
+    ExecuteSubscriptionModifyRequest$outboundSchema.parse(
+      toInheritanceChangeRequest('add', ['external-us', 'external-eu']),
+    ).inheritance_params,
+  ).toEqual({
+    action: 'add',
+    external_customer_ids_to_inherit_subscription: ['external-us', 'external-eu'],
+  })
+})

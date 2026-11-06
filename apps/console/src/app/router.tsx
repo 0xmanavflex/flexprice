@@ -892,7 +892,15 @@ function SubscriptionCreateRouteComponent() {
         })
       }
       onCancel={() => void navigate({ to: '/contracts', search: {} as never })}
-      onDone={() => void navigate({ to: '/contracts', search: {} as never })}
+      onDone={(subscriptionId, draft) =>
+        void (draft && subscriptionId
+          ? navigate({
+              to: '/contracts/$subscriptionId',
+              params: { subscriptionId },
+              search: {} as never,
+            })
+          : navigate({ to: '/contracts', search: {} as never }))
+      }
     />
   )
 }

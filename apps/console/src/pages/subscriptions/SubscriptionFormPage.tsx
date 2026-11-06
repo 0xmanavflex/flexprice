@@ -42,7 +42,7 @@ export interface SubscriptionFormPageProps {
   step?: string
   onStepChange: (id: string) => void
   onCancel: () => void
-  onDone: (subscriptionId: string) => void
+  onDone: (subscriptionId: string, draft?: boolean) => void
 }
 
 const PICKER_PAGE = { page: 1, pageSize: Number.MAX_SAFE_INTEGER }
@@ -270,7 +270,7 @@ export function SubscriptionFormPage({
       submitError={explainContractCreateError(create.error, nameOf)}
       onSubmit={(draft) =>
         create.mutate(draft, {
-          onSuccess: (created) => onDone((created as { id?: string }).id ?? ''),
+          onSuccess: (created) => onDone((created as { id?: string }).id ?? '', draft.draft),
         })
       }
     />

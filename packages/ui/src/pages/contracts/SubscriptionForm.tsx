@@ -817,6 +817,9 @@ export function SubscriptionForm({
    * refused while trialing too.
    */
   const statusConflict = (draft: CreateSubscription): string | null => {
+    if (draft.draft && draft.phases.length > 1) {
+      return 'A draft contract cannot have phases. Create the contract instead, or keep a single phase.'
+    }
     const added = draft.phases.some((phase) => phase.extraCharges.length > 0)
     const trial = (draft.trialPeriodDays ?? 0) > 0
     if (added && draft.draft) {
@@ -2768,21 +2771,24 @@ function PhasesStep({
   )
 
   const addPhase = (
-    <div className="flex flex-col gap-1.5">
-      <Button
-        type="button"
-        variant="outline"
-        className="h-11 w-full border-dashed"
-        disabled={!canAdd}
-        onClick={() => {
-          setCollapsed(new Set(phases.map((_, i) => i)))
-          onChange([...phases, emptyPhase()])
-        }}
-      >
-        <PlusIcon data-icon="inline-start" aria-hidden />
-        Add phase
-      </Button>
-      <p className="text-muted-foreground text-center text-xs">
+    <FormCard
+      title="Contract phases"
+      adornment={
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!canAdd}
+          onClick={() => {
+            setCollapsed(new Set(phases.map((_, i) => i)))
+            onChange([...phases, emptyPhase()])
+          }}
+        >
+          <PlusIcon data-icon="inline-start" aria-hidden />
+          Add phase
+        </Button>
+      }
+    >
+      <p className="text-muted-foreground px-5 py-4 text-sm sm:px-6">
         {single
           ? canAdd
             ? `Change the charges partway through: a second phase starts on ${formatDay(last!.endDate)}, with its own charges and discounts.`
@@ -2791,7 +2797,7 @@ function PhasesStep({
             ? `Phase ${phases.length + 1} starts when Phase ${phases.length} ends, with its own charges and discounts.`
             : `A new phase starts when Phase ${phases.length} ends, so Phase ${phases.length} needs an end date first.`}
       </p>
-    </div>
+    </FormCard>
   )
 
   const couponingCharge = couponing
@@ -2903,6 +2909,7 @@ function PhasesStep({
           coupons={coupons}
           onChange={(discounts) => update(0, { discounts })}
         />
+        {addPhase}
         {addChargeDialog}
         {couponDialog}
       </div>
