@@ -159,8 +159,8 @@ importers:
   packages/api:
     dependencies:
       '@flexprice/sdk':
-        specifier: 2.1.47-dev.28
-        version: 2.1.47-dev.28
+        specifier: 2.1.47-dev.32
+        version: 2.1.47-dev.32
     devDependencies:
       typescript:
         specifier: ~5.9.2
@@ -217,8 +217,8 @@ importers:
         version: 5.103.2(react@19.3.0)
     devDependencies:
       '@flexprice/sdk':
-        specifier: 2.1.47-dev.28
-        version: 2.1.47-dev.28
+        specifier: 2.1.47-dev.32
+        version: 2.1.47-dev.32
       '@types/react':
         specifier: ^19.2.14
         version: 19.3.0
@@ -1393,8 +1393,8 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@flexprice/sdk@2.1.47-dev.28':
-    resolution: {integrity: sha512-kUzwQKWtcurg9/X07U6lcMc4GcUeH6MDyhwCKAt/SnePm5EwndGx6G8V8D7pNp8i9IfpcmpSQasRxvmZ0tw0eA==}
+  '@flexprice/sdk@2.1.47-dev.32':
+    resolution: {integrity: sha512-FIG/A+CqETFLCr7F6vqACMg5UvyV4FRb/TqygXkTWy7BB7PwlcRxvAQ671Wd2omAnvevd9hW4fsEX8SJ3B1UZA==}
     engines: {node: '>=18'}
 
   '@floating-ui/core@1.8.0':
@@ -7305,7 +7305,7 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
-  '@flexprice/sdk@2.1.47-dev.28':
+  '@flexprice/sdk@2.1.47-dev.32':
     dependencies:
       zod: 4.6.7
 
