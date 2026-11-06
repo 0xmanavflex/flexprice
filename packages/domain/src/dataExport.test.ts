@@ -66,5 +66,8 @@ describe('validateS3ConnectionEdit', () => {
     expect(
       validateS3ConnectionEdit({ ...named, accessKeyId: 'AKIA', secretAccessKey: 's' }),
     ).toEqual({})
+    expect(validateS3ConnectionEdit({ ...named, sessionToken: 'tok' })).toEqual({
+      accessKeyId: 'Enter the new AWS keys this session token belongs to',
+    })
   })
 })

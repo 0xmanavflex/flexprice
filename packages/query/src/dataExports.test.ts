@@ -175,10 +175,21 @@ describe('V1 exports flow: requests', () => {
       },
     })
     expect(
-      toUpdateS3ConnectionRequest({ ...emptyS3Connection(), name: 'Lake', sessionToken: 'tok' }),
+      toUpdateS3ConnectionRequest({
+        ...emptyS3Connection(),
+        name: 'Lake',
+        accessKeyId: 'ASIA',
+        secretAccessKey: 'temp-secret',
+        sessionToken: 'tok',
+      }),
     ).toEqual({
       name: 'Lake',
-      encrypted_secret_data: { provider_type: 's3', aws_session_token: 'tok' },
+      encrypted_secret_data: {
+        provider_type: 's3',
+        aws_access_key_id: 'ASIA',
+        aws_secret_access_key: 'temp-secret',
+        aws_session_token: 'tok',
+      },
     })
   })
 

@@ -455,20 +455,18 @@ export function useCreateS3Connection() {
   })
 }
 
-/** The edit request: the name, plus new keys only when they were entered. */
+/** The edit request: the name, plus a new key pair (and its session token) when one was entered. */
 export function toUpdateS3ConnectionRequest(draft: CreateS3Connection) {
   const accessKeyId = draft.accessKeyId.trim()
-  const secretAccessKey = draft.secretAccessKey.trim()
   const sessionToken = draft.sessionToken.trim()
-  const rotating = accessKeyId || secretAccessKey || sessionToken
   return {
     name: draft.name.trim(),
-    ...(rotating
+    ...(accessKeyId
       ? {
           encrypted_secret_data: {
             provider_type: 's3',
-            ...(accessKeyId ? { aws_access_key_id: accessKeyId } : {}),
-            ...(secretAccessKey ? { aws_secret_access_key: secretAccessKey } : {}),
+            aws_access_key_id: accessKeyId,
+            aws_secret_access_key: draft.secretAccessKey.trim(),
             ...(sessionToken ? { aws_session_token: sessionToken } : {}),
           },
         }
