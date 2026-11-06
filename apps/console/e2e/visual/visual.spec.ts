@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { VISUAL_CONTRACTS, type Ready } from './routes'
+import { skipAnnouncements } from '../fixtures'
 
 /**
  * Screenshot regression: each contract in `routes.ts` is opened, settled and
@@ -38,6 +39,7 @@ const NEUTRALISE = `
 
 /** The mock demo session (see `shell.spec.ts`); the guard needs one even under mocks. */
 async function signIn(page: Page) {
+  await skipAnnouncements(page)
   await page.context().addInitScript(
     (value) => {
       try {

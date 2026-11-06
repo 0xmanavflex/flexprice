@@ -9,7 +9,35 @@ import { type Page, test as base, expect as baseExpect } from '@playwright/test'
  * status only: no headers, bodies or query strings, so a token, cookie or
  * password never reaches a report.
  */
-export const test = base.extend<{ evidence: void }>({
+/**
+ * The walkthrough announcement opens by itself on a first visit (an empty
+ * browser), which is every journey's start: marked as already played, so it
+ * never covers the page a journey is working on. Keep the id in step with
+ * `src/app/shell/changelog.ts`.
+ */
+export const PLAYED_ANNOUNCEMENTS = {
+  key: 'fp.changelog.dismissed.played',
+  ids: ['2026-11-console-walkthrough'],
+}
+
+export async function skipAnnouncements(page: Page) {
+  await page.context().addInitScript(({ key, ids }) => {
+    try {
+      if (!window.localStorage.getItem(key)) window.localStorage.setItem(key, JSON.stringify(ids))
+    } catch {
+      /* private-mode browser */
+    }
+  }, PLAYED_ANNOUNCEMENTS)
+}
+
+export const test = base.extend<{ evidence: void; announcements: void }>({
+  announcements: [
+    async ({ page }, use) => {
+      await skipAnnouncements(page)
+      await use()
+    },
+    { auto: true },
+  ],
   evidence: [
     async ({ page }, use, testInfo) => {
       const consoleLines: string[] = []

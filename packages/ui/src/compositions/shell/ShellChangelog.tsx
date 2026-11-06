@@ -46,10 +46,22 @@ export interface ShellChangelogEntry {
   /** Where "Read more" goes: the docs page for the change, or the video's own page. */
   href: string
   /**
-   * An embeddable player for the change (a Loom `/embed/` URL). With one, a tap
-   * or "Watch" plays it here in a dialog instead of leaving the console.
+   * An embeddable player for the change (a Loom `/embed/` URL). With one, the
+   * card's picture becomes a play button that opens it here, in an
+   * announcement dialog, instead of leaving the console.
    */
   video?: string | undefined
+  /** A still of the video, shown on the card and in the dialog before it plays. */
+  poster?: string | undefined
+  /** How long it runs, as shown on the still: "1:29". */
+  duration?: string | undefined
+  /** The dialog's copy, which can say more than the card; the card's own words when absent. */
+  announcement?: { eyebrow: string; title: string; description: string } | undefined
+  /**
+   * Opens the video once, unasked, the first time the stack shows (which is
+   * right after sign-in). Remembered beside the dismissals, so never twice.
+   */
+  autoOpen?: boolean | undefined
   /** Which product figure illustrates the card. */
   scene: EmptyScene
 }
@@ -97,6 +109,7 @@ function ChangelogCard({
   onPlay,
   hideContent,
   active,
+  reserveActions = false,
 }: {
   entry: Pick<ShellChangelogEntry, 'title' | 'summary'> & Partial<ShellChangelogEntry>
   onDismiss?: () => void
@@ -104,6 +117,12 @@ function ChangelogCard({
   onPlay?: () => void
   hideContent?: boolean
   active?: boolean
+  /**
+   * Draw the row that opens on hover as already open. The invisible card that
+   * sizes the stack does, so the row opens inside the stack's own space
+   * instead of spilling over the sidebar item below it.
+   */
+  reserveActions?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const drag = useRef({ start: 0, delta: 0, startTime: 0, maxDelta: 0 })
@@ -199,13 +218,42 @@ function ChangelogCard({
           <span className="text-foreground line-clamp-1 text-sm font-medium">{entry.title}</span>
           <p className="text-muted-foreground line-clamp-2 h-8 leading-4">{entry.summary}</p>
         </div>
-        <div className="bg-muted/60 pointer-events-none mt-3 flex aspect-video w-full items-center justify-center overflow-hidden rounded-md border">
-          {entry.scene ? <SceneIllustration scene={entry.scene} className="w-40" /> : null}
-        </div>
+        {entry.video && onPlay ? (
+          // The picture is the play button: what to press is on the card itself.
+          <button
+            type="button"
+            aria-label={`Watch: ${entry.title}`}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              onPlay()
+            }}
+            className="group/play bg-muted/60 focus-visible:ring-ring/50 relative mt-3 flex aspect-video w-full cursor-pointer items-center justify-center overflow-hidden rounded-md border outline-none focus-visible:ring-3"
+          >
+            {entry.poster ? (
+              <img src={entry.poster} alt="" className="absolute inset-0 size-full object-cover" />
+            ) : entry.scene ? (
+              <SceneIllustration scene={entry.scene} className="w-40" />
+            ) : null}
+            <span className="bg-background/90 text-foreground relative flex size-9 items-center justify-center rounded-full border shadow-sm transition-transform group-hover/play:scale-105">
+              <PlayIcon aria-hidden className="ml-0.5 size-4 fill-current" />
+            </span>
+            {entry.duration ? (
+              <span className="bg-background/90 text-foreground absolute right-1.5 bottom-1.5 rounded px-1.5 py-0.5 text-[10px] tabular-nums">
+                {entry.duration}
+              </span>
+            ) : null}
+          </button>
+        ) : (
+          <div className="bg-muted/60 pointer-events-none mt-3 flex aspect-video w-full items-center justify-center overflow-hidden rounded-md border">
+            {entry.scene ? <SceneIllustration scene={entry.scene} className="w-40" /> : null}
+          </div>
+        )}
         {/* Read more and Dismiss open under the top card on hover, drag or focus. */}
         <div
           className={cn(
-            'grid grid-rows-[0fr] overflow-hidden opacity-0 transition-[grid-template-rows,opacity] duration-200',
+            'grid overflow-hidden opacity-0 transition-[grid-template-rows,opacity] duration-200',
+            reserveActions ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
             'sm:group-has-[*[data-dragging=true]]:grid-rows-[1fr] sm:group-has-[*[data-dragging=true]]:opacity-100',
             'sm:group-hover:group-data-[active=true]:grid-rows-[1fr] sm:group-hover:group-data-[active=true]:opacity-100',
             'has-focus-visible:grid-rows-[1fr] has-focus-visible:opacity-100',
@@ -214,20 +262,7 @@ function ChangelogCard({
           <div className="min-h-0">
             <div className="flex items-center justify-between pt-2">
               {entry.video && onPlay ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  className="text-muted-foreground -ml-2"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onPlay()
-                  }}
-                >
-                  <PlayIcon aria-hidden className="size-3" />
-                  Watch
-                </Button>
+                <span />
               ) : (
                 <a
                   href={entry.href ?? '#'}
@@ -269,6 +304,26 @@ export function ShellChangelog({ entries, storageKey, className }: ShellChangelo
   // with nothing new shows nothing at all.
   const [showCompleted, setShowCompleted] = useState(count > 0)
   const [playing, setPlaying] = useState<ShellChangelogEntry | null>(null)
+
+  // The announcement opens itself once, the first time the stack shows (right
+  // after sign-in), and is remembered so a reload or the next visit does not.
+  const announced = useRef(false)
+  useEffect(() => {
+    if (announced.current) return
+    announced.current = true
+    const playedKey = storageKey ? `${storageKey}.played` : undefined
+    const played = readDismissed(playedKey)
+    const announce = entries.find(
+      (entry) =>
+        entry.autoOpen &&
+        entry.video &&
+        !played.includes(entry.id) &&
+        !dismissed.includes(entry.id),
+    )
+    if (!announce) return
+    writeDismissed(playedKey, [announce.id, ...played].slice(0, MAX_REMEMBERED))
+    setPlaying(announce)
+  }, [entries, storageKey, dismissed])
 
   useEffect(() => {
     if (count !== 0) return
@@ -332,7 +387,7 @@ export function ShellChangelog({ entries, storageKey, className }: ShellChangelo
 
         {/* Holds the stack's height, since every card is absolutely placed. */}
         <div className="pointer-events-none invisible" aria-hidden>
-          <ChangelogCard entry={{ title: 'Title', summary: 'Summary' }} />
+          <ChangelogCard entry={{ title: 'Title', summary: 'Summary' }} reserveActions />
         </div>
 
         {showCompleted && count === 0 ? (
@@ -343,35 +398,104 @@ export function ShellChangelog({ entries, storageKey, className }: ShellChangelo
           </div>
         ) : null}
       </div>
-      <Dialog
-        open={playing !== null}
-        onOpenChange={(open) => (open ? undefined : setPlaying(null))}
-      >
-        <DialogContent className="sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{playing?.title}</DialogTitle>
-            <DialogDescription>{playing?.summary}</DialogDescription>
-          </DialogHeader>
-          {playing?.video ? (
-            <iframe
-              src={playing.video}
-              title={playing.title}
-              allow="fullscreen; picture-in-picture"
-              allowFullScreen
-              className="aspect-video w-full rounded-md border"
-            />
-          ) : null}
-          <a
-            href={playing?.href ?? '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 justify-self-start text-xs font-medium"
-          >
-            Open in a new tab
-            <ArrowUpRightIcon aria-hidden className="size-3" />
-          </a>
-        </DialogContent>
-      </Dialog>
+      <VideoAnnouncement entry={playing} onClose={() => setPlaying(null)} />
     </section>
+  )
+}
+
+/** Loom's player without its own title bar, owner, share and comments, starting at once. */
+function quietPlayer(url: string): string {
+  const params = 'autoplay=1&hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true'
+  return `${url}${url.includes('?') ? '&' : '?'}${params}`
+}
+
+/**
+ * The video as a product announcement: what it is about first, then a clean
+ * still with one play button (the player, with its controls, only once
+ * pressed), then a way out to the video's own page. Closing is always there.
+ */
+function VideoAnnouncement({
+  entry,
+  onClose,
+}: {
+  entry: ShellChangelogEntry | null
+  onClose: () => void
+}) {
+  const [started, setStarted] = useState(false)
+  const copy = entry?.announcement ?? {
+    eyebrow: "What's new",
+    title: entry?.title ?? '',
+    description: entry?.summary ?? '',
+  }
+  const close = () => {
+    setStarted(false)
+    onClose()
+  }
+  return (
+    <Dialog open={entry !== null} onOpenChange={(open) => (open ? undefined : close())}>
+      <DialogContent className="gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-3xl">
+        <DialogHeader className="gap-1.5 px-6 pt-6 pb-4">
+          <p className="text-primary text-[11px] font-medium tracking-wider uppercase">
+            {copy.eyebrow}
+          </p>
+          <DialogTitle className="text-xl font-medium">{copy.title}</DialogTitle>
+          <DialogDescription>{copy.description}</DialogDescription>
+        </DialogHeader>
+        <div className="px-6">
+          {entry?.video ? (
+            started ? (
+              <iframe
+                src={quietPlayer(entry.video)}
+                title={copy.title}
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                className="aspect-video w-full rounded-xl border"
+              />
+            ) : (
+              <button
+                type="button"
+                aria-label={`Play: ${copy.title}`}
+                onClick={() => setStarted(true)}
+                className="group/play bg-muted focus-visible:ring-ring/50 relative flex aspect-video w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl border outline-none focus-visible:ring-3"
+              >
+                {entry.poster ? (
+                  <img
+                    src={entry.poster}
+                    alt=""
+                    className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover/play:scale-[1.02]"
+                  />
+                ) : (
+                  <SceneIllustration scene={entry.scene} className="w-56" />
+                )}
+                <span className="bg-background/95 text-foreground relative flex size-16 items-center justify-center rounded-full border shadow-lg transition-transform group-hover/play:scale-105">
+                  <PlayIcon aria-hidden className="ml-1 size-6 fill-current" />
+                </span>
+                {entry.duration ? (
+                  <span className="bg-background/95 text-foreground absolute bottom-3 left-3 rounded-md px-2 py-1 text-xs tabular-nums shadow-sm">
+                    {entry.duration} · Product walkthrough
+                  </span>
+                ) : null}
+              </button>
+            )
+          ) : null}
+        </div>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4">
+          <span className="text-muted-foreground text-xs">
+            Explore what&apos;s new in Flexprice
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={
+              <a href={entry?.href ?? '#'} target="_blank" rel="noopener noreferrer" role="link" />
+            }
+          >
+            Open in new tab
+            <ArrowUpRightIcon aria-hidden />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

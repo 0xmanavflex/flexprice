@@ -19,6 +19,9 @@ export const CONSOLE_WALKTHROUGH_URL = 'https://www.loom.com/share/125badfaeeb94
 /** The same video's player, which the card plays in the console. */
 export const CONSOLE_WALKTHROUGH_EMBED =
   'https://www.loom.com/embed/125badfaeeb94dfabca6c195b49687b3'
+/** Loom's still of it (its oEmbed `thumbnail_url`, as a JPEG). */
+const CONSOLE_WALKTHROUGH_POSTER =
+  'https://cdn.loom.com/sessions/thumbnails/125badfaeeb94dfabca6c195b49687b3-f5105f366e263f84.jpg'
 
 const RELEASES: ShellChangelogEntry[] = [
   {
@@ -29,6 +32,16 @@ const RELEASES: ShellChangelogEntry[] = [
     summary: 'Watch the 90-second walkthrough of what moved and what is new.',
     href: CONSOLE_WALKTHROUGH_URL,
     video: CONSOLE_WALKTHROUGH_EMBED,
+    poster: CONSOLE_WALKTHROUGH_POSTER,
+    duration: '1:29',
+    announcement: {
+      eyebrow: 'Product update',
+      title: 'Meet your new Flexprice Console',
+      description:
+        'Explore the redesigned experience for managing customers, billing, contracts and revenue.',
+    },
+    // Opens by itself once, right after sign-in.
+    autoOpen: true,
     scene: 'home',
   },
   {
