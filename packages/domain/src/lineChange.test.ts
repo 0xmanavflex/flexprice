@@ -39,7 +39,21 @@ describe('validateLineChange', () => {
       validateLineChange(line, { ...q, effectiveDate: '2026-09-30' }, period).effectiveDate,
     ).toBeDefined()
     expect(
-      validateLineChange(line, { ...q, effectiveDate: '2026-11-01' }, period).effectiveDate,
+      validateLineChange(line, { ...q, effectiveDate: '2026-11-02' }, period).effectiveDate,
     ).toBeDefined()
   })
+})
+
+it('keeps the exact billing boundary and rejects invalid instants', () => {
+  const q = { ...draft, quantity: '3' }
+  expect(
+    validateLineChange(
+      line,
+      { ...q, effectiveDate: new Date(period.end.getTime() - 1).toISOString() },
+      period,
+    ),
+  ).toEqual({})
+  expect(
+    validateLineChange(line, { ...q, effectiveDate: 'invalid' }, period).effectiveDate,
+  ).toBeDefined()
 })

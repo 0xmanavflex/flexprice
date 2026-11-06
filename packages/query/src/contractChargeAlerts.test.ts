@@ -102,3 +102,15 @@ describe('contract charge coverage', () => {
     expect(toSubscriptionCoupon({ coupon: wire.coupon }, now).lineItemId).toBeUndefined()
   })
 })
+
+it('labels future coupons as scheduled', () => {
+  expect(
+    toSubscriptionCoupon({ startDate: new Date('2027-01-01') }, new Date('2026-01-01')).status,
+  ).toBe('Scheduled')
+  expect(
+    toSubscriptionCoupon(
+      { status: 'archived', startDate: new Date('2027-01-01') },
+      new Date('2026-01-01'),
+    ).status,
+  ).toBe('Ended')
+})

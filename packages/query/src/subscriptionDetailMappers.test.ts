@@ -733,6 +733,16 @@ describe('line item change', () => {
     ])
   })
 
+  it('preserves an exact billing boundary rather than rounding to midnight', () => {
+    const at = '2026-12-06T11:09:24.123Z'
+    const request = toLineItemChangeRequest(line, {
+      quantity: '4',
+      amount: '120',
+      effectiveDate: at,
+    }) as { lineItemChangeParams: { lineItems: Record<string, unknown>[] } }
+    expect(request.lineItemChangeParams.lineItems[0]?.effectiveDate).toEqual(new Date(at))
+  })
+
   it('never sends a price for a charge whose price cannot change', () => {
     const request = toLineItemChangeRequest(
       { ...line, amountEditable: false },

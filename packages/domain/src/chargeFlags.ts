@@ -136,7 +136,7 @@ export interface ChargeVersion {
  */
 export interface ChargeDetail {
   /**
-   * The price was changed here.
+   * The charge was overridden here. This may only change quantity or commitment.
    *
    * Separate from `overriddenFrom` because the two are known at different
    * costs: `parent_price_id` on the line says *that* it changed and comes
@@ -188,7 +188,10 @@ export function chargeFlags(detail: ChargeDetail | undefined): ChargeFlag[] {
   if (!detail) return []
   const flags: ChargeFlag[] = []
   if (detail.overridden || detail.overriddenFrom) {
-    flags.push({ section: ChargeSection.Price, label: 'Price changed' })
+    flags.push({
+      section: ChargeSection.Price,
+      label: detail.overriddenFrom ? 'Price changed' : 'Changed here',
+    })
   }
   if (detail.coupon || detail.coupons?.length)
     flags.push({ section: ChargeSection.Discount, label: 'Discount' })

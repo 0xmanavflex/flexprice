@@ -1518,9 +1518,17 @@ export function SubscriptionDetailView({
                               {
                                 key: 'status',
                                 header: 'Status',
-                                sortBy: (row) => (row.active ? 'Active' : 'Inactive'),
-                                text: (row) => (row.active ? 'Active' : 'Inactive'),
-                                cell: (row) => <ActiveBadge active={row.active} />,
+                                sortBy: (row) => row.status ?? (row.active ? 'Active' : 'Ended'),
+                                text: (row) => row.status ?? (row.active ? 'Active' : 'Ended'),
+                                cell: (row) => (
+                                  <Pill
+                                    tone={statusTone(
+                                      row.status ?? (row.active ? 'Active' : 'Ended'),
+                                    )}
+                                  >
+                                    {row.status ?? (row.active ? 'Active' : 'Ended')}
+                                  </Pill>
+                                ),
                               },
                               {
                                 key: 'end',
@@ -1542,7 +1550,7 @@ export function SubscriptionDetailView({
                                       })
                                   : null,
                                 // An ended coupon has nothing left to remove.
-                                (row) => row.active,
+                                (row) => (row.status ? row.status !== 'Ended' : row.active),
                               ),
                             ]}
                           />

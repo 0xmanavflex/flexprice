@@ -1157,12 +1157,13 @@ export function validateLineChange(
   if (amount !== '' && !DECIMAL.test(amount)) errors.amount = 'Enter a price of 0 or more.'
 
   if (draft.effectiveDate) {
-    const at = new Date(`${draft.effectiveDate}T00:00:00Z`)
+    const at = contractDateToInstant(draft.effectiveDate)
     const lower = [line.startDate, period.start].filter((d): d is Date => d !== null)
     const earliest = lower.length ? new Date(Math.max(...lower.map((d) => d.getTime()))) : null
     const latest = [line.endDate, period.end].filter((d): d is Date => d !== null)
     const last = latest.length ? new Date(Math.min(...latest.map((d) => d.getTime()))) : null
-    if (earliest && at < earliest)
+    if (Number.isNaN(at.getTime())) errors.effectiveDate = 'Pick a valid date.'
+    else if (earliest && at < earliest)
       errors.effectiveDate = 'Pick a date inside the current billing period.'
     else if (last && at >= last) errors.effectiveDate = 'Pick a date before this period ends.'
   }
@@ -1293,6 +1294,8 @@ export interface SubscriptionAddon {
 
 /** A coupon applied to a contract. */
 export interface SubscriptionCoupon {
+  /** Lifecycle includes discounts whose start date is still in the future. */
+  status?: 'Active' | 'Scheduled' | 'Ended' | undefined
   /** Only this line receives the discount; absent means contract/phase scope. */
   lineItemId?: string | undefined
   id: string

@@ -2,6 +2,7 @@ import { useWriteAccess } from '@ui/compositions/access/Access'
 import { useState } from 'react'
 import {
   entitlementToEdit,
+  FeatureType,
   emptySpendingAllowance,
   formatUnitAmount,
   type CreateEntitlement,
@@ -137,10 +138,12 @@ export function ContractBenefitsEditor({
       effectiveRows.push({
         id,
         feature: record.name,
-        enabled: true,
+        enabled: record.entitlement.isEnabled ?? true,
         limit: null,
         featureType: record.entitlement.featureType,
-        valueLabel: 'Not reported',
+        ...(record.entitlement.featureType === FeatureType.Boolean
+          ? {}
+          : { valueLabel: 'Not reported' }),
       })
     }
   }

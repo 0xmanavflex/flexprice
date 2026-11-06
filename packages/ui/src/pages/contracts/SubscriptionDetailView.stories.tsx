@@ -845,7 +845,7 @@ export const ChargesTab: Story = {
     await expect(canvas.getByText('Fixed · Set on this contract')).toBeVisible()
     // And the one the contract changed carries the flag for it.
     await expect(
-      canvas.getByRole('button', { name: /Price changed: open Onboarding/ }),
+      canvas.getByRole('button', { name: /Changed here: open Onboarding/ }),
     ).toBeVisible()
     await expect(canvas.queryByText(/shared by every contract/)).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Activity' })).toBeNull()
@@ -2573,5 +2573,26 @@ export const ParentWithInherited: Story = {
     const canvas = within(canvasElement)
     await expect(await canvas.findByRole('heading', { name: 'Inherited contracts' })).toBeVisible()
     await expect(canvas.getByText('Initech Labs')).toBeVisible()
+  },
+}
+
+export const ScheduledCoupon: Story = {
+  args: {
+    ...BASE,
+    onRemoveCoupon: fn(async () => undefined),
+    coupons: ready([
+      {
+        ...COUPONS[0]!,
+        active: false,
+        status: 'Scheduled' as const,
+        startDate: new Date('2030-01-01'),
+      },
+    ]),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const section = canvas.getByRole('region', { name: 'Coupons' })
+    await expect(within(section).getByText('Scheduled')).toBeVisible()
+    await expect(within(section).getByRole('button', { name: /Actions for/ })).toBeVisible()
   },
 }

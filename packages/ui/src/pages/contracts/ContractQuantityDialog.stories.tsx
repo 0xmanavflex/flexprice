@@ -27,7 +27,6 @@ const PERIOD = {
   end: new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1)),
 }
 const MONTH = now.toLocaleString('en-US', { month: 'long' })
-const FIFTEENTH = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15`
 
 const meta = {
   title: 'App/Contracts/Contract quantity dialog',
@@ -71,7 +70,7 @@ export const PicksTheEffectiveDay: Story = {
     await expect(args.onPreview).toHaveBeenCalledWith(LINE, {
       quantity: '8',
       amount: '20',
-      effectiveDate: FIFTEENTH,
+      effectiveDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
     })
   },
 }

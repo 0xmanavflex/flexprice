@@ -67,18 +67,54 @@ export function useContractBenefitRecords(subscriptionId: string) {
           source: source.source,
         })),
       )
+      // The effective endpoint omits disabled features. Read this contract's
+      // source records separately so an override never removes its own reset action.
+      const ownRecords: ContractBenefitRecord[] = []
+      for (let offset = 0; ; offset += 100) {
+        const page = await call(() =>
+          client.entitlements.queryEntitlement({
+            entityType: EntitlementEntityType.Subscription,
+            entityIds: [subscriptionId],
+            expand: 'features',
+            limit: 100,
+            offset,
+          } as never),
+        )
+        const items = (page.items ?? []) as EntitlementWire[]
+        for (const wire of items) {
+          const entitlement = toEntitlement(wire)
+          if (
+            entitlement.entityId !== subscriptionId ||
+            entitlement.entityType !== EntitlementEntityType.Subscription
+          )
+            continue
+          ownRecords.push({
+            entitlement,
+            name: entitlement.featureName || entitlement.featureId || 'All usage charges',
+            source: 'Contract',
+          })
+        }
+        if (items.length < 100) break
+      }
+      const allRecords = [
+        ...new Map(
+          [...featureRecords, ...ownRecords].map((row) => [row.entitlement.id, row]),
+        ).values(),
+      ]
       const overridden = new Set(
-        featureRecords.flatMap((row) =>
+        allRecords.flatMap((row) =>
           row.entitlement.parentEntitlementId ? [row.entitlement.parentEntitlementId] : [],
         ),
       )
       return [
-        ...featureRecords.filter((row) => !overridden.has(row.entitlement.id)),
-        ...(response.subscriptionEntitlementGrants?.entitlements ?? []).map((wire) => ({
-          entitlement: toEntitlement(wire),
-          name: 'All usage charges',
-          source: 'Contract spending allowance',
-        })),
+        ...allRecords.filter((row) => !overridden.has(row.entitlement.id)),
+        ...(response.subscriptionEntitlementGrants?.entitlements ?? [])
+          .filter((wire) => !allRecords.some((row) => row.entitlement.id === wire.id))
+          .map((wire) => ({
+            entitlement: toEntitlement(wire),
+            name: 'All usage charges',
+            source: 'Contract spending allowance',
+          })),
       ]
     },
   })

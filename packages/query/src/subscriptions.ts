@@ -2054,7 +2054,7 @@ export function toLineItemChangeRequest(
   const quantity = draft.quantity.trim()
   const amount = draft.amount.trim()
   // The SDK serialises this field from a Date, unlike the line-item PUT/DELETE, which take a string.
-  const from = draft.effectiveDate ? new Date(`${draft.effectiveDate}T00:00:00Z`) : undefined
+  const from = draft.effectiveDate ? contractDateToInstant(draft.effectiveDate) : undefined
   return {
     type: 'line_item_change',
     lineItemChangeParams: {
@@ -2491,7 +2491,11 @@ export function toSubscriptionCoupon(
   const percentage = coupon?.type === CouponType.Percentage
   const off = percentage || !coupon?.amountOff ? null : moneyOr(coupon.amountOff, coupon.currency)
   const endDate = realDate(wire.endDate)
+  const startDate = realDate(wire.startDate)
+  const ended = wire.status === 'archived' || (endDate !== null && endDate <= now)
+  const status = ended ? 'Ended' : startDate && startDate > now ? 'Scheduled' : 'Active'
   return {
+    status,
     id: wire.id ?? wire.couponId ?? '',
     lineItemId: wire.subscriptionLineItemId,
     name: coupon?.name || wire.couponId || 'Coupon',

@@ -2,6 +2,7 @@ import { CircleAlertIcon } from '@ui/icons'
 import { useState } from 'react'
 import {
   formatMoney,
+  InvoiceCadence,
   money,
   validateLineChange,
   type ChangeLineQuantity,
@@ -111,7 +112,19 @@ function QuantityFlow({
 }) {
   const [quantity, setQuantity] = useState(line.quantity)
   const [amount, setAmount] = useState(line.amount.amount)
-  const [effectiveDate, setEffectiveDate] = useState('')
+  const [effectiveDate, setEffectiveDate] = useState(() => {
+    const boundary =
+      line.charge?.invoiceCadence === InvoiceCadence.Advance
+        ? period.end
+        : line.charge?.invoiceCadence === InvoiceCadence.Arrear
+          ? period.start
+          : null
+    if (!boundary) return ''
+    let at = boundary.getTime() - (line.charge?.invoiceCadence === InvoiceCadence.Advance ? 1 : 0)
+    if (line.startDate) at = Math.max(at, line.startDate.getTime() + 1)
+    if (line.endDate) at = Math.min(at, line.endDate.getTime())
+    return new Date(at).toISOString()
+  })
   const [touched, setTouched] = useState(false)
   const [preview, setPreview] = useState<LineChangePreview | null>(null)
   const [busy, setBusy] = useState(false)
@@ -221,6 +234,7 @@ function QuantityFlow({
           <FieldLabel htmlFor="change-date">Effective from</FieldLabel>
           <DateInput
             id="change-date"
+            withTime
             value={effectiveDate}
             disabled={busy}
             clearable
@@ -230,7 +244,8 @@ function QuantityFlow({
             onValueChange={setEffectiveDate}
           />
           <FieldDescription>
-            Leave empty to apply now.
+            Defaults to period end for advance charges and period start for arrears. Clear the date
+            to apply now.
             {period.start && period.end
               ? ` Must fall in this period (${dayFormat.format(period.start)} to ${dayFormat.format(period.end)}).`
               : ''}
