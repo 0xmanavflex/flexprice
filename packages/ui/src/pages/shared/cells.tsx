@@ -423,19 +423,23 @@ export function EntityLink({
   onOpen,
   muted,
   primary,
+  wrap = false,
 }: {
   label: string
   onOpen: () => void
   muted?: boolean | undefined
   /** Set in a list's name column: the name type rather than body text. */
   primary?: boolean | undefined
+  /** Allow relationship labels to wrap within compact layouts. */
+  wrap?: boolean | undefined
 }) {
   return (
     <button
       type="button"
       title={label}
       className={cn(
-        'block max-w-full min-w-0 truncate text-left underline-offset-4 hover:underline focus-visible:underline',
+        'block max-w-full min-w-0 text-left underline-offset-4 hover:underline focus-visible:underline',
+        wrap ? 'wrap-anywhere whitespace-normal' : 'truncate',
         primary && NAME_TEXT,
         muted && 'text-muted-foreground',
       )}
