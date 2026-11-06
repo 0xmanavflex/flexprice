@@ -772,6 +772,7 @@ export {
   emptyS3Connection,
   validateDataExport,
   validateS3Connection,
+  validateS3ConnectionEdit,
 } from './dataExport'
 export type {
   CreateDataExport,

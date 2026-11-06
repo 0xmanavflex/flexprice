@@ -6,6 +6,7 @@ import {
   DatabaseIcon,
   DownloadIcon,
   EyeIcon,
+  PencilIcon,
   PlayIcon,
   PlusIcon,
   ShieldCheckIcon,
@@ -255,6 +256,7 @@ export interface S3ConnectionListProps {
   onBack: () => void
   onOpen: (connection: S3Connection) => void
   onCreate: (draft: CreateS3Connection) => Promise<unknown>
+  onUpdate: (connection: S3Connection, draft: CreateS3Connection) => Promise<unknown>
   onDelete: (connection: S3Connection) => Promise<unknown>
 }
 
@@ -275,10 +277,12 @@ export function S3ConnectionList({
   onBack,
   onOpen,
   onCreate,
+  onUpdate,
   onDelete,
 }: S3ConnectionListProps) {
   usePublishDetailTrail([{ label: 'Exports', onClick: onBack }, { label: 'Amazon S3' }])
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<S3Connection | null>(null)
   const remove = useConfirm<S3Connection>()
 
   // A section's action is outline (design rules §2); the page's one filled
@@ -345,6 +349,14 @@ export function S3ConnectionList({
                       <Button
                         variant="ghost"
                         size="icon-sm"
+                        aria-label={`Edit ${connection.name}`}
+                        onClick={() => setEditing(connection)}
+                      >
+                        <PencilIcon aria-hidden />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         aria-label={`Delete ${connection.name}`}
                         onClick={() => remove.open(connection)}
                       >
@@ -369,6 +381,18 @@ export function S3ConnectionList({
           toast.success('S3 connection added')
         }}
       />
+      {editing ? (
+        <S3ConnectionDialog
+          key={editing.id}
+          open
+          connection={editing}
+          onOpenChange={(open) => !open && setEditing(null)}
+          onSubmit={async (draft) => {
+            await onUpdate(editing, draft)
+            toast.success('S3 connection updated')
+          }}
+        />
+      ) : null}
       <ConfirmDialog
         open={remove.target !== null}
         onOpenChange={(open) => !open && remove.close()}
