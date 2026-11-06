@@ -116,12 +116,31 @@ export const UnsupportedAllowancesHidden: Story = {
 }
 
 export const DisabledOverrideStillEditable: Story = {
- args: {entitlements:[], records:[{entitlement:{...inherited,id:'disabled',featureType:FeatureType.Boolean,isEnabled:false,entityType:EntitlementEntityType.Subscription,entityId:'contract',parentEntitlementId:inherited.id},name:'Disabled feature',source:'Contract'}]},
- play: async ({canvasElement}) => {
-  const canvas=within(canvasElement)
-  await expect(canvas.getByText('Disabled feature')).toBeVisible()
-  await expect(canvas.queryByText('No features')).toBeNull()
-  await userEvent.click(canvas.getByRole('button',{name:'Actions for Disabled feature'}))
-  await expect(screen.getByRole('menuitem',{name:'Reset to inherited value'})).toBeVisible()
- }
+  args: {
+    entitlements: [],
+    records: [
+      {
+        entitlement: {
+          ...inherited,
+          id: 'disabled',
+          featureType: FeatureType.Boolean,
+          isEnabled: false,
+          entityType: EntitlementEntityType.Subscription,
+          entityId: 'contract',
+          parentEntitlementId: inherited.id,
+        },
+        name: 'Disabled feature',
+        source: 'Contract',
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Disabled feature')).toBeVisible()
+    await expect(canvas.queryByText('No features')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Disabled feature' }))
+    await expect(
+      await screen.findByRole('menuitem', { name: 'Reset to inherited value' }),
+    ).toBeVisible()
+  },
 }

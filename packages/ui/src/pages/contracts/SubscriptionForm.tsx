@@ -3403,6 +3403,7 @@ export function AddonChargesDialog({
                 // becomes the commitment's too, so neither silently loses.
                 const commitment = commitmentOf(repricing.id)
                 onChange({
+                  ...value,
                   priceOverrides: [...without(value.priceOverrides, repricing.id), override],
                   commitments:
                     commitment &&
@@ -3432,6 +3433,7 @@ export function AddonChargesDialog({
           if (committing) {
             const override = overrideOf(committing.id)
             onChange({
+              ...value,
               // And the other way: a commitment's new bucket replaces one the price override chose.
               priceOverrides:
                 next && override?.bucketSize && override.bucketSize !== next.bucketSize

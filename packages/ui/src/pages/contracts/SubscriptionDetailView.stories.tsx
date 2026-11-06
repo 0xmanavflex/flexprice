@@ -1551,6 +1551,10 @@ export const AddAddonWithCommitment: Story = {
     await expect(await dialog.findByText('Support seat')).toBeVisible()
     await expect(dialog.getByText('Support tickets')).toBeVisible()
 
+    const seats = dialog.getByRole('textbox', { name: 'Quantity of Support seat' })
+    await userEvent.clear(seats)
+    await userEvent.type(seats, '2')
+    await userEvent.click(dialog.getByRole('switch', { name: 'Prorate the current period' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Actions for Support seat' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Override price' }))
     const price = within(
@@ -1568,6 +1572,11 @@ export const AddAddonWithCommitment: Story = {
     await userEvent.type(await commitment.findByRole('textbox', { name: /^Commitment \(/ }), '500')
     await userEvent.click(commitment.getByRole('button', { name: 'Save commitment' }))
     const back = within(await screen.findByRole('dialog', { name: 'Modify add-ons' }))
+    await expect(back.getByRole('textbox', { name: 'Quantity of Support seat' })).toHaveValue('2')
+    await expect(back.getByRole('switch', { name: 'Prorate the current period' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    )
     await userEvent.click(back.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
@@ -1577,6 +1586,8 @@ export const AddAddonWithCommitment: Story = {
             expect.objectContaining({ billingModel: BillingModel.FlatFee, amount: '40' }),
           ],
           commitments: [expect.objectContaining({ value: '500' })],
+          quantities: [expect.objectContaining({ quantity: '2' })],
+          prorate: false,
         }),
       ]),
     )
