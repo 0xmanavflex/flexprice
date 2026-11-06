@@ -170,15 +170,18 @@ export function InvoiceDetailPage({
                 ...mappings.controls,
                 syncing: mappings.push.isPending || mappings.pull.isPending,
                 syncRuns: syncWatch.runs,
-                ...(mappings.pushProviders.length > 0
+                ...(mappings.pushConnections.length > 0
                   ? {
-                      pushProviders: mappings.pushProviders,
-                      onPush: () =>
-                        mappings.push.mutate(undefined, {
+                      connectionActions: mappings.pushConnections,
+                      onPushConnection: (connectionId: string) => {
+                        const connection = mappings.pushConnections.find(
+                          (item) => item.id === connectionId,
+                        )
+                        mappings.push.mutate(connectionId, {
                           onSuccess: () => {
-                            syncWatch.watch(mappings.pushProviders)
-                            toast(`Pushing invoice to ${mappings.pushProviders.join(', ')}`, {
-                              description: 'You are told here when each provider has it.',
+                            syncWatch.watch([connection?.providerName ?? connection?.name ?? 'the provider'])
+                            toast(`Pushing invoice to ${connection?.name ?? 'the integration'}`, {
+                              description: 'You are told here when the provider has it.',
                             })
                           },
                           onError: (cause) =>
@@ -187,7 +190,8 @@ export function InvoiceDetailPage({
                                 ? cause.message
                                 : 'Could not push this invoice.',
                             ),
-                        }),
+                        })
+                      },
                     }
                   : {}),
                 ...(mappings.pullProviders.length > 0

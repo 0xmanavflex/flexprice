@@ -730,8 +730,11 @@ export const IntegrationsCard: Story = {
           linkable: [{ providerType: 'zoho', name: 'Zoho' }],
           onLink: fn(),
           onUnlink: fn(),
-          pushProviders: ['Stripe', 'Zoho'],
-          onPush: fn(),
+          connectionActions: [
+            { id: 'conn_stripe', name: 'Test', providerType: 'stripe', providerName: 'Stripe' },
+            { id: 'conn_zoho', name: 'Test', providerType: 'zoho', providerName: 'Zoho' },
+          ],
+          onPushConnection: fn(),
         }}
       />
     )
@@ -739,14 +742,15 @@ export const IntegrationsCard: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const integrations = await canvas.findByRole('region', { name: 'Integrations' })
-    await expect(
-      within(integrations).getByRole('link', { name: 'Open this invoice in Stripe' }),
-    ).toHaveAttribute('href', STRIPE_PAGE)
-    // Link and Push live in the card's own menu, not as rows.
-    await expect(within(integrations).queryByText(/^Push to/)).toBeNull()
+    await expect(within(integrations).getByText('in_1UXlX7demo')).toBeVisible()
+    await expect(within(integrations).getByText('Not mapped')).toBeVisible()
+    await expect(within(integrations).queryByText('Last sync')).toBeNull()
+    await userEvent.click(within(integrations).getByRole('button', { name: 'Manage Stripe' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Push to Stripe' })).toBeVisible()
+    await userEvent.keyboard('{Escape}')
     await userEvent.click(within(integrations).getByRole('button', { name: 'Integration actions' }))
     await expect(await screen.findByRole('menuitem', { name: 'Link integration' })).toBeVisible()
-    await expect(screen.getByRole('menuitem', { name: 'Push to Stripe, Zoho' })).toBeVisible()
+    await expect(screen.queryByRole('menuitem', { name: /^Push to/ })).toBeNull()
     await userEvent.keyboard('{Escape}')
     // Related lists the customer and contract only.
     const related = canvas.getByRole('region', { name: 'Related' })

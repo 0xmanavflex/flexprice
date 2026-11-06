@@ -72,7 +72,14 @@ export interface ContractIntegrationsProps {
    * one "Push to {names}" action, shown whether or not a mapping exists yet
    * (a push creates the provider record).
    */
-  pushProviders?: string[]
+  /**
+   * One row per published connection that syncs this entity outbound. Push
+   * sends that connection's id. The row menu maps that provider.
+   */
+  pushProviders?: string[] | undefined
+  connectionActions?:
+    { id: string; name: string; providerType: string; providerName: string }[] | undefined
+  onPushConnection?: ((connectionId: string) => void) | undefined
   onPush?: () => void
   /** Provider names a pull reads from (inbound sync on); one "Pull from {names}" action. */
   pullProviders?: string[]
@@ -129,6 +136,8 @@ export function ContractIntegrations({
   onLink,
   onUnlink,
   pushProviders,
+  connectionActions,
+  onPushConnection,
   onPush,
   pullProviders,
   onPull,
@@ -139,6 +148,7 @@ export function ContractIntegrations({
 }: ContractIntegrationsProps) {
   const write = useWriteAccess(RBAC_ENTITY.Integration)
   const [unlinking, setUnlinking] = useState<IntegrationLink | null>(null)
+  const [linkFor, setLinkFor] = useState<string | null>(null)
   const [internalLinking, setInternalLinking] = useState(false)
   const linking = linkOpen ?? internalLinking
   const setLinking = onLinkOpenChange ?? setInternalLinking
@@ -166,7 +176,7 @@ export function ContractIntegrations({
     !linking &&
     !canPush &&
     !canPull &&
-    (layout !== 'rows' || syncRuns.length === 0)
+    (layout !== 'rows' || (syncRuns.length === 0 && (connectionActions?.length ?? 0) === 0))
   ) {
     return layout === 'rows' ? (
       <p className="text-muted-foreground px-6 py-4 text-sm">{none}</p>
@@ -188,114 +198,244 @@ export function ContractIntegrations({
 
   return (
     <div className={layout === 'rows' ? 'flex flex-col divide-y' : 'flex items-center gap-1.5'}>
-      {links.map((link) =>
-        layout === 'rows' ? (
-          <div
-            key={link.providerType}
-            className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-4 px-6 py-3"
-          >
-            {providerHref?.(link) ? (
-              <a
-                href={providerHref(link) ?? undefined}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Open this ${entityLabel} in ${link.name}`}
-                className="hover:text-foreground focus-visible:outline-ring flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-2"
-              >
-                <IntegrationMark integration={link} />
-                <span className="truncate text-sm underline-offset-2 hover:underline">
-                  {link.name}
+      {layout === 'rows' && connectionActions && connectionActions.length > 0
+        ? connectionActions.map((connection) => {
+            const link = links.find((item) => item.providerType === connection.providerType)
+            const sync = syncRuns.find(
+              (run) =>
+                run.providerId === connection.providerType || run.provider === connection.providerName,
+            )
+            const shown = sync
+              ? (SYNC_STATE[sync.status ?? ''] ?? { label: 'Unknown', tone: 'neutral' as const })
+              : link
+                ? { label: 'Not synced', tone: 'neutral' as const }
+                : { label: 'Not synced', tone: 'neutral' as const }
+            const failed = shown.tone === 'danger'
+            const at = sync ? (sync.closeTime ?? sync.startTime) : null
+            const mark = link ?? {
+              id: connection.id,
+              name: connection.providerName,
+              providerType: connection.providerType,
+              mappingId: '',
+              providerEntityId: '',
+              createdAt: null,
+              updatedAt: null,
+            }
+            return (
+              <div key={connection.id} className="flex items-center gap-3 px-6 py-3">
+                <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <IntegrationMark integration={mark} />
+                  <span className="min-w-0">
+                    <span className="block text-sm">{connection.providerName}</span>
+                    <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+                      <span className="truncate">{connection.name}</span>
+                      <span aria-hidden>·</span>
+                      {link ? (
+                        <Tooltip>
+                          <TooltipTrigger
+                            aria-label={`${connection.providerName} ID ${link.providerEntityId}`}
+                            className="truncate font-mono"
+                          >
+                            {link.providerEntityId}
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-72 font-mono break-all">
+                            {link.providerEntityId}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Pill size="sm" tone="neutral">
+                          Not mapped
+                        </Pill>
+                      )}
+                    </span>
+                  </span>
                 </span>
-                <ArrowUpRightIcon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
-              </a>
-            ) : (
-              <span className="flex min-w-0 items-center gap-2.5">
-                <IntegrationMark integration={link} />
-                <span className="truncate text-sm">{link.name}</span>
-              </span>
-            )}
-            <span className="flex min-w-0 items-center gap-1">
-              <Tooltip>
-                {/* The row shows a shortened id; the accessible name carries it whole. */}
-                <TooltipTrigger
-                  aria-label={`${link.name} ID ${link.providerEntityId}`}
-                  className="inline-flex min-w-0 items-center text-sm"
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                  <Pill size="sm" tone={shown.tone}>
+                    {failed ? 'Failed' : shown.label}
+                  </Pill>
+                  {at ? (
+                    <span className="text-muted-foreground text-xs tabular-nums">{when(at)}</span>
+                  ) : null}
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    aria-label={`Manage ${connection.providerName}`}
+                    className="text-muted-foreground hover:bg-muted focus-visible:outline-ring flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
+                  >
+                    <MoreHorizontalIcon aria-hidden className="size-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-48">
+                    {write.allowed && onPushConnection ? (
+                      <DropdownMenuItem
+                        disabled={syncing}
+                        onClick={() => onPushConnection(connection.id)}
+                      >
+                        <UploadIcon aria-hidden />
+                        {failed ? 'Retry push' : `Push to ${connection.providerName}`}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {link && providerHref?.(link) ? (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          void window.open(providerHref(link) ?? '', '_blank', 'noopener,noreferrer')
+                        }
+                      >
+                        <ArrowUpRightIcon aria-hidden /> Open in {connection.providerName}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {link ? (
+                      <DropdownMenuItem onClick={() => copyEntityId(link, entityLabel)}>
+                        <CopyIcon aria-hidden /> Copy {entityLabel} ID
+                      </DropdownMenuItem>
+                    ) : null}
+                    {write.allowed && onLink && !link ? (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setError(null)
+                          setLinkFor(connection.providerType)
+                          setLinking(true)
+                        }}
+                      >
+                        <PlusIcon aria-hidden /> Map account
+                      </DropdownMenuItem>
+                    ) : null}
+                    {write.allowed && onUnlink && link ? (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => {
+                            setError(null)
+                            setUnlinking(link)
+                          }}
+                        >
+                          <CircleSlashIcon aria-hidden /> Unlink {connection.providerName}
+                        </DropdownMenuItem>
+                      </>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )
+          })
+        : null}
+      {links
+        .filter(
+          (link) =>
+            !connectionActions?.some((connection) => connection.providerType === link.providerType),
+        )
+        .map((link) =>
+          layout === 'rows' ? (
+            <div
+              key={link.providerType}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-4 px-6 py-3"
+            >
+              {providerHref?.(link) ? (
+                <a
+                  href={providerHref(link) ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Open this ${entityLabel} in ${link.name}`}
+                  className="hover:text-foreground focus-visible:outline-ring flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-2"
                 >
-                  <span className="truncate font-mono">{shortId(link.providerEntityId)}</span>
+                  <IntegrationMark integration={link} />
+                  <span className="truncate text-sm underline-offset-2 hover:underline">
+                    {link.name}
+                  </span>
+                  <ArrowUpRightIcon
+                    aria-hidden
+                    className="text-muted-foreground size-3.5 shrink-0"
+                  />
+                </a>
+              ) : (
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <IntegrationMark integration={link} />
+                  <span className="truncate text-sm">{link.name}</span>
+                </span>
+              )}
+              <span className="flex min-w-0 items-center gap-1">
+                <Tooltip>
+                  {/* The row shows a shortened id; the accessible name carries it whole. */}
+                  <TooltipTrigger
+                    aria-label={`${link.name} ID ${link.providerEntityId}`}
+                    className="inline-flex min-w-0 items-center text-sm"
+                  >
+                    <span className="truncate font-mono">{shortId(link.providerEntityId)}</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-72 font-mono break-all">
+                    {link.providerEntityId}
+                  </TooltipContent>
+                </Tooltip>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground size-7 shrink-0"
+                  aria-label={`Copy ${entityLabel} ID`}
+                  onClick={() => copyEntityId(link, entityLabel)}
+                >
+                  <CopyIcon aria-hidden />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    aria-label={`Manage ${link.name} integration`}
+                    className="text-muted-foreground hover:bg-muted focus-visible:outline-ring ml-auto flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
+                  >
+                    <MoreHorizontalIcon aria-hidden className="size-4" />
+                  </DropdownMenuTrigger>
+                  <IntegrationMenu
+                    link={link}
+                    entityLabel={entityLabel}
+                    href={providerHref?.(link) ?? null}
+                    onUnlink={write.allowed ? onUnlink : undefined}
+                    onAskUnlink={() => {
+                      setError(null)
+                      setUnlinking(link)
+                    }}
+                  />
+                </DropdownMenu>
+              </span>
+            </div>
+          ) : (
+            <DropdownMenu key={link.providerType}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <DropdownMenuTrigger
+                      aria-label={`${link.name} integration`}
+                      className="focus-visible:outline-ring flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+                    />
+                  }
+                >
+                  <IntegrationMark integration={link} />
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-72 font-mono break-all">
-                  {link.providerEntityId}
+                <TooltipContent side="bottom" className="block max-w-72 p-3">
+                  <p className="mb-2 text-xs font-medium">{link.name}</p>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                    <dt className="opacity-70">Provider {entityLabel} ID</dt>
+                    <dd className="font-mono break-all">{link.providerEntityId}</dd>
+                    <dt className="opacity-70">Created</dt>
+                    <dd>{when(link.createdAt)}</dd>
+                    <dt className="opacity-70">Updated</dt>
+                    <dd>{when(link.updatedAt)}</dd>
+                  </dl>
                 </TooltipContent>
               </Tooltip>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground size-7 shrink-0"
-                aria-label={`Copy ${entityLabel} ID`}
-                onClick={() => copyEntityId(link, entityLabel)}
-              >
-                <CopyIcon aria-hidden />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  aria-label={`Manage ${link.name} integration`}
-                  className="text-muted-foreground hover:bg-muted focus-visible:outline-ring ml-auto flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
-                >
-                  <MoreHorizontalIcon aria-hidden className="size-4" />
-                </DropdownMenuTrigger>
-                <IntegrationMenu
-                  link={link}
-                  entityLabel={entityLabel}
-                  href={providerHref?.(link) ?? null}
-                  onUnlink={write.allowed ? onUnlink : undefined}
-                  onAskUnlink={() => {
-                    setError(null)
-                    setUnlinking(link)
-                  }}
-                />
-              </DropdownMenu>
-            </span>
-          </div>
-        ) : (
-          <DropdownMenu key={link.providerType}>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <DropdownMenuTrigger
-                    aria-label={`${link.name} integration`}
-                    className="focus-visible:outline-ring flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2"
-                  />
-                }
-              >
-                <IntegrationMark integration={link} />
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="block max-w-72 p-3">
-                <p className="mb-2 text-xs font-medium">{link.name}</p>
-                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                  <dt className="opacity-70">Provider {entityLabel} ID</dt>
-                  <dd className="font-mono break-all">{link.providerEntityId}</dd>
-                  <dt className="opacity-70">Created</dt>
-                  <dd>{when(link.createdAt)}</dd>
-                  <dt className="opacity-70">Updated</dt>
-                  <dd>{when(link.updatedAt)}</dd>
-                </dl>
-              </TooltipContent>
-            </Tooltip>
-            <IntegrationMenu
-              link={link}
-              entityLabel={entityLabel}
-              href={providerHref?.(link) ?? null}
-              onUnlink={write.allowed ? onUnlink : undefined}
-              onAskUnlink={() => {
-                setError(null)
-                setUnlinking(link)
-              }}
-            />
-          </DropdownMenu>
-        ),
-      )}
-      {layout === 'rows' && links.length === 0 ? (
+              <IntegrationMenu
+                link={link}
+                entityLabel={entityLabel}
+                href={providerHref?.(link) ?? null}
+                onUnlink={write.allowed ? onUnlink : undefined}
+                onAskUnlink={() => {
+                  setError(null)
+                  setUnlinking(link)
+                }}
+              />
+            </DropdownMenu>
+          ),
+        )}
+      {layout === 'rows' && links.length === 0 && !connectionActions?.length ? (
         <p className="text-muted-foreground px-6 py-3 text-sm">{none}</p>
       ) : null}
       {canLink ? (
@@ -359,7 +499,7 @@ export function ContractIntegrations({
         </Button>
       ) : null}
 
-      {layout === 'rows' && syncRuns.length > 0 ? (
+      {layout === 'rows' && syncRuns.length > 0 && !connectionActions?.length ? (
         <div className="space-y-2 px-6 py-3">
           <p className="text-muted-foreground text-xs">Last sync</p>
           <ul className="space-y-1.5">
@@ -409,7 +549,18 @@ export function ContractIntegrations({
       <LinkDialog
         entityLabel={entityLabel}
         open={linking && write.allowed}
-        providers={linkable}
+        providers={
+          linkFor
+            ? linkable
+                .filter((provider) => provider.providerType === linkFor)
+                .concat(
+                  linkable.some((provider) => provider.providerType === linkFor)
+                    ? []
+                    : [{ providerType: linkFor, name: linkFor }],
+                )
+            : linkable
+        }
+        initialProvider={linkFor ?? undefined}
         pending={pending}
         error={error}
         onClose={() => setLinking(false)}
@@ -417,7 +568,10 @@ export function ContractIntegrations({
           onLink &&
           void run(
             () => onLink(input),
-            () => setLinking(false),
+            () => {
+              setLinkFor(null)
+              setLinking(false)
+            },
           )
         }
       />
@@ -476,6 +630,7 @@ function LinkDialog({
   entityLabel,
   open,
   providers,
+  initialProvider,
   pending,
   error,
   onClose,
@@ -484,12 +639,15 @@ function LinkDialog({
   entityLabel: string
   open: boolean
   providers: LinkableProvider[]
+  initialProvider?: string | undefined
   pending: boolean
   error: string | null
   onClose: () => void
   onSubmit: (input: { providerType: string; providerEntityId: string }) => void
 }) {
-  const [providerType, setProviderType] = useState(providers[0]?.providerType ?? '')
+  const [providerType, setProviderType] = useState(
+    initialProvider ?? providers[0]?.providerType ?? '',
+  )
   const [providerEntityId, setProviderEntityId] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
   const selected = providers.some((p) => p.providerType === providerType)

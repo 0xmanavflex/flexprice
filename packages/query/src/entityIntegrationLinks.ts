@@ -89,23 +89,25 @@ export function useEntityIntegrationControls(type: MappedEntityType, id: string)
   })
   // V1's "Push to Integration": the API writes the entity to every connection
   // that syncs this type outbound, creating the provider record when unmapped.
-  const sync = (method: 'push' | 'pull') => async () => {
-    const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
-    if (!token) throw new ApiError(ErrorKind.Unauthorized, `Sign in to ${method} this ${type}.`)
-    if (!environmentId) throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
-    await pushToIntegrations(
-      serverURL,
-      token,
-      environmentId,
-      { entityType: type, entityId: id },
-      method,
-    )
-  }
-  const push = useSingleFlight(useMutation({ mutationFn: sync('push'), onSuccess: refresh }))
+  const sync =
+    (method: 'push' | 'pull') =>
+    async (connectionId?: string) => {
+      const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
+      if (!token) throw new ApiError(ErrorKind.Unauthorized, `Sign in to ${method} this ${type}.`)
+      if (!environmentId) throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
+      await pushToIntegrations(
+        serverURL,
+        token,
+        environmentId,
+        { entityType: type, entityId: id, ...(connectionId ? { connectionId } : {}) },
+        method,
+      )
+    }
+  const push = useMutation({ mutationFn: sync('push'), onSuccess: refresh })
   // V1's "Pull from Integration": the provider's copy is read back over this one.
   const pull = useSingleFlight(
     useMutation({
-      mutationFn: sync('pull'),
+      mutationFn: () => sync('pull')(),
       onSuccess: () => {
         void refresh()
         if (type === 'invoice') void cache.invalidateQueries({ queryKey: queryKeys.invoices.all() })
@@ -113,14 +115,21 @@ export function useEntityIntegrationControls(type: MappedEntityType, id: string)
     }),
   )
   // The providers a push reaches: connected, with this entity's outbound sync on.
-  const pushProviders = (providers.data ?? [])
-    .filter((provider) =>
-      provider.connections.some((connection) => connection.syncConfig[type]?.outbound),
-    )
-    .map((provider) => provider.name)
+  const pushConnections = (providers.data ?? []).flatMap((provider) =>
+    provider.connections
+      .filter((connection) => connection.syncConfig[type]?.outbound && connection.id)
+      .map((connection) => ({
+        id: connection.id,
+        name: connection.name || provider.name,
+        providerType: provider.providerType,
+        providerName: provider.name,
+      })),
+  )
+  const pushProviders = [...new Set(pushConnections.map((connection) => connection.providerName))]
   return {
     ...mappings,
     push,
+    pushConnections,
     pushProviders,
     pull,
     // The providers a pull reads from: connected, with this entity's inbound sync on.
