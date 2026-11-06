@@ -239,6 +239,7 @@
         "GrantAllowanceFields",
         "LabelWithHint",
         "OptionCombobox",
+        "OptionMultiCombobox",
         "OptionSelect",
         "PencilIcon",
         "PlusIcon",
@@ -1826,6 +1827,7 @@
         "EntitlementEditForm",
         "EntitlementUsageTable",
         "FormDialog",
+        "PencilIcon",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
@@ -1864,6 +1866,7 @@
         "Field",
         "FormDialog",
         "OptionCombobox",
+        "OptionMultiCombobox",
         "PencilIcon",
         "PlusIcon",
         "RowActionsMenu",
@@ -5835,7 +5838,8 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "OptionCombobox"
+        "OptionCombobox",
+        "OptionMultiCombobox"
       ],
       "story": "./src/compositions/forms/OptionSelect.stories.tsx"
     },
@@ -5861,6 +5865,19 @@
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/OptionCombobox.stories.tsx"
+    },
+    "OptionMultiCombobox": {
+      "file": "src/compositions/forms/OptionMultiCombobox.tsx",
+      "layer": "composition",
+      "composes": [
+        "OptionBody"
+      ],
+      "usedBy": [
+        "AddonChargesDialog",
+        "ContractHierarchyEditor",
+        "SubscriptionForm"
+      ],
+      "story": "./src/compositions/forms/OptionMultiCombobox.stories.tsx"
     },
     "OptionSelect": {
       "file": "src/compositions/forms/OptionSelect.tsx",
@@ -6190,6 +6207,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonGrid",
+        "ContractBenefitsEditor",
         "ContractHierarchyEditor",
         "ContractSectionDialogs",
         "CostSheetGrid",
@@ -8203,6 +8221,7 @@
         "GrantAllowanceFields",
         "LabelWithHint",
         "OptionCombobox",
+        "OptionMultiCombobox",
         "OptionSelect",
         "PencilIcon",
         "PlusIcon",
@@ -9653,6 +9672,14 @@
       "uses": [
         "OptionCombobox",
         "PlusIcon"
+      ]
+    },
+    "./src/compositions/forms/OptionMultiCombobox.stories.tsx": {
+      "title": "Building blocks/Forms/OptionMultiCombobox",
+      "component": "OptionMultiCombobox",
+      "uses": [
+        "Field",
+        "OptionMultiCombobox"
       ]
     },
     "./src/compositions/forms/OptionSelect.stories.tsx": {
