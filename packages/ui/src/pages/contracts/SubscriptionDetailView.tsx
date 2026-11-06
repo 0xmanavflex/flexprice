@@ -1646,8 +1646,9 @@ export function SubscriptionDetailView({
                 {...(activityEmptyText ? { emptyText: activityEmptyText } : {})}
                 awaiting={activityAwaiting}
               />
-              <RelatedCard items={related}>
-                {integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
+              <RelatedCard items={related} />
+              {integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
+                <Section title="Integrations" flush>
                   <ContractIntegrations
                     entityLabel="contract"
                     layout="rows"
@@ -1656,8 +1657,8 @@ export function SubscriptionDetailView({
                     onLink={onLinkIntegration}
                     onUnlink={onUnlinkIntegration}
                   />
-                ) : null}
-              </RelatedCard>
+                </Section>
+              ) : null}
             </div>
           </div>
         ) : null}
