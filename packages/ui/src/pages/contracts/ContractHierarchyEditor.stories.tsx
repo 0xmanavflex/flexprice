@@ -116,7 +116,9 @@ export const RemovesWithoutTheCustomerList: Story = {
     ],
   },
   play: async ({ args, canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole('button', { name: /Child company/ }))
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: 'Actions for Child company' }),
+    )
     await userEvent.click(await screen.findByRole('menuitem', { name: /Remove inheritance/ }))
     await userEvent.click(
       within(await screen.findByRole('dialog')).getByRole('button', {
@@ -145,5 +147,100 @@ export const AddsMultipleCustomersTogether: Story = {
     await expect(args.onInherit).not.toHaveBeenCalled()
     await userEvent.click(dialog.getByRole('button', { name: 'Add 2 inherited customers' }))
     await expect(args.onInherit).toHaveBeenCalledWith('add', ['acme-us', 'acme-eu'])
+  },
+}
+
+export const DetachesWithoutExternalId: Story = {
+  args: {
+    ...RemovesWithoutTheCustomerList.args,
+    inherited: RemovesWithoutTheCustomerList.args!.inherited!.map((row) => ({
+      ...row,
+      customerExternalId: '',
+    })),
+    onDetach: fn().mockResolvedValue(undefined),
+  },
+  play: async ({ args, canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: 'Actions for Child company' }),
+    )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove inheritance' }))
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Remove inheritance' }),
+    )
+    await expect(args.onDetach).toHaveBeenCalledWith('subs_child')
+    await expect(args.onInherit).not.toHaveBeenCalled()
+  },
+}
+
+export const IndependentChildActions: Story = {
+  args: {
+    ...RemovesWithoutTheCustomerList.args,
+    onOpenContract: fn(),
+    onOpenCustomer: fn(),
+    onDetach: fn().mockResolvedValue(undefined),
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Child company' }))
+    await expect(args.onOpenCustomer).toHaveBeenCalledWith('cust_child')
+    await userEvent.click(canvas.getByRole('button', { name: 'Scale · subs_child' }))
+    await expect(args.onOpenContract).toHaveBeenCalledWith('subs_child')
+    args.onOpenContract!.mockClear()
+    args.onOpenCustomer!.mockClear()
+    const trigger = canvas.getByRole('button', { name: 'Actions for Child company' })
+    await userEvent.click(trigger)
+    await expect(screen.getByRole('menu')).toBeVisible()
+    await userEvent.keyboard('{Escape}')
+    await expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    await userEvent.click(trigger)
+    await userEvent.click(screen.getByRole('menuitem', { name: 'View customer' }))
+    await expect(args.onOpenCustomer).toHaveBeenCalledTimes(1)
+    await expect(args.onOpenContract).not.toHaveBeenCalled()
+    await userEvent.click(trigger)
+    await userEvent.click(screen.getByRole('menuitem', { name: 'View child contract' }))
+    await expect(args.onOpenContract).toHaveBeenCalledTimes(1)
+    await userEvent.click(trigger)
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove inheritance' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(dialog.getByText(/Scale \(subs_child\)/)).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
+    await expect(args.onDetach).not.toHaveBeenCalled()
+    await expect(args.onOpenContract).toHaveBeenCalledTimes(1)
+    await expect(args.onOpenCustomer).toHaveBeenCalledTimes(1)
+  },
+}
+
+export const RemovalFailure: Story = {
+  args: {
+    ...IndependentChildActions.args,
+    onDetach: fn().mockRejectedValue(new Error('Could not remove inheritance. Try again.')),
+  },
+  play: async ({ args, canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: 'Actions for Child company' }),
+    )
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove inheritance' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove inheritance' }))
+    await expect(dialog.getByRole('alert')).toHaveTextContent(
+      'Could not remove inheritance. Try again.',
+    )
+    await expect(args.onOpenContract).not.toHaveBeenCalled()
+    await expect(args.onOpenCustomer).not.toHaveBeenCalled()
+    await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
+  },
+}
+
+export const LongNamesAndInactiveChildren: Story = {
+  args: {
+    ...IndependentChildActions.args,
+    inherited: [SubscriptionStatus.Active, SubscriptionStatus.Cancelled].map((status, index) => ({
+      ...RemovesWithoutTheCustomerList.args!.inherited![0]!,
+      id: `subs_very_long_child_contract_identifier_${index}_01JK3M8Q4T123456789`,
+      customerId: `cust_${index}`,
+      customerName: `International Customer Research and Development Operations Division ${index + 1}`,
+      planName: 'Enterprise worldwide usage agreement',
+      status,
+    })),
   },
 }

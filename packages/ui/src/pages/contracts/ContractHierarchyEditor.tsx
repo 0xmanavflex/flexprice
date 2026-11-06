@@ -1,7 +1,15 @@
 import { useWriteAccess } from '@ui/compositions/access/Access'
 import { useState } from 'react'
+import {
+  CircleSlashIcon,
+  EyeIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  PlusIcon,
+  UserIcon,
+} from '@ui/icons'
 import { type Subscription, type SubscriptionDetail } from '@fp/domain'
-import { PencilIcon, PlusIcon } from '@ui/icons'
+import { InfoHint } from '@ui/compositions/forms/InfoHint'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
@@ -10,8 +18,16 @@ import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { Field } from '@ui/compositions/forms/Field'
 import { OptionMultiCombobox } from '@ui/compositions/forms/OptionMultiCombobox'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
-import { DetailTable } from '../shared/DetailTable'
-import { RowActionsMenu } from '../shared/RowActionsMenu'
+import { EntityLink, Pill } from '../shared/cells'
+import { SUBSCRIPTION_STATUS_TONE } from '../shared/statusTones'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@ui/components/primitives/dropdown-menu'
+import { toast } from 'sonner'
 import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { provenance } from '@ui/provenance'
 
@@ -21,7 +37,7 @@ export const ContractHierarchyEditorProvenance = provenance({
     'compositions/Section',
     'compositions/FormDialog',
     'compositions/OptionCombobox',
-    'pages/shared/DetailTable',
+    'pages/shared/EntityLink',
   ],
   note: 'Change a contract’s parent or add and remove inherited customers after creation.',
 })
@@ -38,6 +54,10 @@ export interface ContractHierarchyEditorProps {
   onRetry?: () => void
   /** The current parent as the section names it ("Acme · Pro"); its id stands in until known. */
   parentLabel?: string | null | undefined
+  /** The parent contract, when this one has one and it has loaded. */
+  parent?: SubscriptionDetail | null | undefined
+  onOpenContract?: ((id: string) => void) | undefined
+  onOpenCustomer?: ((id: string) => void) | undefined
   /**
    * Asked for when a dialog opens: the customers and parent contracts to pick
    * from are only read then, not on every visit to the contract.
@@ -62,6 +82,9 @@ export function ContractHierarchyEditor({
   error,
   onRetry,
   parentLabel,
+  parent: parentContract = null,
+  onOpenContract,
+  onOpenCustomer,
   onLoadOptions,
   optionsLoading = false,
   optionsError = null,
@@ -71,10 +94,11 @@ export function ContractHierarchyEditor({
   onInherit,
 }: ContractHierarchyEditorProps) {
   const [mode, setMode] = useState<'parent' | 'inherit' | null>(null)
-  const [parent, setParent] = useState(subscription.parentSubscriptionId ?? '')
+  const [selectedParent, setParent] = useState(subscription.parentSubscriptionId ?? '')
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([])
   const [remove, setRemove] = useState<{
     name: string
+    planName: string
     externalId: string
     subscriptionId: string
   } | null>(null)
@@ -85,13 +109,14 @@ export function ContractHierarchyEditor({
     subscription.status === 'cancelled' ||
     subscription.subscriptionType === 'inherited' ||
     !write.allowed
-  const run = async (action: () => Promise<unknown>) => {
+  const run = async (action: () => Promise<unknown>, success?: string) => {
     setPending(true)
     setProblem(null)
     try {
       await action()
       setMode(null)
       setRemove(null)
+      if (success) toast.success(success)
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not change hierarchy. Try again.')
     } finally {
@@ -122,10 +147,12 @@ export function ContractHierarchyEditor({
     <>
       <Section
         title="Contract hierarchy"
-        description={
-          inherited.length > 0
-            ? 'Manage the customers that inherit this contract. Remove inherited customers before assigning a parent.'
-            : 'Set a parent contract or manage the customers that inherit this contract.'
+        titleAction={
+          <InfoHint>
+            {inherited.length > 0
+              ? 'Manage the customers that inherit this contract. Remove inherited customers before assigning a parent.'
+              : 'Set a parent contract or manage the customers that inherit this contract.'}
+          </InfoHint>
         }
         actions={
           !readOnly ? (
@@ -186,52 +213,122 @@ export function ContractHierarchyEditor({
             Loading hierarchy…
           </p>
         ) : (
-          <>
-            <p className="text-muted-foreground text-sm">
-              {subscription.parentSubscriptionId
-                ? `Parent: ${parentLabel || parentOptions.find((row) => row.value === subscription.parentSubscriptionId)?.label || subscription.parentSubscriptionId}`
-                : 'No parent contract'}
-            </p>
+          <div className="flex flex-col gap-4">
+            <HierarchySummary
+              subscription={subscription}
+              parent={parentContract}
+              parentLabel={parentLabel}
+              parentFallback={
+                parentOptions.find((row) => row.value === subscription.parentSubscriptionId)?.label
+              }
+              {...(onOpenContract ? { onOpenContract } : {})}
+              {...(onOpenCustomer ? { onOpenCustomer } : {})}
+            />
             {inherited.length ? (
-              <DetailTable
-                label="Inherited customers"
-                noun="customers"
-                rows={inherited}
-                getRowId={(row) => row.id}
-                columns={[
-                  { key: 'customer', header: 'Customer', cell: (row) => row.customerName },
-                  { key: 'plan', header: 'Plan', cell: (row) => row.planName },
-                  {
-                    key: 'actions',
-                    header: '',
-                    cell: (row) => {
-                      // The inherited contract carries its customer's external id; the
-                      // customer list (read only for the dialogs) is the fallback.
-                      const externalId =
-                        row.customerExternalId ??
-                        customers.find((customer) => customer.id === row.customerId)?.externalId
-                      return !readOnly && (onDetach || externalId) ? (
-                        <RowActionsMenu
-                          label={row.customerName}
-                          removeLabel="Remove inheritance"
-                          onRemove={() => {
-                            setProblem(null)
-                            setRemove({
-                              name: row.customerName,
-                              externalId: externalId ?? '',
-                              subscriptionId: row.id,
-                            })
-                          }}
-                        />
-                      ) : null
-                    },
-                  },
-                ]}
-              />
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">
+                  Customers inheriting this contract ({inherited.length})
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {inherited.length === 1
+                    ? '1 customer inherits this contract'
+                    : `${inherited.length} customers inherit this contract`}
+                </p>
+                <ul aria-label="Customers inheriting this contract" className="divide-y">
+                  {inherited.map((row) => {
+                    const externalId =
+                      row.customerExternalId ??
+                      customers.find((customer) => customer.id === row.customerId)?.externalId
+                    const canRemove = !readOnly && (Boolean(onDetach) || Boolean(externalId))
+                    return (
+                      <li key={row.id} className="flex items-center gap-3 py-2.5">
+                        <span className="min-w-0 flex-1">
+                          {onOpenCustomer ? (
+                            <EntityLink
+                              primary
+                              wrap
+                              label={row.customerName}
+                              onOpen={() => onOpenCustomer(row.customerId)}
+                            />
+                          ) : (
+                            <span className="text-sm wrap-anywhere">{row.customerName}</span>
+                          )}
+                          {onOpenContract ? (
+                            <EntityLink
+                              muted
+                              wrap
+                              label={row.planName ? `${row.planName} · ${row.id}` : row.id}
+                              onOpen={() => onOpenContract(row.id)}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground block text-xs">
+                              {row.planName ? `${row.planName} · ${row.id}` : row.id}
+                            </span>
+                          )}
+                        </span>
+                        <Pill size="sm" tone={SUBSCRIPTION_STATUS_TONE[row.status]}>
+                          {row.status}
+                        </Pill>
+                        <div
+                          onClick={(event) => event.stopPropagation()}
+                          onPointerDown={(event) => event.stopPropagation()}
+                        >
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              aria-label={`Actions for ${row.customerName}`}
+                              className="text-muted-foreground hover:bg-muted focus-visible:outline-ring flex size-8 items-center justify-center rounded-md focus-visible:outline-2"
+                            >
+                              <MoreHorizontalIcon aria-hidden className="size-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="min-w-48"
+                              onClick={(event) => event.stopPropagation()}
+                              onPointerDown={(event) => event.stopPropagation()}
+                            >
+                              {onOpenContract ? (
+                                <DropdownMenuItem onClick={() => onOpenContract(row.id)}>
+                                  <EyeIcon aria-hidden /> View child contract
+                                </DropdownMenuItem>
+                              ) : null}
+                              {onOpenCustomer ? (
+                                <DropdownMenuItem onClick={() => onOpenCustomer(row.customerId)}>
+                                  <UserIcon aria-hidden /> View customer
+                                </DropdownMenuItem>
+                              ) : null}
+                              {canRemove ? (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => {
+                                      setProblem(null)
+                                      setRemove({
+                                        name: row.customerName,
+                                        planName: row.planName
+                                          ? `${row.planName} (${row.id})`
+                                          : row.id,
+                                        externalId: externalId ?? '',
+                                        subscriptionId: row.id,
+                                      })
+                                    }}
+                                  >
+                                    <CircleSlashIcon aria-hidden /> Remove inheritance
+                                  </DropdownMenuItem>
+                                </>
+                              ) : null}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
             ) : (
-              <p className="text-muted-foreground text-sm">No customers inherit this contract.</p>
+              <SectionEmpty title="No customers inherit this contract" />
             )}
-          </>
+          </div>
         )}
       </Section>
       <FormDialog
@@ -257,7 +354,7 @@ export function ContractHierarchyEditor({
             (mode === 'inherit' && !selectedCustomers.length)
           }
           onSubmit={() => {
-            if (mode === 'parent') void run(() => onParent(parent))
+            if (mode === 'parent') void run(() => onParent(selectedParent))
             else if (selectedCustomers.length)
               void run(() => onInherit('add', [...new Set(selectedCustomers)]))
           }}
@@ -282,7 +379,7 @@ export function ContractHierarchyEditor({
                 <OptionCombobox
                   id={id}
                   searchable
-                  value={parent || '__none__'}
+                  value={selectedParent || '__none__'}
                   onValueChange={(value) => setParent(value === '__none__' ? '' : value)}
                   options={[{ value: '__none__', label: 'No parent' }, ...parentOptions]}
                 />
@@ -319,19 +416,107 @@ export function ContractHierarchyEditor({
       <ConfirmDialog
         open={remove !== null}
         onOpenChange={(open) => !open && !pending && setRemove(null)}
-        title={`Remove inheritance for ${remove?.name ?? ''}?`}
-        description="This customer will no longer inherit this contract."
+        title={`Remove inheritance for ${remove?.name ?? 'this customer'}?`}
+        description={
+          remove
+            ? `${remove.name} stops inheriting this contract through ${remove.planName}. The customer and that contract stay. Its charges no longer follow this contract.`
+            : 'This customer stops inheriting this contract. The customer and the child contract stay.'
+        }
         confirmLabel="Remove inheritance"
         destructive
         isPending={pending}
         error={problem}
         onConfirm={() =>
           remove &&
-          void run(() =>
-            onDetach ? onDetach(remove.subscriptionId) : onInherit('remove', [remove.externalId]),
+          void run(
+            () =>
+              onDetach ? onDetach(remove.subscriptionId) : onInherit('remove', [remove.externalId]),
+            `${remove.name} no longer inherits this contract`,
           )
         }
       />
     </>
+  )
+}
+
+const contractDay = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
+function span(start: Date | null, end: Date | null): string {
+  if (!start && !end) return ''
+  const from = start ? contractDay.format(start) : 'Open start'
+  const to = end ? contractDay.format(end) : 'No end'
+  return `${from} – ${to}`
+}
+
+function HierarchySummary({
+  subscription,
+  parent,
+  parentLabel,
+  parentFallback,
+  onOpenContract,
+  onOpenCustomer,
+}: {
+  subscription: SubscriptionDetail
+  parent: SubscriptionDetail | null
+  parentLabel?: string | null | undefined
+  parentFallback?: string | undefined
+  onOpenContract?: (id: string) => void
+  onOpenCustomer?: (id: string) => void
+}) {
+  const parentId = subscription.parentSubscriptionId
+  const parentName =
+    parent?.planName || parentLabel || parentFallback || parentId || 'Parent contract'
+  const facts = [
+    parent?.billingPeriodLabel,
+    parent?.currency,
+    parent ? span(parent.startDate, parent.endDate) : '',
+  ].filter(Boolean)
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground text-xs">Parent</p>
+      {parentId ? (
+        <div className="border-border ml-3 flex flex-col gap-1 border-l pl-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {onOpenContract ? (
+              <EntityLink label={parentName} onOpen={() => onOpenContract(parentId)} />
+            ) : (
+              <span className="text-sm">{parentName}</span>
+            )}
+            {parent ? (
+              <Pill size="sm" tone={SUBSCRIPTION_STATUS_TONE[parent.status]}>
+                {parent.status}
+              </Pill>
+            ) : null}
+          </div>
+          {parent && onOpenCustomer ? (
+            <EntityLink
+              muted
+              label={parent.customerName}
+              onOpen={() => onOpenCustomer(parent.customerId)}
+            />
+          ) : null}
+          {facts.length ? (
+            <p className="text-muted-foreground text-sm">{facts.join(' · ')}</p>
+          ) : null}
+          {subscription.subscriptionType === 'inherited' ? (
+            <p className="text-muted-foreground text-sm">
+              Charges and billing follow this parent. This contract has no charges of its own.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-sm">No parent contract</p>
+      )}
+      {subscription.subscriptionType === 'parent' ? (
+        <p className="text-muted-foreground text-sm">
+          Child contracts below bill with this contract’s charges.
+        </p>
+      ) : null}
+    </div>
   )
 }

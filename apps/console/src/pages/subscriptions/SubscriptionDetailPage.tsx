@@ -401,6 +401,9 @@ export function SubscriptionDetailPage({
                   ? `${parentContract.data.customerName} · ${parentContract.data.planName}`
                   : null
               }
+              parent={parentContract.data ?? null}
+              {...(onOpenContract ? { onOpenContract } : {})}
+              onOpenCustomer={onOpenCustomer}
               onLoadOptions={() => setHierarchyOptions(true)}
               optionsLoading={
                 hierarchyOptions && (hierarchyCustomers.isPending || parentCandidates.isPending)

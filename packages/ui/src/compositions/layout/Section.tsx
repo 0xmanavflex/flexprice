@@ -140,9 +140,12 @@ export function Section({
       ) : (
         <div className="flex items-center justify-between gap-4 border-b px-6 py-4">
           <div className="min-w-0 space-y-0.5">
-            <Heading id={id} className="text-sm font-medium">
-              {title}
-            </Heading>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Heading id={id} className="text-sm font-medium">
+                {title}
+              </Heading>
+              {titleAction}
+            </div>
             {description ? (
               <p className="text-muted-foreground text-[13px]">{description}</p>
             ) : null}
