@@ -1410,6 +1410,51 @@ export const AddSeveralAddons: Story = {
   },
 }
 
+/**
+ * An add-on set aside is still being added, so it stays editable (V1): reopening it brings back
+ * its start and proration, and sets the one in hand aside instead.
+ */
+export const EditASetAsideAddon: Story = {
+  parameters: menuA11y,
+  args: {
+    sectionOptions: {
+      ...SECTION_OPTIONS,
+      addons: [
+        { id: 'addon_support', name: 'Priority support' },
+        { id: 'addon_sso', name: 'SSO' },
+      ],
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Modify add-ons' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Add another add-on' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'SSO' }))
+
+    // Back to the first: SSO goes aside, Priority support opens with its settings.
+    await userEvent.click(dialog.getByRole('button', { name: 'Edit Priority support' }))
+    const staged = within(dialog.getByRole('list', { name: 'Add-ons to attach' }))
+    await expect(staged.getByText('SSO')).toBeVisible()
+    await expect(staged.queryByText('Priority support')).toBeNull()
+    await userEvent.click(dialog.getByRole('combobox', { name: /Starts/ }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'At the end of the current period' }),
+    )
+    await userEvent.click(dialog.getByRole('switch', { name: 'Prorate the current period' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
+    await waitFor(() =>
+      expect(args.onAddAddon).toHaveBeenCalledWith([
+        { addonId: 'addon_sso', changeAt: 'immediate', prorate: true },
+        { addonId: 'addon_support', changeAt: 'end_of_period', prorate: false },
+      ]),
+    )
+  },
+}
+
 /** V1's "Configure": an attached add-on lists its charges here, each opening the charge editor. */
 export const ConfigureAddon: Story = {
   parameters: menuA11y,

@@ -1925,6 +1925,7 @@
         "LabelWithHint",
         "OptionCombobox",
         "OptionSelect",
+        "PencilIcon",
         "PlusIcon",
         "TaxDialog"
       ],
@@ -6190,6 +6191,7 @@
         "AddonChargesDialog",
         "AddonGrid",
         "ContractHierarchyEditor",
+        "ContractSectionDialogs",
         "CostSheetGrid",
         "CouponGrid",
         "CreateWithAiButton",

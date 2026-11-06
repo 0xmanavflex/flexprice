@@ -10,15 +10,38 @@ import { env } from '@/env'
  * of dismissing stops being news. Adding a release is adding an entry at the
  * top with a new `id` (it is what a dismissal is remembered under, so reusing
  * one would hide the new card from anyone who dismissed the old); drop the
- * oldest to stay at six. Every `href` is a page on docs.flexprice.io that
- * explains the change, and `scene` is the product figure for its area.
+ * oldest to stay at six. Every `href` explains the change: a page on
+ * docs.flexprice.io, or for the console as a whole its walkthrough video.
+ * `scene` is the product figure for its area.
  */
+/** "New Flexprice Console | Quick Walkthrough", the tour of this console (Loom, 1:29). */
+export const CONSOLE_WALKTHROUGH_URL = 'https://www.loom.com/share/125badfaeeb94dfabca6c195b49687b3'
+/** The same video's player, which the card plays in the console. */
+export const CONSOLE_WALKTHROUGH_EMBED =
+  'https://www.loom.com/embed/125badfaeeb94dfabca6c195b49687b3'
+/** Loom's still of it (its oEmbed `thumbnail_url`, as a JPEG). */
+const CONSOLE_WALKTHROUGH_POSTER =
+  'https://cdn.loom.com/sessions/thumbnails/125badfaeeb94dfabca6c195b49687b3-f5105f366e263f84.jpg'
+
 const RELEASES: ShellChangelogEntry[] = [
   {
-    id: '2026-11-console-v2',
+    // A new id (it was `2026-11-console-v2`, to the docs): the card now plays the walkthrough,
+    // so it shows again for anyone who dismissed the old one.
+    id: '2026-11-console-walkthrough',
     title: 'A new console',
-    summary: 'Search every record with ⌘K, and switch environments from the breadcrumb.',
-    href: DOCS.home,
+    summary: 'Watch the 90-second walkthrough of what moved and what is new.',
+    href: CONSOLE_WALKTHROUGH_URL,
+    video: CONSOLE_WALKTHROUGH_EMBED,
+    poster: CONSOLE_WALKTHROUGH_POSTER,
+    duration: '1:29',
+    announcement: {
+      eyebrow: 'Product update',
+      title: 'Meet your new Flexprice Console',
+      description:
+        'Explore the redesigned experience for managing customers, billing, contracts and revenue.',
+    },
+    // Opens by itself once, right after sign-in.
+    autoOpen: true,
     scene: 'home',
   },
   {
