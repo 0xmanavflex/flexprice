@@ -869,3 +869,5 @@ export {
 } from './contractBenefits'
 
 export { useContractPickerFeatures, useContractPickerPriceUnits } from './contractPickers'
+
+export { useDetachInheritedContract } from './subscriptions'

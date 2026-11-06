@@ -22,6 +22,7 @@ import {
   useEditContractEntitlement,
   useResetContractEntitlement,
   useCreateSpendingAllowance,
+  useDetachInheritedContract,
   useParentContractCandidates,
   useUpdateContractParent,
   useChangeInheritedCustomers,
@@ -165,6 +166,7 @@ export function SubscriptionDetailPage({
   const benefitRecords = useContractBenefitRecords(subscriptionId)
   const editBenefit = useEditContractEntitlement(subscriptionId)
   const resetBenefit = useResetContractEntitlement(subscriptionId)
+  const detachInherited = useDetachInheritedContract()
   const createAllowance = useCreateSpendingAllowance(subscriptionId)
   // Every customer and every parent candidate is a large read: it waits until
   // the hierarchy editor opens a dialog that picks from them.
@@ -376,6 +378,7 @@ export function SubscriptionDetailPage({
         hierarchyEditor={
           <AccessScope entity={RBAC_ENTITY.Subscription}>
             <ContractHierarchyEditor
+              onDetach={(childId) => detachInherited.mutateAsync(childId)}
               subscription={data}
               inherited={inheritedContracts.data ?? []}
               customers={hierarchyCustomers.data?.customers ?? []}

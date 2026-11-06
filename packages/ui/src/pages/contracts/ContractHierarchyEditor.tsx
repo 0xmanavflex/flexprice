@@ -8,6 +8,7 @@ import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { Field } from '@ui/compositions/forms/Field'
+import { OptionMultiCombobox } from '@ui/compositions/forms/OptionMultiCombobox'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { DetailTable } from '../shared/DetailTable'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
@@ -46,6 +47,7 @@ export interface ContractHierarchyEditorProps {
   optionsLoading?: boolean | undefined
   optionsError?: string | null | undefined
   onRetryOptions?: (() => void) | undefined
+  onDetach?: ((childSubscriptionId: string) => Promise<unknown>) | undefined
   onParent: (parentId: string) => Promise<unknown>
   onInherit: (action: 'add' | 'remove', externalIds: string[]) => Promise<unknown>
 }
@@ -64,17 +66,25 @@ export function ContractHierarchyEditor({
   optionsLoading = false,
   optionsError = null,
   onRetryOptions,
+  onDetach,
   onParent,
   onInherit,
 }: ContractHierarchyEditorProps) {
   const [mode, setMode] = useState<'parent' | 'inherit' | null>(null)
   const [parent, setParent] = useState(subscription.parentSubscriptionId ?? '')
-  const [customer, setCustomer] = useState('')
-  const [remove, setRemove] = useState<{ name: string; externalId: string } | null>(null)
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([])
+  const [remove, setRemove] = useState<{
+    name: string
+    externalId: string
+    subscriptionId: string
+  } | null>(null)
   const [pending, setPending] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const write = useWriteAccess()
-  const readOnly = subscription.status === 'cancelled' || !write.allowed
+  const readOnly =
+    subscription.status === 'cancelled' ||
+    subscription.subscriptionType === 'inherited' ||
+    !write.allowed
   const run = async (action: () => Promise<unknown>) => {
     setPending(true)
     setProblem(null)
@@ -97,10 +107,7 @@ export function ContractHierarchyEditor({
   )
   const parentOptions = parents
     .filter(
-      (row) =>
-        row.id !== subscription.id &&
-        row.customerId !== subscription.customerId &&
-        !inherited.some((contract) => contract.id === row.id),
+      (row) => row.id !== subscription.id && !inherited.some((contract) => contract.id === row.id),
     )
     .map((row) => ({ value: row.id, label: `${row.customerName} · ${row.planName}` }))
   if (
@@ -126,7 +133,12 @@ export function ContractHierarchyEditor({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={loading || Boolean(error) || inherited.length > 0}
+                disabled={
+                  loading ||
+                  Boolean(error) ||
+                  inherited.length > 0 ||
+                  subscription.subscriptionType !== 'standalone'
+                }
                 onClick={() => {
                   setParent(subscription.parentSubscriptionId ?? '')
                   setProblem(null)
@@ -145,7 +157,7 @@ export function ContractHierarchyEditor({
                   size="sm"
                   disabled={loading || Boolean(error)}
                   onClick={() => {
-                    setCustomer('')
+                    setSelectedCustomers([])
                     setProblem(null)
                     onLoadOptions?.()
                     setMode('inherit')
@@ -198,13 +210,17 @@ export function ContractHierarchyEditor({
                       const externalId =
                         row.customerExternalId ??
                         customers.find((customer) => customer.id === row.customerId)?.externalId
-                      return !readOnly && externalId ? (
+                      return !readOnly && (onDetach || externalId) ? (
                         <RowActionsMenu
                           label={row.customerName}
                           removeLabel="Remove inheritance"
                           onRemove={() => {
                             setProblem(null)
-                            setRemove({ name: row.customerName, externalId })
+                            setRemove({
+                              name: row.customerName,
+                              externalId: externalId ?? '',
+                              subscriptionId: row.id,
+                            })
                           }}
                         />
                       ) : null
@@ -221,17 +237,29 @@ export function ContractHierarchyEditor({
       <FormDialog
         open={mode !== null}
         onOpenChange={(open) => !open && !pending && setMode(null)}
-        title={mode === 'parent' ? 'Change parent contract' : 'Add inherited customer'}
+        title={mode === 'parent' ? 'Change parent contract' : 'Add inherited customers'}
         isPending={pending}
       >
         <Composer
-          submitLabel={mode === 'parent' ? 'Save parent' : 'Add inherited customer'}
+          submitLabel={
+            mode === 'parent'
+              ? 'Save parent'
+              : `Add ${selectedCustomers.length || ''} inherited customer${selectedCustomers.length === 1 ? '' : 's'}`.replace(
+                  '  ',
+                  ' ',
+                )
+          }
           submitting={pending}
           onCancel={() => setMode(null)}
-          disabled={optionsLoading || Boolean(optionsError) || (mode === 'inherit' && !customer)}
+          disabled={
+            optionsLoading ||
+            Boolean(optionsError) ||
+            (mode === 'inherit' && !selectedCustomers.length)
+          }
           onSubmit={() => {
             if (mode === 'parent') void run(() => onParent(parent))
-            else if (customer) void run(() => onInherit('add', [customer]))
+            else if (selectedCustomers.length)
+              void run(() => onInherit('add', [...new Set(selectedCustomers)]))
           }}
         >
           {optionsError ? (
@@ -262,15 +290,16 @@ export function ContractHierarchyEditor({
             </Field>
           ) : (
             <Field
-              label="Customer"
+              label="Customers"
               hint="Customers with their own contract cannot inherit another contract."
             >
               {({ id }) => (
-                <OptionCombobox
+                <OptionMultiCombobox
                   id={id}
-                  searchable
-                  value={customer || undefined}
-                  onValueChange={setCustomer}
+                  disabled={pending}
+                  value={selectedCustomers}
+                  onValueChange={setSelectedCustomers}
+                  placeholder="Search and select customers…"
                   options={eligible.map((row) => ({
                     value: row.externalId,
                     label: row.name,
@@ -296,7 +325,12 @@ export function ContractHierarchyEditor({
         destructive
         isPending={pending}
         error={problem}
-        onConfirm={() => remove && void run(() => onInherit('remove', [remove.externalId]))}
+        onConfirm={() =>
+          remove &&
+          void run(() =>
+            onDetach ? onDetach(remove.subscriptionId) : onInherit('remove', [remove.externalId]),
+          )
+        }
       />
     </>
   )

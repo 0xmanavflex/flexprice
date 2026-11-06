@@ -70,10 +70,11 @@ export const AddsAnInheritedCustomer: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Add inherited customer' }))
-    const dialog = within(await screen.findByRole('dialog', { name: 'Add inherited customer' }))
-    await userEvent.click(dialog.getByRole('combobox', { name: 'Customer' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add inherited customers' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Customers' }))
     await userEvent.click(await screen.findByRole('option', { name: /Customer past page one/ }))
-    await userEvent.click(dialog.getByRole('button', { name: 'Add inherited customer' }))
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add 1 inherited customer' }))
     await expect(args.onInherit).toHaveBeenCalledWith('add', ['external-child'])
   },
 }
@@ -123,5 +124,26 @@ export const RemovesWithoutTheCustomerList: Story = {
       }),
     )
     await expect(args.onInherit).toHaveBeenCalledWith('remove', ['external-child'])
+  },
+}
+
+export const AddsMultipleCustomersTogether: Story = {
+  args: {
+    customers: [
+      { id: 'first', name: 'Acme US', externalId: 'acme-us' },
+      { id: 'second', name: 'Acme EU', externalId: 'acme-eu' },
+    ],
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add inherited customer' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add inherited customers' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Customers' }))
+    await userEvent.click(await screen.findByRole('option', { name: /Acme US/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Acme EU/ }))
+    await userEvent.keyboard('{Escape}')
+    await expect(args.onInherit).not.toHaveBeenCalled()
+    await userEvent.click(dialog.getByRole('button', { name: 'Add 2 inherited customers' }))
+    await expect(args.onInherit).toHaveBeenCalledWith('add', ['acme-us', 'acme-eu'])
   },
 }

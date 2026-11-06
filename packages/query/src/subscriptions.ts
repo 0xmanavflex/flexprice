@@ -1001,7 +1001,7 @@ export interface ParentContractCandidate {
 }
 
 /**
- * The contracts that can be a parent: running ones (active or trialing) that
+ * The contracts that can be a parent: active ones that
  * do not sit under a parent themselves, since a child cannot have children.
  */
 export function toParentContractCandidates(
@@ -1022,7 +1022,7 @@ export function toParentContractCandidates(
 
 /**
  * Contracts a new contract can sit under (`inheritance.parent_subscription_id`):
- * the first page of running contracts, with their customer and plan named.
+ * every page of active contracts, with their customer and plan named.
  */
 export function useParentContractCandidates(enabled = true) {
   const client = useFlexprice()
@@ -1036,7 +1036,7 @@ export function useParentContractCandidates(enabled = true) {
           (options) =>
             client.subscriptions.querySubscription(
               {
-                subscriptionStatus: ['active', 'trialing'],
+                subscriptionStatus: ['active'],
                 expand: 'customer,plan',
                 limit: 100,
                 offset,
@@ -2974,6 +2974,19 @@ export function useChangeInheritedCustomers(subscriptionId: string) {
           subscriptionId,
           toInheritanceChangeRequest(action, externalIds),
         ),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** Detach a known inherited record without needing a customer lookup or external ID. */
+export function useDetachInheritedContract() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (childSubscriptionId: string) =>
+      call(() =>
+        client.subscriptions.updateSubscription(childSubscriptionId, { parentSubscriptionId: '' }),
       ),
     onSuccess: () => invalidateContract(queryClient),
   })
