@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { ContractHierarchyEditor } from './ContractHierarchyEditor'
@@ -96,6 +97,7 @@ export const LoadsChoicesOnOpen: Story = {
 export const RemovesWithoutTheCustomerList: Story = {
   args: {
     customers: [],
+    onDetach: fn().mockResolvedValue(undefined),
     subscription: { ...SUBSCRIPTION, subscriptionType: 'parent' },
     inherited: [
       {
@@ -125,7 +127,8 @@ export const RemovesWithoutTheCustomerList: Story = {
         name: 'Remove inheritance',
       }),
     )
-    await expect(args.onInherit).toHaveBeenCalledWith('remove', ['external-child'])
+    await expect(args.onDetach).toHaveBeenCalledWith('subs_child')
+    await expect(args.onInherit).not.toHaveBeenCalled()
   },
 }
 
@@ -185,44 +188,44 @@ export const IndependentChildActions: Story = {
     await expect(args.onOpenCustomer).toHaveBeenCalledWith('cust_child')
     await userEvent.click(canvas.getByRole('button', { name: 'Scale · subs_child' }))
     await expect(args.onOpenContract).toHaveBeenCalledWith('subs_child')
-    args.onOpenContract!.mockClear()
-    args.onOpenCustomer!.mockClear()
     const trigger = canvas.getByRole('button', { name: 'Actions for Child company' })
     await userEvent.click(trigger)
-    await expect(screen.getByRole('menu')).toBeVisible()
+    await expect(await screen.findByRole('menu')).toBeVisible()
     await userEvent.keyboard('{Escape}')
     await expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     await userEvent.click(trigger)
-    await userEvent.click(screen.getByRole('menuitem', { name: 'View customer' }))
-    await expect(args.onOpenCustomer).toHaveBeenCalledTimes(1)
-    await expect(args.onOpenContract).not.toHaveBeenCalled()
-    await userEvent.click(trigger)
-    await userEvent.click(screen.getByRole('menuitem', { name: 'View child contract' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'View customer' }))
+    await expect(args.onOpenCustomer).toHaveBeenCalledTimes(2)
     await expect(args.onOpenContract).toHaveBeenCalledTimes(1)
     await userEvent.click(trigger)
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove inheritance' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'View child contract' }))
+    await expect(args.onOpenContract).toHaveBeenCalledTimes(2)
+    await userEvent.click(trigger)
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove inheritance' }))
     const dialog = within(await screen.findByRole('dialog'))
     await expect(dialog.getByText(/Scale \(subs_child\)/)).toBeVisible()
     await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
     await expect(args.onDetach).not.toHaveBeenCalled()
-    await expect(args.onOpenContract).toHaveBeenCalledTimes(1)
-    await expect(args.onOpenCustomer).toHaveBeenCalledTimes(1)
+    await expect(args.onOpenContract).toHaveBeenCalledTimes(2)
+    await expect(args.onOpenCustomer).toHaveBeenCalledTimes(2)
   },
 }
 
 export const RemovalFailure: Story = {
   args: {
     ...IndependentChildActions.args,
-    onDetach: fn().mockRejectedValue(new Error('Could not remove inheritance. Try again.')),
+    onDetach: async () => {
+      throw new Error('Could not remove inheritance. Try again.')
+    },
   },
   play: async ({ args, canvasElement }) => {
     await userEvent.click(
       within(canvasElement).getByRole('button', { name: 'Actions for Child company' }),
     )
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Remove inheritance' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove inheritance' }))
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.click(dialog.getByRole('button', { name: 'Remove inheritance' }))
-    await expect(dialog.getByRole('alert')).toHaveTextContent(
+    await expect(await dialog.findByRole('alert')).toHaveTextContent(
       'Could not remove inheritance. Try again.',
     )
     await expect(args.onOpenContract).not.toHaveBeenCalled()
@@ -242,5 +245,51 @@ export const LongNamesAndInactiveChildren: Story = {
       planName: 'Enterprise worldwide usage agreement',
       status,
     })),
+  },
+}
+
+/** Model the refreshed query result after a successful child-specific detach. */
+export const RefreshAfterRemoval: Story = {
+  args: { ...IndependentChildActions.args },
+  render: function RefreshedHierarchy(args) {
+    const [children, setChildren] = useState(args.inherited)
+    return (
+      <ContractHierarchyEditor
+        {...args}
+        inherited={children}
+        onDetach={async (id) => {
+          await args.onDetach?.(id)
+          setChildren((rows) => rows.filter((row) => row.id !== id))
+        }}
+      />
+    )
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Child company' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove inheritance' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove inheritance' }))
+    await expect(await canvas.findByText('No customers inherit this contract')).toBeVisible()
+    await expect(args.onDetach).toHaveBeenCalledWith('subs_child')
+    await expect(args.onOpenContract).not.toHaveBeenCalled()
+  },
+}
+
+export const NarrowHierarchy: Story = {
+  args: { ...LongNamesAndInactiveChildren.args },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 360, maxWidth: '100%' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const list = within(canvasElement).getByRole('list', {
+      name: 'Customers inheriting this contract',
+    })
+    await expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth)
+    await expect(within(list).getAllByRole('listitem')).toHaveLength(2)
   },
 }

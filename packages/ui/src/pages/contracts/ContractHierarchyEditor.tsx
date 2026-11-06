@@ -37,7 +37,7 @@ export const ContractHierarchyEditorProvenance = provenance({
     'compositions/Section',
     'compositions/FormDialog',
     'compositions/OptionCombobox',
-    'pages/shared/EntityLink',
+    'pages/shared/cells',
   ],
   note: 'Change a contract’s parent or add and remove inherited customers after creation.',
 })
@@ -99,7 +99,6 @@ export function ContractHierarchyEditor({
   const [remove, setRemove] = useState<{
     name: string
     planName: string
-    externalId: string
     subscriptionId: string
   } | null>(null)
   const [pending, setPending] = useState(false)
@@ -229,17 +228,9 @@ export function ContractHierarchyEditor({
                 <p className="text-sm font-medium">
                   Customers inheriting this contract ({inherited.length})
                 </p>
-                <p className="text-muted-foreground text-xs">
-                  {inherited.length === 1
-                    ? '1 customer inherits this contract'
-                    : `${inherited.length} customers inherit this contract`}
-                </p>
                 <ul aria-label="Customers inheriting this contract" className="divide-y">
                   {inherited.map((row) => {
-                    const externalId =
-                      row.customerExternalId ??
-                      customers.find((customer) => customer.id === row.customerId)?.externalId
-                    const canRemove = !readOnly && (Boolean(onDetach) || Boolean(externalId))
+                    const canRemove = !readOnly && Boolean(onDetach)
                     return (
                       <li key={row.id} className="flex items-center gap-3 py-2.5">
                         <span className="min-w-0 flex-1">
@@ -308,7 +299,6 @@ export function ContractHierarchyEditor({
                                         planName: row.planName
                                           ? `${row.planName} (${row.id})`
                                           : row.id,
-                                        externalId: externalId ?? '',
                                         subscriptionId: row.id,
                                       })
                                     }}
@@ -429,8 +419,7 @@ export function ContractHierarchyEditor({
         onConfirm={() =>
           remove &&
           void run(
-            () =>
-              onDetach ? onDetach(remove.subscriptionId) : onInherit('remove', [remove.externalId]),
+            () => onDetach!(remove.subscriptionId),
             `${remove.name} no longer inherits this contract`,
           )
         }
@@ -483,7 +472,7 @@ function HierarchySummary({
         <div className="border-border ml-3 flex flex-col gap-1 border-l pl-3">
           <div className="flex flex-wrap items-center gap-2">
             {onOpenContract ? (
-              <EntityLink label={parentName} onOpen={() => onOpenContract(parentId)} />
+              <EntityLink wrap label={parentName} onOpen={() => onOpenContract(parentId)} />
             ) : (
               <span className="text-sm">{parentName}</span>
             )}
@@ -496,6 +485,7 @@ function HierarchySummary({
           {parent && onOpenCustomer ? (
             <EntityLink
               muted
+              wrap
               label={parent.customerName}
               onOpen={() => onOpenCustomer(parent.customerId)}
             />

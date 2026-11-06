@@ -2995,7 +2995,11 @@ export function useChangeInheritedCustomers(subscriptionId: string) {
   })
 }
 
-/** Detach a known inherited record without needing a customer lookup or external ID. */
+/**
+ * Clear only the relationship: PUT with an empty parent ID preserves the child
+ * and customer. Do not use modify/inheritance remove here: that schedules child
+ * cancellation (backend subscription_modification.executeRemoveInheritance).
+ */
 export function useDetachInheritedContract() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -3004,6 +3008,9 @@ export function useDetachInheritedContract() {
       call(() =>
         client.subscriptions.updateSubscription(childSubscriptionId, { parentSubscriptionId: '' }),
       ),
-    onSuccess: () => invalidateContract(queryClient),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.customers.usageAll() })
+    },
   })
 }
