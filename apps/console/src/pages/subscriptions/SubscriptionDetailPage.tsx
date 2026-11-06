@@ -1,3 +1,4 @@
+import { env } from '@/env'
 import { useState } from 'react'
 import { FxRatesPanel } from '@/pages/forex/FxRatesPanel'
 import { useSession } from '@/app/session'
@@ -352,6 +353,8 @@ export function SubscriptionDetailPage({
         benefitsEditor={
           <AccessScope entity={RBAC_ENTITY.Entitlement}>
             <ContractBenefitsEditor
+              spendingAllowancesEnabled={env.spendingAllowancesEnabled}
+              currency={data.currency}
               subscriptionId={data.id}
               entitlements={entitlements.data ?? []}
               usage={entitlementUsage.data?.features}

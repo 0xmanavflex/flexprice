@@ -16,6 +16,8 @@ import {
 } from '@fp/domain'
 import {
   toAddCouponRequest,
+  toCreateSpendingAllowanceRequest,
+  toSpendingAllowanceRequest,
   toCancelCreditGrantRequest,
   toAddAddonsRequest,
   toCreateSubscriptionRequest,
@@ -311,5 +313,59 @@ it('sends the selected credit-grant cancellation day rather than now', () => {
 it('sends an empty parent id to detach the contract from its parent', () => {
   expect(UpdateSubscriptionRequest$outboundSchema.parse({ parentSubscriptionId: '' })).toEqual({
     parent_subscription_id: '',
+  })
+})
+
+describe('V1 spending allowance API contract', () => {
+  it('sends a featureless monetary allowance to POST /entitlements', () => {
+    const wire = CreateEntitlementRequest$outboundSchema.parse(
+      toCreateSpendingAllowanceRequest('sub_existing', {
+        ...emptySpendingAllowance(),
+        quota: ' 125.50 ',
+      }),
+    )
+    expect(wire).toEqual({
+      entity_type: 'SUBSCRIPTION',
+      entity_id: 'sub_existing',
+      grant_measure: 'amount',
+      grant_quota: '125.50',
+      grant_duration_unit: 'subscription_period',
+      aggregation_mode: 'additive',
+    })
+    expect(wire).not.toHaveProperty('feature_id')
+    expect(wire).not.toHaveProperty('grant_duration_value')
+    expect(wire).not.toHaveProperty('grant_allocation_behavior')
+  })
+  it('preserves timed window, allocation, stacking and optional dates', () => {
+    expect(
+      CreateEntitlementRequest$outboundSchema.parse(
+        toCreateSpendingAllowanceRequest('sub_existing', {
+          ...allowance,
+          allocation: 'unit_start',
+          aggregation: 'parallel',
+        }),
+      ),
+    ).toMatchObject({
+      grant_duration_unit: 'week',
+      grant_duration_value: 2,
+      grant_allocation_behavior: 'unit_start',
+      aggregation_mode: 'parallel',
+      start_date: '2026-11-08T00:00:00.000Z',
+      end_date: '2026-12-08T00:00:00.000Z',
+    })
+  })
+  it('does not send stale timed fields on billing-period allowances', () => {
+    expect(
+      toSpendingAllowanceRequest({
+        ...emptySpendingAllowance(),
+        quota: '20',
+        every: 0,
+        allocation: 'unit_start',
+      }),
+    ).toEqual({
+      grantQuota: '20',
+      grantDurationUnit: 'subscription_period',
+      aggregationMode: 'additive',
+    })
   })
 })

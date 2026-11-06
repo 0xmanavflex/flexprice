@@ -1,3 +1,4 @@
+import { env } from '@/env'
 import { useMemo, useState } from 'react'
 import {
   explainContractCreateError,
@@ -181,6 +182,7 @@ export function SubscriptionFormPage({
 
   return (
     <SubscriptionForm
+      spendingAllowancesEnabled={env.spendingAllowancesEnabled}
       pickerStatus={
         customers.isError ||
         plans.isError ||

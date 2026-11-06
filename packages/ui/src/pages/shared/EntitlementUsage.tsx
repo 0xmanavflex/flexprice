@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   allowancePeriod,
   AMOUNT_ALLOWANCE_SUFFIX,
@@ -103,6 +104,8 @@ export interface EntitlementSourceLink {
 export interface EntitlementUsageRow {
   id: string
   feature: string
+  /** Explicit unavailable state when the server supplied sources without an effective value. */
+  valueLabel?: string | undefined
   /** `metered`, `boolean`, `static`, `config`. Unknown is read as metered. */
   featureType?: string | undefined
   enabled: boolean
@@ -130,6 +133,8 @@ export interface EntitlementUsageRow {
 
 export interface EntitlementUsageTableProps {
   rows: EntitlementUsageRow[]
+  /** Contextual actions share the feature row instead of repeating a source table. */
+  rowActions?: ((row: EntitlementUsageRow) => ReactNode) | undefined
   locale?: string | undefined
 }
 
@@ -138,6 +143,7 @@ const measured = (row: EntitlementUsageRow) =>
 
 /** What the entitlement grants, in words: V1's "Value" column. */
 export function entitlementValue(row: EntitlementUsageRow, locale?: string): string {
+  if (row.valueLabel) return row.valueLabel
   if (!row.enabled) return 'Not included'
   if (row.featureType === 'boolean') return 'Included'
   if (row.featureType === 'static' || row.featureType === 'config') return row.staticValue || '—'
@@ -202,7 +208,7 @@ function Sources({ sources }: { sources: EntitlementSourceLink[] }) {
 }
 
 /** The entitlements table: Feature, Source (when known), Value, Usage. */
-export function EntitlementUsageTable({ rows, locale }: EntitlementUsageTableProps) {
+export function EntitlementUsageTable({ rows, locale, rowActions }: EntitlementUsageTableProps) {
   const withSources = rows.some((row) => (row.sources?.length ?? 0) > 0)
 
   return (
@@ -287,6 +293,7 @@ export function EntitlementUsageTable({ rows, locale }: EntitlementUsageTablePro
               <EmDash />
             ),
         },
+        ...(rowActions ? [{ key: 'actions', header: '', cell: rowActions }] : []),
       ]}
     />
   )

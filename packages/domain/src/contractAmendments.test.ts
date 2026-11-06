@@ -64,3 +64,35 @@ describe('spending allowances', () => {
     ).toBe(false)
   })
 })
+
+describe('spending allowance reset modes', () => {
+  it('ignores the hidden count when returning to billing-period reset', () => {
+    expect(
+      spendingAllowanceSchema.parse({
+        ...emptySpendingAllowance(),
+        quota: '25.50',
+        every: 0,
+        allocation: 'unit_start',
+      }),
+    ).toMatchObject({ every: 1, allocation: 'first_usage' })
+  })
+  it('requires whole positive counts only for timed windows', () => {
+    for (const every of [0, -1, 1.5]) {
+      const result = spendingAllowanceSchema.safeParse({
+        ...emptySpendingAllowance(),
+        quota: '25',
+        unit: 'day',
+        every,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error.issues[0]?.path).toEqual(['every'])
+    }
+  })
+  it('rejects text and unbounded numeric input before sending it', () => {
+    for (const quota of ['allowance', '9'.repeat(400), '-5', '']) {
+      expect(
+        spendingAllowanceSchema.safeParse({ ...emptySpendingAllowance(), quota }).success,
+      ).toBe(false)
+    }
+  })
+})

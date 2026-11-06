@@ -1813,7 +1813,7 @@ export const InheritsCustomers: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     const picker = canvas.getByRole('combobox', { name: /^Inherited customers/ })
-    await expect(picker).toHaveAttribute('placeholder', 'Add customers to inherit…')
+    await expect(picker).toHaveAttribute('placeholder', 'Search and select customers…')
     await userEvent.click(picker)
     await expect(await screen.findByRole('option', { name: /Umbrella/ })).toHaveAttribute(
       'aria-disabled',
@@ -1823,6 +1823,7 @@ export const InheritsCustomers: Story = {
       'Has its own contract',
     )
     await userEvent.click(screen.getByRole('option', { name: /Globex/ }))
+    await userEvent.keyboard('{Escape}')
     await expect(canvas.getByRole('button', { name: 'Remove Globex' })).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
@@ -1848,6 +1849,7 @@ export const InheritedCustomersKeepTheSamePayer: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('combobox', { name: /^Inherited customers/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Globex/ }))
+    await userEvent.keyboard('{Escape}')
     await userEvent.click(canvas.getByRole('radio', { name: /Another customer/ }))
     await userEvent.click(canvas.getByRole('combobox', { name: /^Invoiced to/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Initech/ }))

@@ -8,8 +8,20 @@ const meta = {
   title: 'Pages/Contracts/Benefits editor',
   component: ContractBenefitsEditor,
   args: {
+    currency: 'USD',
+    spendingAllowancesEnabled: true,
     subscriptionId: 'contract',
-    entitlements: [],
+    entitlements: [
+      {
+        featureId: inherited.featureId,
+        name: inherited.featureName ?? 'Feature',
+        enabled: true,
+        usageLimit: 10000,
+        softLimit: false,
+        resetPeriodLabel: 'Monthly',
+        featureType: inherited.featureType,
+      },
+    ],
     records: [
       { entitlement: inherited, name: inherited.featureName ?? 'Feature', source: 'Pro plan' },
       {
@@ -56,9 +68,12 @@ export const Failed: Story = {
 export const ResetsOnlyTheOverride: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    const row = canvas.getByText('Contract override · Pro plan').closest('tr')!
-    await userEvent.click(within(row).getByRole('button', { name: /^Actions for/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Reset to inherited value' }))
+    await userEvent.click(
+      canvas.getByRole('button', { name: `Actions for ${inherited.featureName}` }),
+    )
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Reset Contract override · Pro plan' }),
+    )
     const dialog = within(
       await screen.findByRole('dialog', { name: 'Reset entitlement to its inherited value?' }),
     )
@@ -67,5 +82,35 @@ export const ResetsOnlyTheOverride: Story = {
     await expect(args.onReset).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'override', entityId: 'contract' }),
     )
+  },
+}
+
+/** Effective values and their sources share one row, with source-specific edits in its menu. */
+export const OneFeatureOneRow: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByText(inherited.featureName ?? 'Feature')).toHaveLength(1)
+    await expect(canvas.queryByRole('table', { name: 'Entitlement sources table' })).toBeNull()
+    await expect(canvas.getByText('10,000 / monthly')).toBeVisible()
+    await userEvent.click(
+      canvas.getByRole('button', { name: `Actions for ${inherited.featureName}` }),
+    )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit Pro plan' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save changes' }))
+    await expect(args.onEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ id: inherited.id, entityType: 'PLAN' }),
+      expect.any(Object),
+    )
+  },
+}
+
+export const UnsupportedAllowancesHidden: Story = {
+  args: { spendingAllowancesEnabled: false, records: [], entitlements: [] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('heading', { name: 'Spending allowances' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Add allowance' })).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Add entitlement' })).toBeVisible()
   },
 }

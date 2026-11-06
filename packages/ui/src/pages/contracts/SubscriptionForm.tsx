@@ -107,6 +107,7 @@ import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
 import { FormPage } from '@ui/compositions/forms/FormPage'
+import { OptionMultiCombobox } from '@ui/compositions/forms/OptionMultiCombobox'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { type Option, OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { useFormSteps } from '@ui/compositions/forms/useFormSteps'
@@ -238,6 +239,8 @@ export interface SubscriptionTaxRateOption {
 }
 
 export interface SubscriptionFormProps {
+  spendingAllowancesEnabled?: boolean
+
   pickerStatus?: 'loading' | 'failed' | 'ready' | undefined
   defaultValue?: Partial<CreateSubscription>
   customers: readonly SubscriptionCustomerOption[]
@@ -452,6 +455,7 @@ export function SubscriptionForm({
   onCancel,
   isSubmitting = false,
   pickerStatus = 'ready',
+  spendingAllowancesEnabled = false,
   submitError = null,
   trail,
   step,
@@ -1256,10 +1260,13 @@ export function SubscriptionForm({
         ) : (
           noPlan('Entitlements')
         )}
-        <SpendingAllowancesSection
-          value={values.spendingAllowances ?? []}
-          onChange={(next) => set('spendingAllowances', next)}
-        />
+        {spendingAllowancesEnabled ? (
+          <SpendingAllowancesSection
+            currency={values.currency}
+            value={values.spendingAllowances ?? []}
+            onChange={(next) => set('spendingAllowances', next)}
+          />
+        ) : null}
         <CreditsSection
           grants={values.creditGrants}
           changed={values.creditGrantsChanged}
@@ -4557,7 +4564,6 @@ function BillingStep({
     })
   const nameOf = (externalId: string) =>
     payerOptions.find((o) => o.value === externalId)?.label ?? externalId
-  const [pickerKey, setPickerKey] = useState(0)
   // The contract's own customer's contracts are not a parent for it.
   const parentOptions = (parentContracts ?? []).filter(
     (option) => !option.customerId || option.customerId !== values.customerId,
@@ -4674,56 +4680,22 @@ function BillingStep({
               error={errors.inheritedCustomerExternalIds?.message}
             >
               {({ id, ...field }) => (
-                <div className="flex flex-col gap-2">
-                  {values.inheritedCustomerExternalIds.length > 0 ? (
-                    <ul className="flex flex-wrap gap-1.5">
-                      {values.inheritedCustomerExternalIds.map((externalId) => (
-                        <li key={externalId}>
-                          <Badge variant="secondary" className="gap-1 pr-1">
-                            {nameOf(externalId)}
-                            <button
-                              type="button"
-                              aria-label={`Remove ${nameOf(externalId)}`}
-                              className="hover:text-foreground rounded-sm"
-                              onClick={() =>
-                                onChange(
-                                  'inheritedCustomerExternalIds',
-                                  values.inheritedCustomerExternalIds.filter(
-                                    (e) => e !== externalId,
-                                  ),
-                                )
-                              }
-                            >
-                              <XIcon aria-hidden className="size-3" />
-                            </button>
-                          </Badge>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  <OptionCombobox
-                    key={pickerKey}
-                    id={id}
-                    {...field}
-                    value=""
-                    onValueChange={(value) => {
-                      if (!value) return
-                      onChange('inheritedCustomerExternalIds', [
-                        ...values.inheritedCustomerExternalIds,
-                        value,
-                      ])
-                      setPickerKey((n) => n + 1)
-                    }}
-                    options={inheritable}
-                    placeholder={
-                      values.inheritedCustomerExternalIds.length > 0
-                        ? 'Add another customer…'
-                        : 'Add customers to inherit…'
-                    }
-                    emptyText="No other customer has an external ID."
-                    disabled={isSubmitting}
-                  />
-                </div>
+                <OptionMultiCombobox
+                  id={id}
+                  {...field}
+                  value={values.inheritedCustomerExternalIds}
+                  onValueChange={(value) => onChange('inheritedCustomerExternalIds', value)}
+                  options={[
+                    ...values.inheritedCustomerExternalIds.map((externalId) => ({
+                      value: externalId,
+                      label: nameOf(externalId),
+                    })),
+                    ...inheritable,
+                  ]}
+                  placeholder="Search and select customers…"
+                  emptyText="No eligible customers."
+                  disabled={isSubmitting}
+                />
               )}
             </FormRow>
           </>
@@ -5006,17 +4978,21 @@ function ReviewStep({
                 }`
           }
         />
-        <ReviewRow
-          label="Spending allowances"
-          value={
-            (values.spendingAllowances ?? [])
-              .map(
-                (allowance) =>
-                  `${money(allowance.quota, values.currency)} / ${allowance.unit === 'subscription_period' ? 'billing period' : `${allowance.every} ${allowance.unit}`} · ${allowance.startDate || 'contract start'} → ${allowance.endDate || 'no end'}`,
-              )
-              .join(', ') || 'None'
-          }
-        />
+        {(values.spendingAllowances?.length ?? 0) > 0 ? (
+          <>
+            <ReviewRow
+              label="Spending allowances"
+              value={
+                (values.spendingAllowances ?? [])
+                  .map(
+                    (allowance) =>
+                      `${money(allowance.quota, values.currency)} / ${allowance.unit === 'subscription_period' ? 'billing period' : `${allowance.every} ${allowance.unit}`} · ${allowance.startDate || 'contract start'} → ${allowance.endDate || 'no end'}`,
+                  )
+                  .join(', ') || 'None'
+              }
+            />
+          </>
+        ) : null}
         <ReviewRow
           label="Credit grants"
           value={

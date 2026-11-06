@@ -9,6 +9,7 @@ import {
 } from '@fp/api'
 import {
   type SpendingAllowance,
+  spendingAllowanceSchema,
   type AddContractAddon,
   type RemoveContractAddon,
   type AddContractCharge,
@@ -2909,6 +2910,7 @@ export function useCancelSubscriptionCreditGrant() {
 export function toSpendingAllowanceRequest(
   draft: SpendingAllowance,
 ): FlexpriceModels.CreateSubscriptionEntitlementGrantRequest {
+  draft = spendingAllowanceSchema.parse(draft)
   const period = draft.unit === 'subscription_period'
   return {
     grantQuota: draft.quota,
@@ -2922,18 +2924,28 @@ export function toSpendingAllowanceRequest(
   }
 }
 
+/** POST /entitlements: the subscription owner and amount measure imply featureless scope. */
+export function toCreateSpendingAllowanceRequest(
+  subscriptionId: string,
+  draft: SpendingAllowance,
+): FlexpriceModels.CreateEntitlementRequest {
+  return {
+    ...toSpendingAllowanceRequest(draft),
+    entityType: 'SUBSCRIPTION',
+    entityId: subscriptionId,
+    grantMeasure: 'amount',
+  }
+}
+
 export function useCreateSpendingAllowance(subscriptionId: string) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (draft: SpendingAllowance) =>
       call(() =>
-        client.entitlements.createEntitlement({
-          ...toSpendingAllowanceRequest(draft),
-          entityType: 'SUBSCRIPTION',
-          entityId: subscriptionId,
-          grantMeasure: 'amount',
-        }),
+        client.entitlements.createEntitlement(
+          toCreateSpendingAllowanceRequest(subscriptionId, draft),
+        ),
       ),
     onSuccess: () => invalidateContract(queryClient),
   })
