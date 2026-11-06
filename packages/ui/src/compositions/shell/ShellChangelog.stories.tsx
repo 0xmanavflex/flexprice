@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { expect, screen, userEvent, waitFor, within } from 'storybook/test'
 import { ShellChangelog, type ShellChangelogEntry } from './ShellChangelog'
 import { DOCS } from '@fp/domain'
 
@@ -53,6 +53,34 @@ export const NewestOnTop: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('link', { name: /Read more/ })).toHaveAttribute('href', DOCS.home)
     await expect(canvas.getAllByRole('link', { name: /Read more/ })).toHaveLength(1)
+  },
+}
+
+/** A card with a video plays it here: "Watch" opens a player dialog, with a link out to the video. */
+export const PlaysAVideo: Story = {
+  args: {
+    entries: [
+      {
+        ...(ENTRIES[0] as ShellChangelogEntry),
+        id: 'console-walkthrough',
+        summary: 'Watch the 90-second walkthrough of what moved and what is new.',
+        href: 'https://www.loom.com/share/demo',
+        video: 'about:blank',
+      },
+      ...ENTRIES.slice(1),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('link', { name: /Read more/ })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Watch' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'A new console' }))
+    await expect(dialog.getByTitle('A new console')).toHaveAttribute('src', 'about:blank')
+    await expect(dialog.getByRole('link', { name: /Open in a new tab/ })).toHaveAttribute(
+      'href',
+      'https://www.loom.com/share/demo',
+    )
+    await userEvent.keyboard('{Escape}')
   },
 }
 

@@ -5,7 +5,14 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { ArrowUpRightIcon } from '@ui/icons'
+import { ArrowUpRightIcon, PlayIcon } from '@ui/icons'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@ui/components/primitives/dialog'
 import { Button } from '@ui/components/primitives/button'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -27,7 +34,7 @@ import { SceneIllustration, type EmptyScene } from '../feedback/SceneIllustratio
  */
 export const ShellChangelogProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'SceneIllustration'],
+  composes: ['ui/button', 'ui/dialog', 'SceneIllustration'],
   note: "Lineage: @reui/app-shell-7 sidebar-news (stack, swipe-to-dismiss, read more). Adds per-entry dismissal in localStorage and the product's SceneIllustration figures.",
 })
 
@@ -36,8 +43,13 @@ export interface ShellChangelogEntry {
   id: string
   title: string
   summary: string
-  /** Where "Read more" goes: the docs page for the change. */
+  /** Where "Read more" goes: the docs page for the change, or the video's own page. */
   href: string
+  /**
+   * An embeddable player for the change (a Loom `/embed/` URL). With one, a tap
+   * or "Watch" plays it here in a dialog instead of leaving the console.
+   */
+  video?: string | undefined
   /** Which product figure illustrates the card. */
   scene: EmptyScene
 }
@@ -82,11 +94,14 @@ function writeDismissed(storageKey: string | undefined, ids: string[]) {
 function ChangelogCard({
   entry,
   onDismiss,
+  onPlay,
   hideContent,
   active,
 }: {
   entry: Pick<ShellChangelogEntry, 'title' | 'summary'> & Partial<ShellChangelogEntry>
   onDismiss?: () => void
+  /** Plays the entry's video in place. */
+  onPlay?: () => void
   hideContent?: boolean
   active?: boolean
 }) {
@@ -156,12 +171,14 @@ function ChangelogCard({
     ref.current.style.setProperty('--w', ref.current.clientWidth.toString())
   }
 
-  // A tap, not the end of a swipe, opens the docs.
+  // A tap, not the end of a swipe, plays the video or opens the docs.
   const onClick = () => {
     if (!ref.current || !entry.href) return
     const still = drag.current.maxDelta < ref.current.clientWidth / 10
     const quick = !drag.current.startTime || Date.now() - drag.current.startTime < 250
-    if (still && quick) window.open(entry.href, '_blank', 'noopener,noreferrer')
+    if (!still || !quick) return
+    if (entry.video && onPlay) onPlay()
+    else window.open(entry.href, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -196,16 +213,33 @@ function ChangelogCard({
         >
           <div className="min-h-0">
             <div className="flex items-center justify-between pt-2">
-              <a
-                href={entry.href ?? '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 font-medium"
-              >
-                Read more
-                <ArrowUpRightIcon aria-hidden className="size-3" />
-              </a>
+              {entry.video && onPlay ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="text-muted-foreground -ml-2"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onPlay()
+                  }}
+                >
+                  <PlayIcon aria-hidden className="size-3" />
+                  Watch
+                </Button>
+              ) : (
+                <a
+                  href={entry.href ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 font-medium"
+                >
+                  Read more
+                  <ArrowUpRightIcon aria-hidden className="size-3" />
+                </a>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -234,6 +268,7 @@ export function ShellChangelog({ entries, storageKey, className }: ShellChangelo
   // Only someone who just cleared the stack sees "all caught up"; a reload
   // with nothing new shows nothing at all.
   const [showCompleted, setShowCompleted] = useState(count > 0)
+  const [playing, setPlaying] = useState<ShellChangelogEntry | null>(null)
 
   useEffect(() => {
     if (count !== 0) return
@@ -289,6 +324,7 @@ export function ShellChangelog({ entries, storageKey, className }: ShellChangelo
                 hideContent={depth >= 2}
                 active={top}
                 onDismiss={() => dismiss(entry.id)}
+                onPlay={() => setPlaying(entry)}
               />
             </div>
           )
@@ -307,6 +343,35 @@ export function ShellChangelog({ entries, storageKey, className }: ShellChangelo
           </div>
         ) : null}
       </div>
+      <Dialog
+        open={playing !== null}
+        onOpenChange={(open) => (open ? undefined : setPlaying(null))}
+      >
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{playing?.title}</DialogTitle>
+            <DialogDescription>{playing?.summary}</DialogDescription>
+          </DialogHeader>
+          {playing?.video ? (
+            <iframe
+              src={playing.video}
+              title={playing.title}
+              allow="fullscreen; picture-in-picture"
+              allowFullScreen
+              className="aspect-video w-full rounded-md border"
+            />
+          ) : null}
+          <a
+            href={playing?.href ?? '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 justify-self-start text-xs font-medium"
+          >
+            Open in a new tab
+            <ArrowUpRightIcon aria-hidden className="size-3" />
+          </a>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

@@ -16,6 +16,9 @@ import { env } from '@/env'
  */
 /** "New Flexprice Console | Quick Walkthrough", the tour of this console (Loom, 1:29). */
 export const CONSOLE_WALKTHROUGH_URL = 'https://www.loom.com/share/125badfaeeb94dfabca6c195b49687b3'
+/** The same video's player, which the card plays in the console. */
+export const CONSOLE_WALKTHROUGH_EMBED =
+  'https://www.loom.com/embed/125badfaeeb94dfabca6c195b49687b3'
 
 const RELEASES: ShellChangelogEntry[] = [
   {
@@ -25,6 +28,7 @@ const RELEASES: ShellChangelogEntry[] = [
     title: 'A new console',
     summary: 'Watch the 90-second walkthrough of what moved and what is new.',
     href: CONSOLE_WALKTHROUGH_URL,
+    video: CONSOLE_WALKTHROUGH_EMBED,
     scene: 'home',
   },
   {
