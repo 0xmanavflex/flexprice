@@ -88,8 +88,9 @@ export function FormCard({
             <div className="flex min-w-0 items-center gap-2">
               {icon}
               <h2 className="text-sm font-medium">{title}</h2>
+              {typeof description === 'string' ? <InfoHint>{description}</InfoHint> : null}
             </div>
-            {description ? (
+            {description && typeof description !== 'string' ? (
               <p className="text-muted-foreground text-[13px]/relaxed">{description}</p>
             ) : null}
           </div>
