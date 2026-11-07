@@ -610,6 +610,12 @@ export const createSubscriptionSchema = z
         quantities: z.array(addonQuantitySchema).optional(),
         /** When this add-on starts. Blank starts it with the contract. An instant, or a day. */
         startDate: z.string().optional(),
+        /** With no start date: now, or at the end of the current period. */
+        changeAt: z.enum(['immediate', 'end_of_period']).optional(),
+        /** Charge for the part of the period it is on for. */
+        prorate: z.boolean().optional(),
+        /** Recurring with the contract, or billed once. */
+        cadence: z.enum(['recurring', 'one_time']).optional(),
       }),
     ),
     /**
