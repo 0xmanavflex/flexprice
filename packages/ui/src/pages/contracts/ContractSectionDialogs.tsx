@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ADDON_TIMING_OPTIONS, AddonChargesDialog, type AddonPricing } from './SubscriptionForm'
+import { ADDON_TIMING_OPTIONS, AddonChargesDialog, AddonScheduleFields, type AddonPricing } from './SubscriptionForm'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { Switch } from '@ui/components/primitives/switch'
 import type { MeterOption } from '../product-catalog/charges/ChargeForm'
@@ -20,7 +20,7 @@ import { Field } from '@ui/compositions/forms/Field'
 import { DateInput } from '@ui/compositions/forms/DateInput'
 import { CheckboxRow } from '@ui/compositions/forms/CheckboxRow'
 import { Button } from '@ui/components/primitives/button'
-import { PencilIcon, PlusIcon, XIcon } from '@ui/icons'
+import { PlusIcon, XIcon } from '@ui/icons'
 import { Composer } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
@@ -312,7 +312,7 @@ const MAX_ADDONS = 20
 /**
  * Attach add-ons, repricing their charges first if you like, as V1's add-on
  * dialog: choosing one lists all its charges, fixed and usage, each with
- * Override price (sent as `override_line_items`) and, on a usage charge, Add
+ * Override price (sent as `override_line_items`) and Add
  * commitment, the same dialogs as a plan charge. "Add another add-on" sets the
  * one in hand aside with its pricing and clears the picker, so several are
  * attached together as one change.
@@ -377,6 +377,7 @@ function AddonDialog({
               : {}
             : { changeAt: pricing.startWhen ?? 'immediate' }),
           prorate: pricing.prorate ?? true,
+          ...(pricing.cadence === 'one_time' ? { cadence: 'one_time' as const } : {}),
         }
       : null
   // Back from a set-aside add-on to its editor: everything chosen for it, as it was.
@@ -388,19 +389,8 @@ function AddonDialog({
       ? { startDate: draft.startDate, startWhen: 'date' as const }
       : { startWhen: draft.changeAt ?? 'immediate' }),
     ...(draft.prorate === undefined ? {} : { prorate: draft.prorate }),
+    ...(draft.cadence ? { cadence: draft.cadence } : {}),
   })
-  // V1 keeps every add-on being added open to change: reopening one sets the one in hand aside.
-  const reopen = (target: AddContractAddon) => {
-    const inHand = current()
-    const inHandName = addons.find((a) => a.id === addonId)?.name ?? addonId
-    setStaged((list) => {
-      const rest = list.filter((item) => item.draft.addonId !== target.addonId)
-      return inHand ? [...rest, { draft: inHand, name: inHandName }] : rest
-    })
-    setAddonId(target.addonId)
-    setPricing(pricingOfDraft(target))
-    setProblem(null)
-  }
   const describe = (draft: AddContractAddon) =>
     [
       draft.priceOverrides?.length || draft.commitments?.length
@@ -415,6 +405,7 @@ function AddonDialog({
           ? 'starts at period end'
           : 'starts now',
       draft.prorate === false ? 'not prorated' : null,
+      draft.cadence === 'one_time' ? 'one time' : null,
     ]
       .filter(Boolean)
       .join(' · ')
@@ -533,22 +524,12 @@ function AddonDialog({
           aria-label="Add-ons to attach"
         >
           {staged.map(({ draft, name }) => (
-            <li key={draft.addonId} className="flex items-center justify-between gap-3 px-3 py-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{name}</p>
-                <p className="text-muted-foreground text-xs">{describe(draft)}</p>
-              </div>
-              <span className="flex shrink-0 items-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground size-7 shrink-0"
-                  aria-label={`Edit ${name}`}
-                  onClick={() => reopen(draft)}
-                >
-                  <PencilIcon aria-hidden />
-                </Button>
+            <li key={draft.addonId} className="flex flex-col gap-3 px-3 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{name}</p>
+                  <p className="text-muted-foreground text-xs">{describe(draft)}</p>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -561,7 +542,31 @@ function AddonDialog({
                 >
                   <XIcon aria-hidden />
                 </Button>
-              </span>
+              </div>
+              <AddonScheduleFields
+                idPrefix={draft.addonId}
+                value={pricingOfDraft(draft)}
+                onChange={(next) =>
+                  setStaged((list) =>
+                    list.map((item) => {
+                      if (item.draft.addonId !== draft.addonId) return item
+                      const { startDate: _start, changeAt: _at, cadence: _cadence, ...rest } =
+                        item.draft
+                      return {
+                        ...item,
+                        draft: {
+                          ...rest,
+                          prorate: next.prorate ?? true,
+                          ...(next.startWhen === 'date' && next.startDate
+                            ? { startDate: next.startDate }
+                            : { changeAt: next.startWhen === 'date' ? 'immediate' : (next.startWhen ?? 'immediate') }),
+                          ...(next.cadence === 'one_time' ? { cadence: 'one_time' as const } : {}),
+                        },
+                      }
+                    }),
+                  )
+                }
+              />
             </li>
           ))}
         </ul>

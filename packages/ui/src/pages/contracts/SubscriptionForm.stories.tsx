@@ -8,6 +8,7 @@ import {
   CreditGrantCadence,
   CreditGrantExpiryType,
   type Entitlement,
+  FeatureType,
   EntitlementGrantDurationUnit,
   EntitlementGrantMeasure,
   UsageResetPeriod,
@@ -312,6 +313,7 @@ function SubscriptionFormPlayground({
             },
           }
         : {})}
+      features={[{ id: 'feat_extra', name: 'Priority support', type: FeatureType.Boolean }]}
       customers={customers}
       {...(fxGlobalRates ? { fxGlobalRates } : {})}
       {...(fxCustomCurrencies ? { fxCustomCurrencies } : {})}
@@ -659,8 +661,8 @@ export const PhaseCharges: Story = {
     await userEvent.click(dialog.getByRole('button', { name: 'Save commitment' }))
     await expect(await dialog.findByText('Enter a commitment greater than zero.')).toBeVisible()
     await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
-    // A new contract is one set of charges, as the reference: no phases to add.
-    await expect(canvas.queryByRole('button', { name: 'Add phase' })).toBeNull()
+    // A second phase needs an explicit boundary first.
+    await expect(canvas.getByRole('button', { name: 'Add phase' })).toBeDisabled()
   },
 }
 
@@ -1142,8 +1144,8 @@ export const AddonPriceOverride: Story = {
     expect(dialog.queryByText('Storage archive (GB)')).toBeNull()
     await userEvent.click(dialog.getByRole('button', { name: 'Actions for Storage base' }))
     const override = await screen.findByRole('menuitem', { name: 'Override price' })
-    // A fixed charge takes no commitment.
-    expect(screen.queryByRole('menuitem', { name: 'Add commitment' })).toBeNull()
+    await expect(screen.getByRole('menuitem', { name: 'Add commitment' })).toBeVisible()
+    await expect(screen.getByRole('menuitem', { name: 'Copy ID' })).toBeVisible()
     await userEvent.click(override)
     const price = within(
       await screen.findByRole('dialog', { name: 'Override price · Storage base' }),
@@ -1813,7 +1815,7 @@ export const InheritsCustomers: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     const picker = canvas.getByRole('combobox', { name: /^Inherited customers/ })
-    await expect(picker).toHaveAttribute('placeholder', 'Add customers to inherit…')
+    await expect(picker).toHaveAttribute('placeholder', 'Search and select customers…')
     await userEvent.click(picker)
     await expect(await screen.findByRole('option', { name: /Umbrella/ })).toHaveAttribute(
       'aria-disabled',
@@ -1823,6 +1825,7 @@ export const InheritsCustomers: Story = {
       'Has its own contract',
     )
     await userEvent.click(screen.getByRole('option', { name: /Globex/ }))
+    await userEvent.keyboard('{Escape}')
     await expect(canvas.getByRole('button', { name: 'Remove Globex' })).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
     await waitFor(() => expect(args.onStepChange).toHaveBeenLastCalledWith('review'))
@@ -1848,6 +1851,7 @@ export const InheritedCustomersKeepTheSamePayer: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('combobox', { name: /^Inherited customers/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Globex/ }))
+    await userEvent.keyboard('{Escape}')
     await userEvent.click(canvas.getByRole('radio', { name: /Another customer/ }))
     await userEvent.click(canvas.getByRole('combobox', { name: /^Invoiced to/ }))
     await userEvent.click(await screen.findByRole('option', { name: /Initech/ }))
@@ -2058,5 +2062,66 @@ export const ProtectsUnsavedConfiguration: Story = {
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Discard changes' }),
     )
     await expect(args.onCancel).toHaveBeenCalledTimes(1)
+  },
+}
+
+export const AddsSecondPhase: Story = {
+  args: { prefilled: true, noTrial: true, step: 'phases', endDate: '2027-01-01' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add phase' }))
+    await expect(canvas.getByRole('heading', { name: 'Phase 2' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await expect(
+      canvas.getByText(
+        'A draft contract cannot have phases. Create the contract instead, or keep a single phase.',
+      ),
+    ).toBeVisible()
+  },
+}
+
+export const AddsContractEntitlement: Story = {
+  args: { prefilled: true, step: 'commitments', entitlementCount: 0 },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add entitlement' }))
+    let dialog = within(await screen.findByRole('dialog', { name: 'Add entitlement' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Feature/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Priority support/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Add entitlement' }))
+    await expect(await canvas.findByText('Priority support')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Add entitlement' })).toBeDisabled()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Priority support' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    dialog = within(await screen.findByRole('dialog', { name: 'Edit entitlement' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save entitlement' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save as draft' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          additionalEntitlements: [
+            expect.objectContaining({ featureId: 'feat_extra', featureType: FeatureType.Boolean }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
+export const RemovesStagedEntitlement: Story = {
+  args: { prefilled: true, step: 'commitments', entitlementCount: 1 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add entitlement' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Add entitlement' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Feature/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /Priority support/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Add entitlement' }))
+    await userEvent.click(
+      await canvas.findByRole('button', { name: 'Actions for Priority support' }),
+    )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove' }))
+    await expect(canvas.queryByText('Priority support')).not.toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Add entitlement' })).toBeEnabled()
   },
 }

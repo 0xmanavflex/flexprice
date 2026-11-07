@@ -159,7 +159,7 @@ function CellSkeleton() {
   )
 }
 
-/** Next billing and amount due coupled in one block; credit balance on its own. Three equal columns. */
+/** Next billing, amount due, and credit balance: three equal cards. */
 function AccountSummary({
   data,
   parts,
@@ -192,15 +192,10 @@ function AccountSummary({
   const wallets = data.wallets.status === 'ready' ? data.wallets.data : []
   const wallet = wallets.find((w) => w.active)
 
+  const card = 'bg-background flex h-full flex-col rounded-xl border'
   return (
-    <div className={parts.creditBalance ? 'grid gap-4 sm:grid-cols-3' : 'grid gap-4'}>
-      <section
-        className={
-          parts.creditBalance
-            ? 'bg-background grid rounded-xl border sm:col-span-2 sm:grid-cols-2 sm:divide-x'
-            : 'bg-background grid rounded-xl border sm:grid-cols-2 sm:divide-x'
-        }
-      >
+    <div className={parts.creditBalance ? 'grid gap-4 sm:grid-cols-3' : 'grid gap-4 sm:grid-cols-2'}>
+      <section className={card}>
         {data.subscriptions.status !== 'ready' ? (
           <CellSkeleton />
         ) : (
@@ -226,7 +221,8 @@ function AccountSummary({
             }
           />
         )}
-        <div className="border-t sm:border-t-0">
+      </section>
+      <section className={card}>
           {data.invoices.status !== 'ready' ? (
             <CellSkeleton />
           ) : due ? (
@@ -271,10 +267,9 @@ function AccountSummary({
               }
             />
           )}
-        </div>
       </section>
       {parts.creditBalance ? (
-        <section className="bg-background rounded-xl border">
+        <section className={card}>
           {data.wallets.status !== 'ready' ? (
             <CellSkeleton />
           ) : (

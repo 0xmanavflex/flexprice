@@ -221,9 +221,9 @@ function nameOf(charge: Charge): string {
   return charge.displayName || charge.meterName || 'Charge'
 }
 
-// Charge dates are calendar days stored at midnight UTC; read them in UTC so a
-// viewer west of Greenwich does not see the day before.
-const DATE_OPTIONS = { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' } as const
+// Charges carry instants, including contract phase boundaries at local midnight.
+// Use the viewer's zone, just like the precise timestamp in the tooltip.
+const DATE_OPTIONS = { day: 'numeric', month: 'short', year: 'numeric' } as const
 const DATE = new Intl.DateTimeFormat(undefined, DATE_OPTIONS)
 
 /**

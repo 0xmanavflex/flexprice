@@ -227,10 +227,12 @@
         "Composer",
         "ConfirmDialog",
         "ContractChargeDialog",
+        "CopyIcon",
         "CreditGrantCreateForm",
         "DateInput",
         "DetailTable",
         "EmptyState",
+        "EntitlementCreateForm",
         "Field",
         "FormCard",
         "FormDialog",
@@ -239,6 +241,7 @@
         "GrantAllowanceFields",
         "LabelWithHint",
         "OptionCombobox",
+        "OptionMultiCombobox",
         "OptionSelect",
         "PencilIcon",
         "PlusIcon",
@@ -281,6 +284,48 @@
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/addons/AddonGrid.stories.tsx"
+    },
+    "AddonScheduleFields": {
+      "file": "src/pages/contracts/SubscriptionForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "CalendarIcon",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
+        "ChoiceCards",
+        "Composer",
+        "ConfirmDialog",
+        "ContractChargeDialog",
+        "CopyIcon",
+        "CreditGrantCreateForm",
+        "DateInput",
+        "DetailTable",
+        "EmptyState",
+        "EntitlementCreateForm",
+        "Field",
+        "FormCard",
+        "FormDialog",
+        "FormPage",
+        "FormRow",
+        "GrantAllowanceFields",
+        "LabelWithHint",
+        "OptionCombobox",
+        "OptionMultiCombobox",
+        "OptionSelect",
+        "PencilIcon",
+        "PlusIcon",
+        "PriceOverrideForm",
+        "RowActionsMenu",
+        "SimpleTable",
+        "SpendingAllowancesSection",
+        "UserIcon",
+        "UsersIcon",
+        "WalletIcon"
+      ],
+      "usedBy": [
+        "ContractSectionDialogs"
+      ],
+      "story": "./src/pages/contracts/SubscriptionForm.stories.tsx"
     },
     "AddonSubscriptionsView": {
       "file": "src/pages/product-catalog/addons/AddonSubscriptionsView.tsx",
@@ -1053,6 +1098,7 @@
       "usedBy": [
         "AccountRollforward",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ApiCard",
         "CustomerAnalyticsView",
         "DashboardHome",
@@ -1149,6 +1195,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionForm"
       ],
       "story": null
@@ -1164,6 +1211,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionForm"
       ],
       "story": "./src/pages/contracts/ChargeCouponDialog.stories.tsx"
@@ -1476,6 +1524,7 @@
       "usedBy": [
         "AddChargeDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ChargeForm",
         "ContractChargeDialog",
         "CreditGrantCreateForm",
@@ -1651,6 +1700,7 @@
         "AddCardDialog",
         "AddCreditsDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AutoTopupDialog",
         "CardLinkDialog",
         "ChargeAlertForm",
@@ -1688,6 +1738,7 @@
       "usedBy": [
         "AddCreditsDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AutoTopupDialog",
         "CardLinkDialog",
         "ChargeSheet",
@@ -1749,6 +1800,7 @@
         "EntityList",
         "EyeIcon",
         "PageBody",
+        "PencilIcon",
         "Pill",
         "PlusIcon",
         "RunExportDialog",
@@ -1826,6 +1878,7 @@
         "EntitlementEditForm",
         "EntitlementUsageTable",
         "FormDialog",
+        "PencilIcon",
         "PlusIcon",
         "RowActionsMenu",
         "Section",
@@ -1849,6 +1902,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionDetailView",
         "SubscriptionForm"
       ],
@@ -1860,15 +1914,19 @@
       "composes": [
         "Composer",
         "ConfirmDialog",
-        "DetailTable",
+        "EntityLink",
+        "EyeIcon",
         "Field",
         "FormDialog",
+        "InfoHint",
         "OptionCombobox",
+        "OptionMultiCombobox",
         "PencilIcon",
+        "Pill",
         "PlusIcon",
-        "RowActionsMenu",
         "Section",
-        "SectionEmpty"
+        "SectionEmpty",
+        "UserIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/contracts/ContractHierarchyEditor.stories.tsx"
@@ -1915,6 +1973,7 @@
       "layer": "surface",
       "composes": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "CheckboxRow",
         "Composer",
         "CreditGrantCreateForm",
@@ -1925,7 +1984,6 @@
         "LabelWithHint",
         "OptionCombobox",
         "OptionSelect",
-        "PencilIcon",
         "PlusIcon",
         "TaxDialog"
       ],
@@ -1998,7 +2056,9 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AddonChargesDialog",
         "AddonGrid",
+        "AddonScheduleFields",
         "ChargeTable",
         "CheckoutLinkPanel",
         "ChoiceCards",
@@ -2046,6 +2106,7 @@
         "SplitMeter",
         "SubscriptionCard",
         "SubscriptionDetailView",
+        "SubscriptionForm",
         "SubscriptionGrid",
         "SubscriptionStatusPill",
         "SummaryCell",
@@ -2274,6 +2335,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ContractSectionDialogs",
         "PlanForm",
         "SubscriptionForm"
@@ -2680,6 +2742,7 @@
         "EntityList",
         "EyeIcon",
         "PageBody",
+        "PencilIcon",
         "Pill",
         "PlusIcon",
         "RunExportDialog",
@@ -2766,6 +2829,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ChargeForm",
         "ContractAddChargeForm",
         "ContractChargeDialog",
@@ -2973,10 +3037,10 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AddonSubscriptionsView",
         "ChargeTable",
         "ContractBenefitsEditor",
-        "ContractHierarchyEditor",
         "CouponRedemptionsView",
         "CreditGrantTable",
         "CustomerAnalyticsView",
@@ -3225,6 +3289,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AddonSubscriptionsView",
         "CostMarginCard",
         "CouponRedemptionsView",
@@ -3266,9 +3331,12 @@
         "PlusIcon"
       ],
       "usedBy": [
+        "AddonChargesDialog",
+        "AddonScheduleFields",
         "ContractBenefitsEditor",
         "ContractSectionDialogs",
-        "PlanForm"
+        "PlanForm",
+        "SubscriptionForm"
       ],
       "story": "./src/pages/product-catalog/entitlements/EntitlementForm.stories.tsx"
     },
@@ -3394,6 +3462,7 @@
       ],
       "usedBy": [
         "AccountRollforward",
+        "ContractHierarchyEditor",
         "CustomerDetail",
         "EntitlementTable",
         "EntitlementUsage",
@@ -3670,6 +3739,7 @@
         "EntityList",
         "EyeIcon",
         "PageBody",
+        "PencilIcon",
         "Pill",
         "PlusIcon",
         "RunExportDialog",
@@ -3696,6 +3766,7 @@
         "EntityList",
         "EyeIcon",
         "PageBody",
+        "PencilIcon",
         "Pill",
         "PlusIcon",
         "RunExportDialog",
@@ -3733,6 +3804,7 @@
         "BillingEntityField",
         "ChargeTable",
         "ConnectionExports",
+        "ContractHierarchyEditor",
         "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
@@ -3888,6 +3960,7 @@
         "AddCardDialog",
         "AddCreditsDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AutoTopupDialog",
         "BillingEntityField",
         "CardLinkDialog",
@@ -4272,6 +4345,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonForm",
+        "AddonScheduleFields",
         "BillingEntityForm",
         "CostSheetForm",
         "CouponCreateForm",
@@ -4303,6 +4377,7 @@
         "AddChargeDialog",
         "AddCreditsDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AutoTopupDialog",
         "CardLinkDialog",
         "ChargeCommitmentDialog",
@@ -4387,6 +4462,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonForm",
+        "AddonScheduleFields",
         "BillingEntityForm",
         "CostSheetForm",
         "CouponCreateForm",
@@ -4425,6 +4501,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonForm",
+        "AddonScheduleFields",
         "BillingEntityForm",
         "CostSheetForm",
         "CouponCreateForm",
@@ -4569,6 +4646,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "EntitlementCreateForm",
         "EntitlementEditForm",
         "SubscriptionForm"
@@ -4820,6 +4898,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ContractHierarchyEditor",
         "CustomerWalletView",
         "DashedRule",
         "Field",
@@ -5140,6 +5219,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ContractIntegrations",
         "ContractSectionDialogs",
         "CustomerTaxSection",
@@ -5835,7 +5915,8 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "OptionCombobox"
+        "OptionCombobox",
+        "OptionMultiCombobox"
       ],
       "story": "./src/compositions/forms/OptionSelect.stories.tsx"
     },
@@ -5847,6 +5928,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AddressPicker",
         "BillingEntityForm",
         "ChargeForm",
@@ -5862,6 +5944,20 @@
       ],
       "story": "./src/compositions/forms/OptionCombobox.stories.tsx"
     },
+    "OptionMultiCombobox": {
+      "file": "src/compositions/forms/OptionMultiCombobox.tsx",
+      "layer": "composition",
+      "composes": [
+        "OptionBody"
+      ],
+      "usedBy": [
+        "AddonChargesDialog",
+        "AddonScheduleFields",
+        "ContractHierarchyEditor",
+        "SubscriptionForm"
+      ],
+      "story": "./src/compositions/forms/OptionMultiCombobox.stories.tsx"
+    },
     "OptionSelect": {
       "file": "src/compositions/forms/OptionSelect.tsx",
       "layer": "composition",
@@ -5869,6 +5965,7 @@
       "usedBy": [
         "AddCardDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "BillingEntityField",
         "BonusSlabTable",
         "ChargeCommitmentDialog",
@@ -6190,18 +6287,23 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonGrid",
+        "AddonScheduleFields",
+        "ConnectionExports",
+        "ContractBenefitsEditor",
         "ContractHierarchyEditor",
-        "ContractSectionDialogs",
         "CostSheetGrid",
         "CouponGrid",
         "CreateWithAiButton",
         "CustomerDetail",
         "CustomerGrid",
+        "DataExportDetail",
         "EditableCard",
         "EmDash",
         "EntityCell",
         "EntityLink",
         "EnvironmentSwitcher",
+        "ExportRunList",
+        "ExportsOverview",
         "FeatureDetailView",
         "FeatureGrid",
         "FeatureTypeGlyph",
@@ -6216,6 +6318,7 @@
         "PlanGrid",
         "PriceUnitGrid",
         "RowActionsMenu",
+        "S3ConnectionList",
         "Status",
         "SubscriptionForm",
         "TaxRateGrid"
@@ -6275,6 +6378,7 @@
         "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
+        "ContractHierarchyEditor",
         "ContractIntegrations",
         "CreditNoteDetailView",
         "CustomerActivityView",
@@ -6542,6 +6646,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonGrid",
+        "AddonScheduleFields",
         "BillingEntityForm",
         "BillingEntityGrid",
         "ChargeCommitmentDialog",
@@ -6782,6 +6887,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionForm"
       ],
       "story": "./src/pages/product-catalog/charges/PriceOverrideForm.stories.tsx"
@@ -7227,10 +7333,10 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "BillingEntityIntegrations",
         "ChargeTable",
         "ContractBenefitsEditor",
-        "ContractHierarchyEditor",
         "CreditGrantTable",
         "CustomerDetail",
         "EntitlementTable",
@@ -7314,6 +7420,7 @@
         "EntityList",
         "EyeIcon",
         "PageBody",
+        "PencilIcon",
         "Pill",
         "PlusIcon",
         "RunExportDialog",
@@ -7842,6 +7949,7 @@
       "usedBy": [
         "AccountRollforward",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "BillingEntityIntegrations",
         "BonusSlabTable",
         "ConnectionExports",
@@ -8012,6 +8120,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionForm"
       ],
       "story": "./src/pages/contracts/SpendingAllowancesSection.stories.tsx"
@@ -8191,10 +8300,12 @@
         "Composer",
         "ConfirmDialog",
         "ContractChargeDialog",
+        "CopyIcon",
         "CreditGrantCreateForm",
         "DateInput",
         "DetailTable",
         "EmptyState",
+        "EntitlementCreateForm",
         "Field",
         "FormCard",
         "FormDialog",
@@ -8203,6 +8314,7 @@
         "GrantAllowanceFields",
         "LabelWithHint",
         "OptionCombobox",
+        "OptionMultiCombobox",
         "OptionSelect",
         "PencilIcon",
         "PlusIcon",
@@ -8882,6 +8994,8 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonChargesDialog",
+        "AddonScheduleFields",
+        "ContractHierarchyEditor",
         "CustomerActivityView",
         "CustomerGrid",
         "InvoiceDetailView",
@@ -8911,6 +9025,7 @@
       "composes": [],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "PageShell",
         "ShellSearch",
         "SubscriptionForm"
@@ -8957,6 +9072,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "CustomerActivityView",
         "CustomerDetail",
         "CustomerWalletView",
@@ -9653,6 +9769,14 @@
       "uses": [
         "OptionCombobox",
         "PlusIcon"
+      ]
+    },
+    "./src/compositions/forms/OptionMultiCombobox.stories.tsx": {
+      "title": "Building blocks/Forms/OptionMultiCombobox",
+      "component": "OptionMultiCombobox",
+      "uses": [
+        "Field",
+        "OptionMultiCombobox"
       ]
     },
     "./src/compositions/forms/OptionSelect.stories.tsx": {

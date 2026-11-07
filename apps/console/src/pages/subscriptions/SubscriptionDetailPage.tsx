@@ -1,3 +1,4 @@
+import { env } from '@/env'
 import { useState } from 'react'
 import { FxRatesPanel } from '@/pages/forex/FxRatesPanel'
 import { useSession } from '@/app/session'
@@ -22,6 +23,7 @@ import {
   useEditContractEntitlement,
   useResetContractEntitlement,
   useCreateSpendingAllowance,
+  useDetachInheritedContract,
   useParentContractCandidates,
   useUpdateContractParent,
   useChangeInheritedCustomers,
@@ -165,6 +167,7 @@ export function SubscriptionDetailPage({
   const benefitRecords = useContractBenefitRecords(subscriptionId)
   const editBenefit = useEditContractEntitlement(subscriptionId)
   const resetBenefit = useResetContractEntitlement(subscriptionId)
+  const detachInherited = useDetachInheritedContract()
   const createAllowance = useCreateSpendingAllowance(subscriptionId)
   // Every customer and every parent candidate is a large read: it waits until
   // the hierarchy editor opens a dialog that picks from them.
@@ -350,6 +353,8 @@ export function SubscriptionDetailPage({
         benefitsEditor={
           <AccessScope entity={RBAC_ENTITY.Entitlement}>
             <ContractBenefitsEditor
+              spendingAllowancesEnabled={env.spendingAllowancesEnabled}
+              currency={data.currency}
               subscriptionId={data.id}
               entitlements={entitlements.data ?? []}
               usage={entitlementUsage.data?.features}
@@ -376,6 +381,7 @@ export function SubscriptionDetailPage({
         hierarchyEditor={
           <AccessScope entity={RBAC_ENTITY.Subscription}>
             <ContractHierarchyEditor
+              onDetach={(childId) => detachInherited.mutateAsync(childId)}
               subscription={data}
               inherited={inheritedContracts.data ?? []}
               customers={hierarchyCustomers.data?.customers ?? []}
@@ -395,6 +401,9 @@ export function SubscriptionDetailPage({
                   ? `${parentContract.data.customerName} · ${parentContract.data.planName}`
                   : null
               }
+              parent={parentContract.data ?? null}
+              {...(onOpenContract ? { onOpenContract } : {})}
+              onOpenCustomer={onOpenCustomer}
               onLoadOptions={() => setHierarchyOptions(true)}
               optionsLoading={
                 hierarchyOptions && (hierarchyCustomers.isPending || parentCandidates.isPending)

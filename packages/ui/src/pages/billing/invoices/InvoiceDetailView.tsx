@@ -258,7 +258,9 @@ export function InvoiceDetailView({
               },
             ]
           : []),
-        ...(integrationControls.onPush && integrationControls.pushProviders?.length
+        ...(integrationControls.onPush &&
+        integrationControls.pushProviders?.length &&
+        !integrationControls.connectionActions?.length
           ? [
               {
                 id: 'push',

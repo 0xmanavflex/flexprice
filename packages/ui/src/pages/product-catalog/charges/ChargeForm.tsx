@@ -267,6 +267,21 @@ export function ChargeForm({
     (WINDOWABLE_AGGREGATIONS as readonly string[]).includes(selectedMeter.aggregationType)
   const showWindow =
     showUsageWindow && isUsage && Boolean(selectedMeter) && (windowable || meterBuckets)
+  // Only name fields this form will actually draw. A contract charge collects
+  // its start, window and commitment beside the price, so those must not be
+  // promised here and the section must not open onto an empty panel.
+  const advancedParts = [
+    (priceUnits.length > 0 || priceUnit) && 'price unit',
+    showWindow && 'usage window',
+    !isUsage && !isEdit && billingPeriod !== BillingPeriod.OneTime && 'free trial',
+    priceOptions && !isEdit && !isUsage && 'minimum quantity',
+    priceOptions && !isEdit && priceOptions.groups.length > 0 && 'tag',
+    !isEdit && priceOptions && 'start date',
+  ].filter((part): part is string => Boolean(part))
+  const advancedSummary =
+    advancedParts.length === 0
+      ? ''
+      : advancedParts.join(', ').replace(/^./, (letter) => letter.toUpperCase())
   const periods = isUsage ? USAGE_PERIODS : FIXED_PERIODS
   const unitLabel = priceUnit || currency
   const lockedInput = (id: string, value: string) => (
@@ -798,13 +813,10 @@ export function ChargeForm({
         </div>
       ) : null}
 
+      {advancedSummary ? (
       <FormDisclosure
         title="Advanced"
-        summary={
-          isUsage
-            ? 'Price unit, usage window, tag, start date'
-            : 'Price unit, free trial, minimum quantity, tag, start date'
-        }
+        summary={advancedSummary}
         forceOpen={Boolean(
           messageOf(errors, 'trialPeriodDays') ||
           messageOf(errors, 'minQuantity') ||
@@ -1006,6 +1018,7 @@ export function ChargeForm({
           ) : null}
         </div>
       </FormDisclosure>
+      ) : null}
 
       {extras}
 

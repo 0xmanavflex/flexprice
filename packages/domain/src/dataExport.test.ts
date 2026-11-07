@@ -6,6 +6,7 @@ import {
   emptyS3Connection,
   validateDataExport,
   validateS3Connection,
+  validateS3ConnectionEdit,
 } from './dataExport'
 
 describe('validateDataExport', () => {
@@ -46,5 +47,27 @@ describe('validateS3Connection', () => {
     expect(
       validateS3Connection({ ...emptyS3Connection(), name: 'x', flexpriceManaged: true }),
     ).toEqual({})
+  })
+})
+
+describe('validateS3ConnectionEdit', () => {
+  const named = { ...emptyS3Connection(), name: 'Lake' }
+  it('keeps the stored keys when both are blank', () => {
+    expect(validateS3ConnectionEdit(named)).toEqual({})
+  })
+  it('needs a name, and both halves of a new key pair', () => {
+    expect(Object.keys(validateS3ConnectionEdit(emptyS3Connection()))).toEqual(['name'])
+    expect(validateS3ConnectionEdit({ ...named, accessKeyId: 'AKIA' })).toEqual({
+      secretAccessKey: 'Enter the new AWS secret access key',
+    })
+    expect(validateS3ConnectionEdit({ ...named, secretAccessKey: 's' })).toEqual({
+      accessKeyId: 'Enter the new AWS access key ID',
+    })
+    expect(
+      validateS3ConnectionEdit({ ...named, accessKeyId: 'AKIA', secretAccessKey: 's' }),
+    ).toEqual({})
+    expect(validateS3ConnectionEdit({ ...named, sessionToken: 'tok' })).toEqual({
+      accessKeyId: 'Enter the new AWS keys this session token belongs to',
+    })
   })
 })

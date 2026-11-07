@@ -1,0 +1,1235 @@
+{
+  "prefix": "qa-contract-parity-20261106104229",
+  "ids": {
+    "owner": "cust_01M6R77V95A0YV5MEFWP8P5YJ6",
+    "child1": "cust_01M6R77VEK47B1CEQJVRS6DCPV",
+    "child2": "cust_01M6R77VK42688RG7F3GEC0YV0",
+    "child3": "cust_01M6R77VQF30NHFR1NN1CVW0H4",
+    "child4": "cust_01M6R77VW5ZB9BBKW52VCA9AFA",
+    "plan": "plan_01M6R77W2C2F4QQXJ00N5TD0KC",
+    "price": "price_01M6R77W6FX7PHZ2TC4WD07QD1",
+    "parent": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+    "inherited": [
+      "subs_01M6R7967KKEV9XA59ZC4DHNJT",
+      "subs_01M6R7967J143NYR3D55XJG56T",
+      "subs_01M6R795KKY7FPGSM575KYF4FH",
+      "subs_01M6R795KG4RBTJ32SWZZHW5QP"
+    ],
+    "line": "subs_line_01M6R795DHJ0EP8TFK7935QAJ9",
+    "feature": "feat_01M6R7EN6NPKY3R6ZEF5MH3EFK",
+    "entitlement": "ent_01M6R7ENDEKGAQ9FRV6T1NTRVB",
+    "override": "ent_01M6R7ENJGQSD8G876GKKZX5AJ",
+    "coupon": "coupon_01M6R7EP8ZKNDX0KZGGVMDVT7J",
+    "addon1": "addon_01M6R7EPZNYEN2XM3FN0DYV92B",
+    "addonprice1": "price_01M6R7EQ6VWZES7GE2RB0MW4PD",
+    "addon2": "addon_01M6R7EQCPRM5X5TTKNHTP2B74",
+    "addonprice2": "price_01M6R7EQHY5SK2DKNKGPGQQTGK",
+    "addon3": "addon_01M6R7EQXZ1ZDG47Y2R68CMFWG",
+    "addonprice3": "price_01M6R7ER7F998N6CYEWWZ4J1JE",
+    "creditgrant": "cg_01M6R7ESCVJTYDD6F2HNNN941G",
+    "usagefeature": "feat_01M6R7JDWAWM9YDBGY8XK3V3WY",
+    "meter": "meter_01M6R7WT34X6YQRPVZB1PK0BPN",
+    "usageprice": "price_01M6R7JE2JZG7ZFYPDPA6JDBNV",
+    "usageline": "subs_line_01M6R7JG4BSV9VQKY6BSXX2P2T",
+    "usageSumFeature": "feat_01M6R7WT36Y2R46PADF3M0XNM7",
+    "usageSumPrice": "price_01M6R7WTMRPET9S4JF22HQ2KDW",
+    "usageSumLine": "subs_line_01M6R7WXG37DGAPA7HVH52VN9W"
+  },
+  "calls": [
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/customers",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 owner",
+        "external_id": "qa-contract-parity-20261106104229-owner"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/customers",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 child1",
+        "external_id": "qa-contract-parity-20261106104229-child1"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/customers",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 child2",
+        "external_id": "qa-contract-parity-20261106104229-child2"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/customers",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 child3",
+        "external_id": "qa-contract-parity-20261106104229-child3"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/customers",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 child4",
+        "external_id": "qa-contract-parity-20261106104229-child4"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/plans",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229",
+        "lookup_key": "qa-contract-parity-20261106104229",
+        "description": "Isolated V1/V2 contract payload verification"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/prices",
+      "status": 201,
+      "payload": {
+        "entity_type": "PLAN",
+        "entity_id": "plan_01M6R77W2C2F4QQXJ00N5TD0KC",
+        "type": "FIXED",
+        "billing_model": "FLAT_FEE",
+        "billing_period": "MONTHLY",
+        "billing_period_count": 1,
+        "billing_cadence": "RECURRING",
+        "invoice_cadence": "ADVANCE",
+        "price_unit_type": "FIAT",
+        "amount": "10",
+        "currency": "usd",
+        "display_name": "QA fixed charge"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions",
+      "status": 201,
+      "payload": {
+        "customer_id": "cust_01M6R77V95A0YV5MEFWP8P5YJ6",
+        "plan_id": "plan_01M6R77W2C2F4QQXJ00N5TD0KC",
+        "currency": "usd",
+        "billing_period": "MONTHLY",
+        "billing_period_count": 1,
+        "billing_cycle": "anniversary",
+        "collection_method": "send_invoice",
+        "start_date": "2026-11-06T10:43:12.693069+00:00",
+        "inheritance": {
+          "external_customer_ids_to_inherit_subscription": [
+            "qa-contract-parity-20261106104229-child1",
+            "qa-contract-parity-20261106104229-child2"
+          ]
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/modify/execute",
+      "status": 200,
+      "payload": {
+        "type": "inheritance",
+        "inheritance_params": {
+          "action": "add",
+          "external_customer_ids_to_inherit_subscription": [
+            "qa-contract-parity-20261106104229-child3",
+            "qa-contract-parity-20261106104229-child4"
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/search",
+      "status": 200,
+      "payload": {
+        "filters": [
+          {
+            "field": "parent_subscription_id",
+            "operator": "eq",
+            "data_type": "string",
+            "value": {
+              "string": "subs_01M6R795DCVVFGHKZJVM3XZTFA"
+            }
+          }
+        ],
+        "limit": 100,
+        "offset": 0,
+        "subscription_status": [
+          "active",
+          "trialing"
+        ]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/subs_01M6R7967KKEV9XA59ZC4DHNJT",
+      "status": 200,
+      "payload": {
+        "parent_subscription_id": ""
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M6R7967KKEV9XA59ZC4DHNJT",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/modify/preview",
+      "status": 200,
+      "payload": {
+        "type": "line_item_change",
+        "line_item_change_params": {
+          "line_items": [
+            {
+              "id": "subs_line_01M6R795DHJ0EP8TFK7935QAJ9",
+              "quantity": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/modify/execute",
+      "status": 200,
+      "payload": {
+        "type": "line_item_change",
+        "line_item_change_params": {
+          "line_items": [
+            {
+              "id": "subs_line_01M6R795DHJ0EP8TFK7935QAJ9",
+              "quantity": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/features",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 access",
+        "lookup_key": "qa-contract-parity-20261106104229-access",
+        "type": "boolean"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/entitlements",
+      "status": 201,
+      "payload": {
+        "entity_type": "PLAN",
+        "entity_id": "plan_01M6R77W2C2F4QQXJ00N5TD0KC",
+        "feature_id": "feat_01M6R7EN6NPKY3R6ZEF5MH3EFK",
+        "feature_type": "boolean",
+        "is_enabled": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/entitlements",
+      "status": 201,
+      "payload": {
+        "entity_type": "SUBSCRIPTION",
+        "entity_id": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+        "feature_id": "feat_01M6R7EN6NPKY3R6ZEF5MH3EFK",
+        "feature_type": "boolean",
+        "is_enabled": false,
+        "parent_entitlement_id": "ent_01M6R7ENDEKGAQ9FRV6T1NTRVB"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/entitlements/ent_01M6R7ENJGQSD8G876GKKZX5AJ",
+      "status": 200,
+      "payload": {
+        "is_enabled": true
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/entitlements/ent_01M6R7ENJGQSD8G876GKKZX5AJ",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/entitlements/ent_01M6R7ENDEKGAQ9FRV6T1NTRVB",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/coupons",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 discount",
+        "coupon_code": "qa-contract-parity-20261106104229-discount",
+        "type": "percentage",
+        "percentage_off": "10",
+        "cadence": "forever"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/modify/execute",
+      "status": 200,
+      "payload": {
+        "type": "coupon",
+        "coupon_params": {
+          "action": "add",
+          "coupon_code": "qa-contract-parity-20261106104229-discount",
+          "subscription_id": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+          "start_date": "2026-11-07T10:46:12.556399+00:00",
+          "end_date": "2026-11-08T10:46:12.556399+00:00"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/coupons/associations?subscription_ids=subs_01M6R795DCVVFGHKZJVM3XZTFA&active_only=false",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/addons",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 addon 1",
+        "lookup_key": "qa-contract-parity-20261106104229-addon-1"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/prices",
+      "status": 201,
+      "payload": {
+        "entity_type": "ADDON",
+        "entity_id": "addon_01M6R7EPZNYEN2XM3FN0DYV92B",
+        "type": "FIXED",
+        "billing_model": "FLAT_FEE",
+        "billing_period": "MONTHLY",
+        "billing_period_count": 1,
+        "billing_cadence": "RECURRING",
+        "invoice_cadence": "ADVANCE",
+        "price_unit_type": "FIAT",
+        "amount": "1",
+        "currency": "usd",
+        "display_name": "QA addon 1"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/addons",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 addon 2",
+        "lookup_key": "qa-contract-parity-20261106104229-addon-2"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/prices",
+      "status": 201,
+      "payload": {
+        "entity_type": "ADDON",
+        "entity_id": "addon_01M6R7EQCPRM5X5TTKNHTP2B74",
+        "type": "FIXED",
+        "billing_model": "FLAT_FEE",
+        "billing_period": "MONTHLY",
+        "billing_period_count": 1,
+        "billing_cadence": "RECURRING",
+        "invoice_cadence": "ADVANCE",
+        "price_unit_type": "FIAT",
+        "amount": "2",
+        "currency": "usd",
+        "display_name": "QA addon 2"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/addons",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 addon 3",
+        "lookup_key": "qa-contract-parity-20261106104229-addon-3"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/prices",
+      "status": 201,
+      "payload": {
+        "entity_type": "ADDON",
+        "entity_id": "addon_01M6R7EQXZ1ZDG47Y2R68CMFWG",
+        "type": "FIXED",
+        "billing_model": "FLAT_FEE",
+        "billing_period": "MONTHLY",
+        "billing_period_count": 1,
+        "billing_cadence": "RECURRING",
+        "invoice_cadence": "ADVANCE",
+        "price_unit_type": "FIAT",
+        "amount": "3",
+        "currency": "usd",
+        "display_name": "QA addon 3"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/modify/execute",
+      "status": 200,
+      "payload": {
+        "type": "addon",
+        "addon_bulk_params": {
+          "adds": [
+            {
+              "addon_id": "addon_01M6R7EPZNYEN2XM3FN0DYV92B"
+            },
+            {
+              "addon_id": "addon_01M6R7EQCPRM5X5TTKNHTP2B74"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/addons/associations",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/modify/execute",
+      "status": 400,
+      "payload": {
+        "type": "addon",
+        "addon_bulk_params": {
+          "adds": [
+            {
+              "addon_id": "addon_01M6R7EQXZ1ZDG47Y2R68CMFWG"
+            }
+          ],
+          "removes": [
+            {
+              "addon_association_id": "addon_assoc_01M6R7ERFT0DV3AC54QFY9FF2K",
+              "effective_date": "2026-11-06T10:46:12.556399+00:00",
+              "proration_behavior": "none"
+            }
+          ]
+        }
+      },
+      "error": {
+        "code": "validation_error",
+        "message": "The effective from date must be on or after the line item's start date",
+        "http_status_code": 400,
+        "details": {
+          "effective_from": "2026-11-06T10:46:12.556399Z",
+          "line_item_id": "subs_line_01M6R7ERFVK4SN75PCWV8RTWWK",
+          "start_date": "2026-11-06T10:46:16.302646Z"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/creditgrants",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 credits",
+        "credits": "5",
+        "scope": "SUBSCRIPTION",
+        "subscription_id": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+        "cadence": "ONETIME",
+        "expiration_type": "NEVER",
+        "priority": 0,
+        "start_date": "2026-11-07T10:46:12.556399+00:00"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/creditgrants/cg_01M6R7ESCVJTYDD6F2HNNN941G",
+      "status": 200,
+      "payload": {
+        "effective_date": "2026-11-08T10:46:12.556399+00:00"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/addons/associations",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/modify/execute",
+      "status": 200,
+      "payload": {
+        "type": "addon",
+        "addon_bulk_params": {
+          "adds": [
+            {
+              "addon_id": "addon_01M6R7EQXZ1ZDG47Y2R68CMFWG",
+              "change_at": "immediate"
+            }
+          ],
+          "removes": [
+            {
+              "addon_association_id": "addon_assoc_01M6R7ERFT0DV3AC54QFY9FF2K",
+              "change_at": "immediate",
+              "proration_behavior": "none"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/addons/associations",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/creditgrants/cg_01M6R7ESCVJTYDD6F2HNNN941G",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/features",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 usage",
+        "lookup_key": "qa-contract-parity-20261106104229-usage",
+        "type": "metered",
+        "meter": {
+          "name": "qa-contract-parity-20261106104229 meter",
+          "event_name": "qa-contract-parity-20261106104229-event",
+          "aggregation": {
+            "type": "COUNT"
+          },
+          "reset_usage": "BILLING_PERIOD"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/prices",
+      "status": 201,
+      "payload": {
+        "entity_type": "PLAN",
+        "entity_id": "plan_01M6R77W2C2F4QQXJ00N5TD0KC",
+        "type": "USAGE",
+        "meter_id": "meter_01M6R7JDW7NMYYN27A2680WK45",
+        "billing_model": "FLAT_FEE",
+        "billing_period": "MONTHLY",
+        "billing_period_count": 1,
+        "billing_cadence": "RECURRING",
+        "invoice_cadence": "ARREAR",
+        "price_unit_type": "FIAT",
+        "amount": "0.01",
+        "currency": "usd",
+        "display_name": "QA usage charge"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/lineitems",
+      "status": 201,
+      "payload": {
+        "price_id": "price_01M6R7JE2JZG7ZFYPDPA6JDBNV",
+        "start_date": "2026-11-06T10:48:18.431096+00:00"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/lineitems/subs_line_01M6R7JG4BSV9VQKY6BSXX2P2T",
+      "status": 200,
+      "payload": {
+        "commitment_type": "amount",
+        "commitment_amount": 10,
+        "commitment_windowed": false,
+        "commitment_overage_factor": 1,
+        "commitment_true_up_enabled": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/lineitems/subs_line_01M6R7JG4BSV9VQKY6BSXX2P2T",
+      "status": 400,
+      "payload": {
+        "commitment_type": "amount",
+        "commitment_amount": 10,
+        "commitment_windowed": true,
+        "commitment_time_buckets": [
+          {
+            "start": {
+              "hour": 9,
+              "minute": 0
+            },
+            "end": {
+              "hour": 17,
+              "minute": 0
+            },
+            "commitment_type": "amount",
+            "commitment_value": "10",
+            "overage_factor": "1",
+            "true_up_enabled": false,
+            "price": {
+              "entity_type": "SUBSCRIPTION",
+              "entity_id": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+              "type": "USAGE",
+              "meter_id": "meter_01M6R7JDW7NMYYN27A2680WK45",
+              "billing_model": "FLAT_FEE",
+              "billing_period": "MONTHLY",
+              "billing_period_count": 1,
+              "billing_cadence": "RECURRING",
+              "invoice_cadence": "ARREAR",
+              "price_unit_type": "FIAT",
+              "amount": "0.01",
+              "currency": "usd",
+              "display_name": "QA usage charge"
+            }
+          }
+        ]
+      },
+      "error": {
+        "code": "validation_error",
+        "message": "Update the scheduled version instead, or delete it to revert this line item",
+        "http_status_code": 400,
+        "details": {
+          "line_item_id": "subs_line_01M6R7JG4BSV9VQKY6BSXX2P2T",
+          "successor_line_item_id": "subs_line_01M6R7JGA1HFTJPNHPP1CPCG2D"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/lineitems/search",
+      "status": 200,
+      "payload": {
+        "subscription_ids": [
+          "subs_01M6R795DCVVFGHKZJVM3XZTFA"
+        ],
+        "active_filter": false,
+        "expand": "prices",
+        "limit": 500,
+        "offset": 0
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/lineitems/subs_line_01M6R7JGA1HFTJPNHPP1CPCG2D",
+      "status": 400,
+      "payload": {
+        "commitment_type": "amount",
+        "commitment_amount": 10,
+        "commitment_windowed": true,
+        "commitment_time_buckets": [
+          {
+            "start": {
+              "hour": 9,
+              "minute": 0
+            },
+            "end": {
+              "hour": 17,
+              "minute": 0
+            },
+            "commitment_type": "amount",
+            "commitment_value": "10",
+            "overage_factor": "1",
+            "true_up_enabled": false,
+            "price": {
+              "entity_type": "SUBSCRIPTION",
+              "entity_id": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+              "type": "USAGE",
+              "meter_id": "meter_01M6R7JDW7NMYYN27A2680WK45",
+              "billing_model": "FLAT_FEE",
+              "billing_period": "MONTHLY",
+              "billing_period_count": 1,
+              "billing_cadence": "RECURRING",
+              "invoice_cadence": "ARREAR",
+              "price_unit_type": "FIAT",
+              "amount": "0.01",
+              "currency": "usd",
+              "display_name": "QA usage charge"
+            }
+          }
+        ]
+      },
+      "error": {
+        "code": "validation_error",
+        "message": "Set bucket_size on the price before using time-of-day buckets",
+        "http_status_code": 400
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/lineitems/search",
+      "status": 200,
+      "payload": {
+        "subscription_ids": [
+          "subs_01M6R795DCVVFGHKZJVM3XZTFA"
+        ],
+        "active_filter": false,
+        "expand": "prices",
+        "limit": 500,
+        "offset": 0
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/lineitems/subs_line_01M6R7JGA1HFTJPNHPP1CPCG2D",
+      "status": 400,
+      "payload": {
+        "bucket_size": "DAY",
+        "commitment_type": "amount",
+        "commitment_amount": 10,
+        "commitment_windowed": true,
+        "commitment_time_buckets": [
+          {
+            "start": {
+              "hour": 9,
+              "minute": 0
+            },
+            "end": {
+              "hour": 17,
+              "minute": 0
+            },
+            "commitment_type": "amount",
+            "commitment_value": "10",
+            "overage_factor": "1",
+            "true_up_enabled": false,
+            "price": {
+              "entity_type": "SUBSCRIPTION",
+              "entity_id": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+              "type": "USAGE",
+              "meter_id": "meter_01M6R7JDW7NMYYN27A2680WK45",
+              "billing_model": "FLAT_FEE",
+              "billing_period": "MONTHLY",
+              "billing_period_count": 1,
+              "billing_cadence": "RECURRING",
+              "invoice_cadence": "ARREAR",
+              "price_unit_type": "FIAT",
+              "amount": "0.01",
+              "currency": "usd",
+              "display_name": "QA usage charge"
+            }
+          }
+        ]
+      },
+      "error": {
+        "code": "validation_error",
+        "message": "Bucketing windows a meter's aggregation, which is only meaningful for MAX or SUM meters",
+        "http_status_code": 400,
+        "details": {
+          "aggregation_type": "COUNT",
+          "bucket_size": "DAY",
+          "meter_id": "meter_01M6R7JDW7NMYYN27A2680WK45"
+        }
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/meters/meter_01M6R7JDW7NMYYN27A2680WK45",
+      "status": 400,
+      "payload": {
+        "aggregation": {
+          "type": "SUM",
+          "field": "value"
+        }
+      },
+      "error": {
+        "code": "validation_error",
+        "message": "At least one filter must be provided",
+        "http_status_code": 400
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/addons/associations",
+      "status": 200,
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/features",
+      "status": 201,
+      "payload": {
+        "name": "qa-contract-parity-20261106104229 usage",
+        "lookup_key": "qa-contract-parity-20261106104229-usage-sum",
+        "type": "metered",
+        "meter": {
+          "name": "qa-contract-parity-20261106104229 meter",
+          "event_name": "qa-contract-parity-20261106104229-event-sum",
+          "aggregation": {
+            "type": "SUM",
+            "field": "value"
+          },
+          "reset_usage": "BILLING_PERIOD"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/prices",
+      "status": 201,
+      "payload": {
+        "entity_type": "PLAN",
+        "entity_id": "plan_01M6R77W2C2F4QQXJ00N5TD0KC",
+        "type": "USAGE",
+        "meter_id": "meter_01M6R7WT34X6YQRPVZB1PK0BPN",
+        "billing_model": "FLAT_FEE",
+        "billing_period": "MONTHLY",
+        "billing_period_count": 1,
+        "billing_cadence": "RECURRING",
+        "invoice_cadence": "ARREAR",
+        "price_unit_type": "FIAT",
+        "amount": "0.01",
+        "currency": "usd",
+        "display_name": "QA usage charge"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/subs_01M6R795DCVVFGHKZJVM3XZTFA/lineitems",
+      "status": 201,
+      "payload": {
+        "price_id": "price_01M6R7WTMRPET9S4JF22HQ2KDW",
+        "start_date": "2026-11-06T10:53:58.955684+00:00"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/lineitems/subs_line_01M6R7WXG37DGAPA7HVH52VN9W",
+      "status": 200,
+      "payload": {
+        "commitment_type": "amount",
+        "commitment_amount": 10,
+        "commitment_windowed": false,
+        "commitment_overage_factor": 1,
+        "commitment_true_up_enabled": false
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/lineitems/search",
+      "status": 200,
+      "payload": {
+        "subscription_ids": [
+          "subs_01M6R795DCVVFGHKZJVM3XZTFA"
+        ],
+        "active_filter": false,
+        "expand": "prices",
+        "limit": 500,
+        "offset": 0
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/lineitems/search",
+      "status": 200,
+      "payload": {
+        "subscription_ids": [
+          "subs_01M6R795DCVVFGHKZJVM3XZTFA"
+        ],
+        "active_filter": false,
+        "expand": "prices",
+        "limit": 500,
+        "offset": 0
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/lineitems/subs_line_01M6R7WZS5TZVCS5BN60NBWSXE",
+      "status": 400,
+      "payload": {
+        "bucket_size": "DAY",
+        "commitment_type": "amount",
+        "commitment_amount": 10,
+        "commitment_windowed": true,
+        "commitment_time_buckets": [
+          {
+            "start": {
+              "hour": 9,
+              "minute": 0
+            },
+            "end": {
+              "hour": 17,
+              "minute": 0
+            },
+            "commitment_type": "amount",
+            "commitment_value": "10",
+            "overage_factor": "1",
+            "true_up_enabled": false,
+            "price": {
+              "entity_type": "SUBSCRIPTION",
+              "entity_id": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+              "type": "USAGE",
+              "meter_id": "meter_01M6R7WT34X6YQRPVZB1PK0BPN",
+              "billing_model": "FLAT_FEE",
+              "billing_period": "MONTHLY",
+              "billing_period_count": 1,
+              "billing_cadence": "RECURRING",
+              "invoice_cadence": "ARREAR",
+              "price_unit_type": "FIAT",
+              "amount": "0.01",
+              "currency": "usd",
+              "display_name": "QA usage charge"
+            }
+          }
+        ]
+      },
+      "error": {
+        "code": "validation_error",
+        "message": "Adjust the bucket so End-Start is an integer multiple of the bucket size",
+        "http_status_code": 400,
+        "details": {
+          "bucket_index": 0,
+          "duration_min": 480,
+          "window_min": 1440
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/lineitems/search",
+      "status": 200,
+      "payload": {
+        "subscription_ids": [
+          "subs_01M6R795DCVVFGHKZJVM3XZTFA"
+        ],
+        "active_filter": false,
+        "expand": "prices",
+        "limit": 500,
+        "offset": 0
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/lineitems/subs_line_01M6R7WZS5TZVCS5BN60NBWSXE",
+      "status": 200,
+      "payload": {
+        "bucket_size": "HOUR",
+        "commitment_type": "amount",
+        "commitment_amount": 10,
+        "commitment_windowed": true,
+        "commitment_time_buckets": [
+          {
+            "start": {
+              "hour": 10,
+              "minute": 0
+            },
+            "end": {
+              "hour": 17,
+              "minute": 0
+            },
+            "commitment_type": "amount",
+            "commitment_value": "10",
+            "overage_factor": "1",
+            "true_up_enabled": false,
+            "price": {
+              "entity_type": "SUBSCRIPTION",
+              "entity_id": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+              "type": "USAGE",
+              "meter_id": "meter_01M6R7WT34X6YQRPVZB1PK0BPN",
+              "billing_model": "FLAT_FEE",
+              "billing_period": "MONTHLY",
+              "billing_period_count": 1,
+              "billing_cadence": "RECURRING",
+              "invoice_cadence": "ARREAR",
+              "price_unit_type": "FIAT",
+              "amount": "0.01",
+              "currency": "usd",
+              "display_name": "QA usage charge"
+            },
+            "id": "bucket_01M6R81REVT134EXQS93TP2B84"
+          }
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/lineitems/search",
+      "status": 200,
+      "payload": {
+        "subscription_ids": [
+          "subs_01M6R795DCVVFGHKZJVM3XZTFA"
+        ],
+        "active_filter": false,
+        "expand": "prices",
+        "limit": 500,
+        "offset": 0
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/lineitems/subs_line_01M6R81REVT134EXQS93CS7WDE",
+      "status": 400,
+      "payload": {
+        "bucket_size": "HOUR",
+        "commitment_type": "amount",
+        "commitment_amount": 10,
+        "commitment_windowed": true,
+        "commitment_time_buckets": [
+          {
+            "start": {
+              "hour": 10,
+              "minute": 0
+            },
+            "end": {
+              "hour": 17,
+              "minute": 0
+            },
+            "commitment_type": "amount",
+            "commitment_value": "10",
+            "overage_factor": "1",
+            "true_up_enabled": false,
+            "price": {
+              "entity_type": "SUBSCRIPTION",
+              "entity_id": "subs_01M6R795DCVVFGHKZJVM3XZTFA",
+              "type": "USAGE",
+              "meter_id": "meter_01M6R7WT34X6YQRPVZB1PK0BPN",
+              "billing_model": "FLAT_FEE",
+              "billing_period": "MONTHLY",
+              "billing_period_count": 1,
+              "billing_cadence": "RECURRING",
+              "invoice_cadence": "ARREAR",
+              "price_unit_type": "FIAT",
+              "amount": "0.01",
+              "currency": "usd",
+              "display_name": "QA usage charge"
+            },
+            "id": "bucket_01M6R81REVT134EXQS93TP2B84"
+          }
+        ]
+      },
+      "error": {
+        "code": "validation_error",
+        "message": "Provide id to keep the existing bucket price, or price (without id) to create a new bucket",
+        "http_status_code": 400,
+        "details": {
+          "bucket_index": 0
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/subscriptions/lineitems/search",
+      "status": 200,
+      "payload": {
+        "subscription_ids": [
+          "subs_01M6R795DCVVFGHKZJVM3XZTFA"
+        ],
+        "active_filter": false,
+        "expand": "prices",
+        "limit": 500,
+        "offset": 0
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/subscriptions/lineitems/subs_line_01M6R81REVT134EXQS93CS7WDE",
+      "status": 200,
+      "payload": {
+        "commitment_type": "amount",
+        "commitment_amount": 10,
+        "commitment_windowed": true,
+        "commitment_time_buckets": [
+          {
+            "id": "bucket_01M6R81REVT134EXQS93TP2B84",
+            "start": {
+              "hour": 10,
+              "minute": 0
+            },
+            "end": {
+              "hour": 17,
+              "minute": 0
+            },
+            "commitment_type": "amount",
+            "commitment_value": "10",
+            "overage_factor": "1",
+            "true_up_enabled": false
+          }
+        ]
+      }
+    }
+  ],
+  "checks": [
+    {
+      "case": "contract entitlement edit",
+      "ok": true
+    },
+    {
+      "case": "reset own override",
+      "ok": true
+    },
+    {
+      "case": "plan source unchanged",
+      "ok": true
+    },
+    {
+      "case": "dated coupon round trip",
+      "ok": true
+    },
+    {
+      "case": "combined addon add/remove",
+      "ok": false
+    },
+    {
+      "case": "dated grant cancellation accepted",
+      "ok": true
+    },
+    {
+      "case": "combined addons immediate timing",
+      "ok": true
+    },
+    {
+      "case": "new addon read back",
+      "ok": true
+    },
+    {
+      "case": "grant future end read back",
+      "ok": true
+    },
+    {
+      "case": "usage charge commitment edit",
+      "ok": true
+    },
+    {
+      "case": "windowed commitment create",
+      "ok": false
+    },
+    {
+      "case": "window create on latest version",
+      "ok": false
+    },
+    {
+      "case": "window create on latest version",
+      "ok": false
+    },
+    {
+      "case": "usage charge commitment edit",
+      "ok": true
+    },
+    {
+      "case": "window create on latest version",
+      "ok": false
+    },
+    {
+      "case": "window create on latest version",
+      "ok": true
+    },
+    {
+      "case": "existing window edit with bucket identity",
+      "ok": false
+    },
+    {
+      "case": "existing bucket edit ID only",
+      "ok": true
+    }
+  ]
+}

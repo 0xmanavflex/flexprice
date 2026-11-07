@@ -1,0 +1,201 @@
+- main:
+  - navigation:
+    - button "Toggle Sidebar":
+      - generic: Toggle Sidebar
+    - generic "Billing"
+    - link "Invoices":
+      - /url: /billing/invoices
+    - generic "INV-202611-00031"
+  - button "Toggle dark mode":
+  - combobox:
+    - generic: English
+  - button "Search or run a command (⌘K)":
+    - generic: Search...
+  - button "Help":
+    - text: Help
+  - button "Api":
+    - text: Api
+  - main:
+    - tablist:
+      - tab "Overview" [selected]:
+        - paragraph: Overview
+      - tab "Payments":
+        - paragraph: Payments
+      - tab "Credit Notes":
+        - paragraph: Credit Notes
+    - tabpanel "Overview":
+      - paragraph: Invoice Details
+      - button "Download":
+        - generic: Download
+      - button:
+      - paragraph: Invoice Number
+      - paragraph: Date of Issue
+      - paragraph: Date Due
+      - paragraph: Payment Status
+      - paragraph: INV-202611-00031
+      - paragraph: Nov 05, 2026
+      - paragraph: Nov 06, 2026
+      - paragraph:
+        - button "Pending":
+          - generic: Pending
+      - paragraph: Acme
+      - paragraph: Acme
+      - paragraph: zoro20014311@gmail.com
+      - paragraph: MIG 47 Bara khamba road Andkhoy FYB 211001 AF
+      - paragraph: Bill to
+      - link:
+        - /url: /billing/customers/cust_01M5M7C1WFQ91X66D56S7YVRY0
+        - paragraph: PUP Acme 1792753923
+      - paragraph: "--"
+      - paragraph
+      - paragraph: Order Details
+      - switch "Show Zero Charges"
+      - paragraph: Show Zero Charges
+      - paragraph
+      - table:
+        - rowgroup:
+          - row "Subscription Description Interval Quantity Amount":
+            - columnheader "Subscription"
+            - columnheader "Description"
+            - columnheader "Interval"
+            - columnheader "Quantity"
+            - columnheader "Amount"
+        - rowgroup:
+          - row "Base Fixed charge 5 Nov 2026 - 5 Dec 2026 1 $100":
+            - cell "Base"
+            - cell "Fixed charge"
+            - cell "5 Nov 2026 - 5 Dec 2026"
+            - cell "1"
+            - cell "$100"
+          - row "Seat Fixed charge 5 Nov 2026 - 5 Dec 2026 1 $10":
+            - cell "Seat"
+            - cell "Fixed charge"
+            - cell "5 Nov 2026 - 5 Dec 2026"
+            - cell "1"
+            - cell "$10"
+      - generic: Subtotal
+      - generic: $110
+      - generic: Tax
+      - button "Show tax breakdown":
+      - generic: $2.2
+      - generic: Net payable
+      - button "How net payable is calculated":
+      - generic: $112.2
+      - generic: Amount paid
+      - generic: $0
+      - generic: Remaining balance
+      - generic: $112.2
+      - heading "Applied Taxes" [level=3]
+      - table:
+        - rowgroup:
+          - row "Tax Name Source Code Jurisdiction Type Rate Behavior Taxable Amount Tax Amount Applied At":
+            - columnheader "Tax Name"
+            - columnheader "Source"
+            - columnheader "Code"
+            - columnheader "Jurisdiction"
+            - columnheader "Type"
+            - columnheader "Rate"
+            - columnheader "Behavior"
+            - columnheader "Taxable Amount"
+            - columnheader "Tax Amount"
+            - columnheader "Applied At"
+        - rowgroup:
+          - row "Flexprice tax-test -- Percentage 2% Exclusive $110.00 $2.20 Nov 5, 2026":
+            - cell:
+              - link:
+                - /url: /billing/taxes/taxrate_01M20V7KH96978CKMCGJM78BC3
+                - text: test
+            - cell "Flexprice":
+              - generic: Flexprice
+            - cell "tax-test":
+              - generic: tax-test
+            - cell "--":
+              - generic: "--"
+            - cell "Percentage":
+              - generic: Percentage
+            - cell "2%":
+              - generic: 2%
+            - cell "Exclusive":
+              - generic: Exclusive
+            - cell "$110.00":
+              - generic: $110.00
+            - cell "$2.20":
+              - generic: $2.20
+            - cell "Nov 5, 2026":
+              - generic: Nov 5, 2026
+      - heading "Integrations" [level=3]
+      - table:
+        - rowgroup:
+          - row "Integration Integration Invoice ID Created At Updated At":
+            - columnheader "Integration"
+            - columnheader "Integration Invoice ID"
+            - columnheader "Created At"
+            - columnheader "Updated At"
+            - columnheader
+            - columnheader
+        - rowgroup:
+          - row "razorpay Razorpay — — — Integration actions":
+            - cell "razorpay Razorpay":
+              - img "razorpay"
+              - generic: Razorpay
+            - cell "—":
+              - generic: —
+            - cell "—":
+              - generic: —
+            - cell "—":
+              - generic: —
+            - cell
+            - cell "Integration actions":
+              - button "Integration actions":
+          - row "chargebee Chargebee 26631 Nov 05, 2026 Nov 05, 2026 Integration actions":
+            - cell "chargebee Chargebee":
+              - img "chargebee"
+              - generic: Chargebee
+            - cell "26631":
+              - generic: "26631"
+            - cell "Nov 05, 2026":
+              - generic: Nov 05, 2026
+            - cell "Nov 05, 2026":
+              - generic: Nov 05, 2026
+            - cell
+            - cell "Integration actions":
+              - button "Integration actions":
+          - row "stripe Stripe in_1UYUAuPkGoeCGaiJ0JtdWO7B Nov 05, 2026 Nov 05, 2026 Integration actions":
+            - cell "stripe Stripe":
+              - img "stripe"
+              - generic: Stripe
+            - cell "in_1UYUAuPkGoeCGaiJ0JtdWO7B":
+              - generic: in_1UYUAuPkGoeCGaiJ0JtdWO7B
+            - cell "Nov 05, 2026":
+              - generic: Nov 05, 2026
+            - cell "Nov 05, 2026":
+              - generic: Nov 05, 2026
+            - cell
+            - cell "Integration actions":
+              - button "Integration actions":
+          - row "zoho_books Zoho Books — — — Integration actions":
+            - cell "zoho_books Zoho Books":
+              - img "zoho_books"
+              - generic: Zoho Books
+            - cell "—":
+              - generic: —
+            - cell "—":
+              - generic: —
+            - cell "—":
+              - generic: —
+            - cell
+            - cell "Integration actions":
+              - button "Integration actions":
+      - heading "Metadata" [level=3]
+      - table:
+        - rowgroup:
+          - row "Key Value":
+            - columnheader "Key"
+            - columnheader "Value"
+        - rowgroup:
+          - row "stripe_hosted_invoice_url https://invoice.stripe.com/i/acct_1SHvkUPkGoeCGaiJ/test_YWNjdF8xU0h2a1VQa0dvZUNHYWlKLF9WWmRSYkY0WmFKRkN3dmZwT3dsdmd4cXphS2xzV243LDE4NDQzOTQxMQ0200jFfl1jVK?s=ap":
+            - cell "stripe_hosted_invoice_url"
+            - cell "https://invoice.stripe.com/i/acct_1SHvkUPkGoeCGaiJ/test_YWNjdF8xU0h2a1VQa0dvZUNHYWlKLF9WWmRSYkY0WmFKRkN3dmZwT3dsdmd4cXphS2xzV243LDE4NDQzOTQxMQ0200jFfl1jVK?s=ap"
+    - button:
+- iframe
+- iframe

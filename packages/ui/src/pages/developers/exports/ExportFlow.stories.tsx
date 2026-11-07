@@ -55,6 +55,7 @@ export const S3Connections: Story = {
       onBack={fn()}
       onOpen={fn()}
       onCreate={fn(async () => undefined)}
+      onUpdate={fn(async () => undefined)}
       onDelete={fn(async () => undefined)}
     />
   ),
@@ -73,6 +74,40 @@ export const S3Connections: Story = {
   },
 }
 
+const onUpdate = fn(async () => undefined)
+
+/** Edit renames a connection or rotates its keys; a new key needs both halves. */
+export const EditS3Connection: Story = {
+  render: () => (
+    <S3ConnectionList
+      connections={CONNECTIONS}
+      onBack={fn()}
+      onOpen={fn()}
+      onCreate={fn(async () => undefined)}
+      onUpdate={onUpdate}
+      onDelete={fn(async () => undefined)}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit Acme data lake' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(dialog.getByDisplayValue('Acme data lake')).toBeVisible()
+    await expect(dialog.queryByRole('switch')).toBeNull()
+    await userEvent.type(dialog.getByLabelText(/New AWS access key ID/), 'AKIANEW')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
+    await expect(await dialog.findByText('Enter the new AWS secret access key')).toBeVisible()
+    await userEvent.type(dialog.getByLabelText(/New AWS secret access key/), 'new-secret')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith(
+        CONNECTIONS[0],
+        expect.objectContaining({ accessKeyId: 'AKIANEW', secretAccessKey: 'new-secret' }),
+      ),
+    )
+  },
+}
+
 export const NoConnections: Story = {
   render: () => (
     <S3ConnectionList
@@ -80,6 +115,7 @@ export const NoConnections: Story = {
       onBack={fn()}
       onOpen={fn()}
       onCreate={fn(async () => undefined)}
+      onUpdate={fn(async () => undefined)}
       onDelete={fn(async () => undefined)}
     />
   ),

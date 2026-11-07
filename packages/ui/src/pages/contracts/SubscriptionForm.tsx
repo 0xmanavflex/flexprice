@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import { SpendingAllowancesSection } from './SpendingAllowancesSection'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
@@ -14,6 +15,7 @@ import {
   InfoIcon,
   MoreHorizontalIcon,
   CircleDollarSignIcon,
+  CopyIcon,
   PencilIcon,
   PlusIcon,
   PuzzleIcon,
@@ -100,6 +102,10 @@ import {
 } from '@ui/compositions/detail/DetailKit'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { Field } from '@ui/compositions/forms/Field'
+import {
+  EntitlementCreateForm,
+  type FeatureOption,
+} from '@ui/pages/product-catalog/entitlements/EntitlementForm'
 import { GrantAllowanceFields } from '@ui/pages/product-catalog/entitlements/GrantAllowanceFields'
 import { parseDateValue } from '@ui/compositions/forms/DateInput'
 import { DateInput } from '@ui/compositions/forms/DateInput'
@@ -107,6 +113,7 @@ import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
 import { FormPage } from '@ui/compositions/forms/FormPage'
+import { OptionMultiCombobox } from '@ui/compositions/forms/OptionMultiCombobox'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { type Option, OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { useFormSteps } from '@ui/compositions/forms/useFormSteps'
@@ -180,6 +187,7 @@ export const SubscriptionFormProvenance = provenance({
     'compositions/form-dialog',
     'ui/dropdown-menu',
     'pages/credit-grant-form',
+    'pages/EntitlementForm',
   ],
   note: 'RHF + the domain schema, five steps with Previous/Next, Save as draft and the stepper in the toolbar (ChoiceCards and SimpleTable from the detail kit); sub-forms (price override, credit grant) sit outside the form element.',
 })
@@ -238,6 +246,8 @@ export interface SubscriptionTaxRateOption {
 }
 
 export interface SubscriptionFormProps {
+  spendingAllowancesEnabled?: boolean
+
   pickerStatus?: 'loading' | 'failed' | 'ready' | undefined
   defaultValue?: Partial<CreateSubscription>
   customers: readonly SubscriptionCustomerOption[]
@@ -274,6 +284,7 @@ export interface SubscriptionFormProps {
   addonChargesFailed?: boolean | undefined
   /** For charges added to this contract alone: the metered features and price units. */
   meters?: MeterOption[]
+  features?: FeatureOption[]
   priceUnits?: PriceUnitOption[]
   customerLocked?: boolean
   /**
@@ -441,6 +452,7 @@ export function SubscriptionForm({
   addonCharges,
   addonChargesFailed = false,
   meters = [],
+  features = [],
   priceUnits = [],
   customerLocked = false,
   inheritanceBlocks = NO_BLOCKS,
@@ -452,6 +464,7 @@ export function SubscriptionForm({
   onCancel,
   isSubmitting = false,
   pickerStatus = 'ready',
+  spendingAllowancesEnabled = false,
   submitError = null,
   trail,
   step,
@@ -612,7 +625,11 @@ export function SubscriptionForm({
     })
     if (name === 'customerId') onCustomerChange?.(value)
     // Entitlement changes name the old plan's entitlements: another plan starts without them.
-    if (name === 'planId' && value !== values.planId) form.setValue('entitlementOverrides', [])
+    if (name === 'planId' && value !== values.planId) {
+      form.setValue('entitlementOverrides', [])
+      // The replacement plan may already include one of the staged features.
+      form.setValue('additionalEntitlements', [])
+    }
   }
 
   // V1 starts a contract with the chosen customer's tax rates; once per customer.
@@ -813,6 +830,9 @@ export function SubscriptionForm({
    * refused while trialing too.
    */
   const statusConflict = (draft: CreateSubscription): string | null => {
+    if (draft.draft && draft.phases.length > 1) {
+      return 'A draft contract cannot have phases. Create the contract instead, or keep a single phase.'
+    }
     const added = draft.phases.some((phase) => phase.extraCharges.length > 0)
     const trial = (draft.trialPeriodDays ?? 0) > 0
     if (added && draft.draft) {
@@ -1193,6 +1213,7 @@ export function SubscriptionForm({
     phases: values.planId ? (
       <div className="flex flex-col gap-5">
         <PhasesStep
+          timeZone={customer?.timezone}
           phases={values.phases}
           starts={starts}
           startDate={values.startDate}
@@ -1247,6 +1268,9 @@ export function SubscriptionForm({
         />
         {values.planId ? (
           <EntitlementsSection
+            features={features}
+            additions={values.additionalEntitlements ?? []}
+            onAdditionsChange={(next) => set('additionalEntitlements', next)}
             planLabel={planLabel}
             entitlements={plan?.entitlements ?? []}
             isLoading={plan?.isLoading ?? true}
@@ -1256,10 +1280,13 @@ export function SubscriptionForm({
         ) : (
           noPlan('Entitlements')
         )}
-        <SpendingAllowancesSection
-          value={values.spendingAllowances ?? []}
-          onChange={(next) => set('spendingAllowances', next)}
-        />
+        {spendingAllowancesEnabled ? (
+          <SpendingAllowancesSection
+            currency={values.currency}
+            value={values.spendingAllowances ?? []}
+            onChange={(next) => set('spendingAllowances', next)}
+          />
+        ) : null}
         <CreditsSection
           grants={values.creditGrants}
           changed={values.creditGrantsChanged}
@@ -2224,11 +2251,22 @@ function ChargesTable({
             ) : (
               <>
                 <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(row.charge.id)
+                        .then(() => toast.success('Charge ID copied'))
+                        .catch(() => toast.error('Couldn’t copy the charge ID'))
+                    }}
+                  >
+                    <CopyIcon aria-hidden />
+                    Copy ID
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setRepricing(row.charge.id)}>
                     <CircleDollarSignIcon aria-hidden />
                     Override price
                   </DropdownMenuItem>
-                  {onCommitment && row.type === 'Usage' ? (
+                  {onCommitment ? (
                     <DropdownMenuItem onClick={() => setCommitting(row.charge.id)}>
                       <ScaleIcon aria-hidden />
                       {commitmentOf.has(row.charge.id) ? 'Edit commitment' : 'Add commitment'}
@@ -2577,6 +2615,7 @@ function PhaseNumber({ n }: { n: number }) {
  * starts where the one before it ends, so only ends are chosen after the first.
  */
 function PhasesStep({
+  timeZone,
   phases,
   starts,
   startDate,
@@ -2596,6 +2635,7 @@ function PhasesStep({
   priceUnits,
   planLabel,
 }: {
+  timeZone: string | undefined
   phases: SubscriptionPhase[]
   starts: string[]
   startDate: string
@@ -2761,21 +2801,24 @@ function PhasesStep({
   )
 
   const addPhase = (
-    <div className="flex flex-col gap-1.5">
-      <Button
-        type="button"
-        variant="outline"
-        className="h-11 w-full border-dashed"
-        disabled={!canAdd}
-        onClick={() => {
-          setCollapsed(new Set(phases.map((_, i) => i)))
-          onChange([...phases, emptyPhase()])
-        }}
-      >
-        <PlusIcon data-icon="inline-start" aria-hidden />
-        Add phase
-      </Button>
-      <p className="text-muted-foreground text-center text-xs">
+    <FormCard
+      title="Contract phases"
+      adornment={
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!canAdd}
+          onClick={() => {
+            setCollapsed(new Set(phases.map((_, i) => i)))
+            onChange([...phases, emptyPhase()])
+          }}
+        >
+          <PlusIcon data-icon="inline-start" aria-hidden />
+          Add phase
+        </Button>
+      }
+    >
+      <p className="text-muted-foreground px-5 py-4 text-sm sm:px-6">
         {single
           ? canAdd
             ? `Change the charges partway through: a second phase starts on ${formatDay(last!.endDate)}, with its own charges and discounts.`
@@ -2784,7 +2827,7 @@ function PhasesStep({
             ? `Phase ${phases.length + 1} starts when Phase ${phases.length} ends, with its own charges and discounts.`
             : `A new phase starts when Phase ${phases.length} ends, so Phase ${phases.length} needs an end date first.`}
       </p>
-    </div>
+    </FormCard>
   )
 
   const couponingCharge = couponing
@@ -2896,6 +2939,7 @@ function PhasesStep({
           coupons={coupons}
           onChange={(discounts) => update(0, { discounts })}
         />
+        {addPhase}
         {addChargeDialog}
         {couponDialog}
       </div>
@@ -2970,6 +3014,8 @@ function PhasesStep({
                       id={id}
                       {...field}
                       value={startDate}
+                      withTime
+                      timeZone={timeZone}
                       onValueChange={onStartDate}
                       placeholder={`Today, ${formatDay(today)}`}
                     />
@@ -2998,6 +3044,8 @@ function PhasesStep({
                     id={id}
                     {...field}
                     value={phase.endDate}
+                    withTime
+                    timeZone={timeZone}
                     onValueChange={(endDate) => update(index, { endDate })}
                     placeholder={
                       index === phases.length - 1 ? 'Runs until cancelled' : 'Choose a date'
@@ -3053,9 +3101,13 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
 /** An add-on's own pricing on one contract: new prices on its charges, commitments on its usage charges. */
 /** When an add-on starts or ends on a running contract, as V1 offers it. */
 export const ADDON_TIMING_OPTIONS: Option[] = [
-  { value: 'immediate', label: 'Immediately' },
-  { value: 'end_of_period', label: 'At the end of the current period' },
-  { value: 'date', label: 'On a date' },
+  { value: 'immediate', label: 'Now', description: 'Attach the add-on right away.' },
+  {
+    value: 'end_of_period',
+    label: 'End of current period',
+    description: 'Attach when the current billing period ends.',
+  },
+  { value: 'date', label: 'Custom date', description: 'Pick the date the add-on starts.' },
 ]
 
 export interface AddonPricing {
@@ -3072,6 +3124,99 @@ export interface AddonPricing {
   startWhen?: AddonChangeAt | 'date'
   /** Charge for the part of the period it is on for (V1's proration). */
   prorate?: boolean
+  /** Recurring with the contract, or a single charge. */
+  cadence?: 'recurring' | 'one_time'
+}
+
+/** Starts, cadence, and proration for one add-on. */
+export function AddonScheduleFields({
+  value,
+  onChange,
+  idPrefix = 'addon',
+}: {
+  value: AddonPricing
+  onChange: (next: AddonPricing) => void
+  idPrefix?: string
+}) {
+  const [advanced, setAdvanced] = useState(false)
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
+        <LabelWithHint htmlFor={`${idPrefix}-when`} hint="When this add-on starts billing.">
+          Starts
+        </LabelWithHint>
+        <OptionSelect
+          id={`${idPrefix}-when`}
+          value={value.startWhen ?? 'immediate'}
+          onValueChange={(next) => {
+            const startWhen = next as AddonChangeAt | 'date'
+            const { startDate: _, ...rest } = value
+            onChange(startWhen === 'date' ? { ...value, startWhen } : { ...rest, startWhen })
+          }}
+          options={ADDON_TIMING_OPTIONS}
+        />
+      </div>
+      {value.startWhen === 'date' ? (
+        <div className="flex flex-col gap-2">
+          <LabelWithHint htmlFor={`${idPrefix}-start`} hint="The day this add-on starts.">
+            Start date
+          </LabelWithHint>
+          <DateInput
+            id={`${idPrefix}-start`}
+            value={value.startDate ?? ''}
+            onValueChange={(startDate) => onChange({ ...value, startDate })}
+          />
+        </div>
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="self-start"
+        aria-expanded={advanced}
+        onClick={() => setAdvanced((open) => !open)}
+      >
+        Advanced options
+      </Button>
+      {advanced ? (
+        <>
+          <div className="flex flex-col gap-2">
+            <LabelWithHint htmlFor={`${idPrefix}-cadence`} hint="Bill with every period, or once.">
+              Cadence
+            </LabelWithHint>
+            <OptionSelect
+              id={`${idPrefix}-cadence`}
+              value={value.cadence ?? 'recurring'}
+              onValueChange={(cadence) =>
+                onChange({ ...value, cadence: cadence as 'recurring' | 'one_time' })
+              }
+              options={[
+                { value: 'recurring', label: 'Recurring' },
+                { value: 'one_time', label: 'One time' },
+              ]}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <LabelWithHint
+              htmlFor={`${idPrefix}-prorate`}
+              hint="Charge for the part of the period this add-on is on for."
+            >
+              Proration
+            </LabelWithHint>
+            <OptionSelect
+              id={`${idPrefix}-prorate`}
+              value={value.prorate === false ? 'none' : 'prorate'}
+              onValueChange={(next) => onChange({ ...value, prorate: next === 'prorate' })}
+              options={[
+                { value: 'prorate', label: 'Prorate' },
+                { value: 'none', label: 'No proration' },
+              ]}
+            />
+          </div>
+        </>
+      ) : null}
+    </div>
+  )
 }
 
 /**
@@ -3220,19 +3365,26 @@ export function AddonChargesDialog({
             label={name}
             extra={[
               {
+                label: 'Copy ID',
+                icon: <CopyIcon aria-hidden />,
+                readOnly: true,
+                onSelect: () => {
+                  void navigator.clipboard
+                    .writeText(charge.id)
+                    .then(() => toast.success('Charge ID copied'))
+                    .catch(() => toast.error('Couldn’t copy the charge ID'))
+                },
+              },
+              {
                 label: overrideOf(charge.id) ? 'Edit price' : 'Override price',
                 icon: <CircleDollarSignIcon aria-hidden />,
                 onSelect: () => setEditing({ kind: 'price', charge }),
               },
-              ...(charge.type === PriceType.Usage
-                ? [
-                    {
-                      label: commitmentOf(charge.id) ? 'Edit commitment' : 'Add commitment',
-                      icon: <ScaleIcon aria-hidden />,
-                      onSelect: () => setEditing({ kind: 'commitment', charge }),
-                    },
-                  ]
-                : []),
+              {
+                label: commitmentOf(charge.id) ? 'Edit commitment' : 'Add commitment',
+                icon: <ScaleIcon aria-hidden />,
+                onSelect: () => setEditing({ kind: 'commitment', charge }),
+              },
               ...(changed
                 ? [
                     {
@@ -3301,47 +3453,9 @@ export function AddonChargesDialog({
               )}
             </div>
           )}
-          {timing ? (
-            <>
-              <div className="flex flex-col gap-2">
-                <LabelWithHint htmlFor="addon-when" hint="When this add-on starts billing.">
-                  Starts
-                </LabelWithHint>
-                <OptionSelect
-                  id="addon-when"
-                  value={value.startWhen ?? 'immediate'}
-                  onValueChange={(next) => {
-                    const startWhen = next as AddonChangeAt | 'date'
-                    const { startDate: _, ...rest } = value
-                    onChange(
-                      startWhen === 'date' ? { ...value, startWhen } : { ...rest, startWhen },
-                    )
-                  }}
-                  options={ADDON_TIMING_OPTIONS}
-                />
-              </div>
-              {value.startWhen === 'date' ? (
-                <div className="flex flex-col gap-2">
-                  <LabelWithHint htmlFor="addon-start" hint="The day this add-on starts.">
-                    Start date
-                  </LabelWithHint>
-                  <DateInput
-                    id="addon-start"
-                    value={value.startDate ?? ''}
-                    onValueChange={(startDate) => onChange({ ...value, startDate })}
-                  />
-                </div>
-              ) : null}
-              <span className="flex items-center justify-between gap-4 text-sm">
-                <label htmlFor="addon-prorate">Prorate the current period</label>
-                <Switch
-                  id="addon-prorate"
-                  checked={value.prorate ?? true}
-                  onCheckedChange={(prorate) => onChange({ ...value, prorate })}
-                />
-              </span>
-            </>
-          ) : (
+          {timing && charges !== null ? (
+            <AddonScheduleFields value={value} onChange={onChange} />
+          ) : timing ? null : (
             <div className="flex flex-col gap-2">
               <LabelWithHint
                 htmlFor="addon-start"
@@ -3389,6 +3503,7 @@ export function AddonChargesDialog({
                 // becomes the commitment's too, so neither silently loses.
                 const commitment = commitmentOf(repricing.id)
                 onChange({
+                  ...value,
                   priceOverrides: [...without(value.priceOverrides, repricing.id), override],
                   commitments:
                     commitment &&
@@ -3418,6 +3533,7 @@ export function AddonChargesDialog({
           if (committing) {
             const override = overrideOf(committing.id)
             onChange({
+              ...value,
               // And the other way: a commitment's new bucket replaces one the price override chose.
               priceOverrides:
                 next && override?.bucketSize && override.bucketSize !== next.bucketSize
@@ -3446,7 +3562,15 @@ function withAddonPricing(
     ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
     ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
     ...(pricing.quantities?.length ? { quantities: pricing.quantities } : {}),
-    ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
+    ...(pricing.startWhen === 'date' && pricing.startDate
+      ? { startDate: pricing.startDate }
+      : pricing.startWhen && pricing.startWhen !== 'date'
+        ? { changeAt: pricing.startWhen }
+        : pricing.startDate
+          ? { startDate: pricing.startDate }
+          : {}),
+    ...(pricing.prorate === undefined ? {} : { prorate: pricing.prorate }),
+    ...(pricing.cadence === 'one_time' ? { cadence: 'one_time' as const } : {}),
   }
 }
 
@@ -3482,6 +3606,8 @@ function AddonsSection({
     adding: boolean
     pricing: AddonPricing
   } | null>(null)
+  // Add-ons set aside inside this dialog, attached together when it is saved.
+  const [staged, setStaged] = useState<CreateSubscription['addons']>([])
   // Only the prices the API will attach (this currency, this period or one-time).
   const chargesFor = (addonId: string) => {
     const charges = chargesOf?.(addonId)
@@ -3506,9 +3632,16 @@ function AddonsSection({
       currency,
       billingPeriod,
     }),
-    ...(addon.startDate ? { startDate: addon.startDate } : {}),
+    ...(addon.startDate
+      ? { startDate: addon.startDate, startWhen: 'date' as const }
+      : { startWhen: addon.changeAt ?? 'immediate' }),
+    ...(addon.prorate === undefined ? {} : { prorate: addon.prorate }),
+    ...(addon.cadence ? { cadence: addon.cadence } : {}),
   })
-  const available = options.filter((o) => !selected.some((a) => a.addonId === o.value))
+  const available = options.filter(
+    (o) =>
+      !selected.some((a) => a.addonId === o.value) && !staged.some((a) => a.addonId === o.value),
+  )
   const optionOf = (addonId: string) => options.find((o) => o.value === addonId)
   const nameOf = (addon: CreateSubscription['addons'][number]) =>
     addon.name || optionOf(addon.addonId)?.label || addon.addonId
@@ -3521,13 +3654,24 @@ function AddonsSection({
     })
   const save = () => {
     if (!open) return
-    const next = withAddonPricing(open, open.pricing)
+    const next = open.addonId ? withAddonPricing(open, open.pricing) : null
     onChange(
       open.adding
-        ? [...selected, next]
-        : selected.map((addon) => (addon.addonId === open.addonId ? next : addon)),
+        ? [...selected, ...staged, ...(next ? [next] : [])]
+        : selected.map((addon) => (addon.addonId === open.addonId && next ? next : addon)),
     )
+    setStaged([])
     setOpen(null)
+  }
+  const stageCurrent = () => {
+    if (!open?.addonId) return
+    setStaged((list) => [...list, withAddonPricing(open, open.pricing)])
+    setOpen({
+      addonId: '',
+      name: '',
+      adding: true,
+      pricing: { priceOverrides: [], commitments: [] },
+    })
   }
   const columns: SimpleColumn<CreateSubscription['addons'][number]>[] = [
     {
@@ -3631,12 +3775,12 @@ function AddonsSection({
                   if (!option) return
                   const addon = { addonId: option.value, name: option.label }
                   // Without the add-on's charges there is nothing to price: add it as it is.
-                  if (!chargesOf) onChange([...selected, addon])
+                  if (!chargesOf) onChange([...selected, ...staged, addon])
                   else
                     setOpen({
                       ...addon,
                       adding: true,
-                      pricing: { priceOverrides: [], commitments: [] },
+                      pricing: { priceOverrides: [], commitments: [], startWhen: 'immediate' },
                     })
                 }}
               />
@@ -3645,19 +3789,70 @@ function AddonsSection({
         </FormRow>
         <AddonChargesDialog
           open={open !== null}
-          title={open ? `${open.adding ? 'Add add-on' : 'Edit add-on'} · ${open.name}` : ''}
+          title={
+            open
+              ? open.adding
+                ? open.name
+                  ? `Add add-on · ${open.name}`
+                  : 'Add add-ons'
+                : `Edit add-on · ${open.name}`
+              : ''
+          }
           submitLabel={open?.adding ? 'Add add-on' : 'Save add-on'}
-          charges={open ? chargesFor(open.addonId) : null}
+          charges={open?.addonId ? chargesFor(open.addonId) : null}
           chargesFailed={chargesFailed}
           currency={currency}
           meters={meters}
           value={open?.pricing ?? { priceOverrides: [], commitments: [] }}
+          timing
           onChange={(pricing) =>
             setOpen((current) => (current ? { ...current, pricing } : current))
           }
-          onClose={() => setOpen(null)}
+          onClose={() => {
+            setStaged([])
+            setOpen(null)
+          }}
           onSubmit={save}
-        />
+        >
+          {open?.adding && staged.length > 0 ? (
+            <ul className="text-muted-foreground flex flex-col gap-1 text-sm">
+              {staged.map((addon) => (
+                <li key={addon.addonId}>{nameOf(addon)} will be added with this one.</li>
+              ))}
+            </ul>
+          ) : null}
+          {open?.adding && !open.addonId ? (
+            <OptionCombobox
+              searchable
+              id="create-addon-another"
+              value=""
+              placeholder="Select another add-on"
+              options={available}
+              onValueChange={(addonId) => {
+                const option = available.find((o) => o.value === addonId)
+                if (!option) return
+                setOpen({
+                  addonId: option.value,
+                  name: option.label,
+                  adding: true,
+                  pricing: { priceOverrides: [], commitments: [], startWhen: 'immediate' },
+                })
+              }}
+            />
+          ) : null}
+          {open?.adding && open.addonId && available.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={stageCurrent}
+            >
+              <PlusIcon aria-hidden />
+              Add another add-on
+            </Button>
+          ) : null}
+        </AddonChargesDialog>
       </div>
     </FormCard>
   )
@@ -3830,19 +4025,56 @@ function entitlementResetsText(entitlement: Entitlement, override?: EntitlementO
  * A config entitlement keeps the plan's.
  */
 function EntitlementsSection({
+  features,
+  additions,
+  onAdditionsChange,
   planLabel,
   entitlements,
   isLoading,
   overrides,
   onChange,
 }: {
+  features: FeatureOption[]
+  additions: NonNullable<CreateSubscription['additionalEntitlements']>
+  onAdditionsChange: (next: NonNullable<CreateSubscription['additionalEntitlements']>) => void
   planLabel: string | undefined
   entitlements: Entitlement[]
   isLoading: boolean
   overrides: EntitlementOverride[]
   onChange: (next: EntitlementOverride[]) => void
 }) {
+  const [adding, setAdding] = useState<number | 'new' | null>(null)
   const [editing, setEditing] = useState<Entitlement | null>(null)
+  const staged: Entitlement[] = additions.map((draft, index) => ({
+    id: `staged-${index}`,
+    featureId: draft.featureId,
+    featureName: features.find((f) => f.id === draft.featureId)?.name ?? draft.featureId,
+    featureType: draft.featureType,
+    entityType: 'SUBSCRIPTION',
+    entityId: '',
+    usageLimit: 'usageLimit' in draft ? draft.usageLimit : null,
+    usageResetPeriod: 'usageResetPeriod' in draft ? draft.usageResetPeriod : null,
+    isSoftLimit: 'isSoftLimit' in draft ? draft.isSoftLimit : false,
+    isEnabled: 'isEnabled' in draft ? draft.isEnabled : null,
+    staticValue: 'staticValue' in draft ? draft.staticValue : null,
+    configValue: 'configValue' in draft ? draft.configValue : null,
+    ...('grant' in draft && draft.grant
+      ? {
+          grantQuota: draft.grant.quota,
+          grantMeasure: draft.grant.measure,
+          grantDurationUnit: draft.grant.unit,
+          grantDurationValue: draft.grant.every ?? 1,
+          grantAllocationBehavior: draft.grant.allocation,
+          aggregationMode: draft.grant.aggregation,
+        }
+      : {}),
+    createdAt: null,
+  }))
+  const available = features.filter(
+    (feature) =>
+      !entitlements.some((e) => e.featureId === feature.id) &&
+      !additions.some((e, index) => e.featureId === feature.id && index !== adding),
+  )
   const overrideOf = (id: string) => overrides.find((o) => o.entitlementId === id)
   const nameOf = (entitlement: Entitlement) => entitlement.featureName ?? entitlement.featureId
   const editable = (entitlement: Entitlement) =>
@@ -3856,6 +4088,11 @@ function EntitlementsSection({
       cell: (entitlement) => (
         <span className="flex items-center gap-1.5">
           <span className="font-medium">{nameOf(entitlement)}</span>
+          {entitlement.id.startsWith('staged-') ? (
+            <Badge variant="outline" size="sm">
+              Added
+            </Badge>
+          ) : null}
           {overrideOf(entitlement.id) ? (
             <Badge variant="outline" size="sm" className="shrink-0 font-normal">
               Changed
@@ -3888,7 +4125,17 @@ function EntitlementsSection({
       header: '',
       className: 'w-10 text-right',
       cell: (entitlement) =>
-        editable(entitlement) ? (
+        entitlement.id.startsWith('staged-') ? (
+          <RowActionsMenu
+            label={nameOf(entitlement)}
+            onEdit={() => setAdding(Number(entitlement.id.slice(7)))}
+            onRemove={() =>
+              onAdditionsChange(
+                additions.filter((_, index) => index !== Number(entitlement.id.slice(7))),
+              )
+            }
+          />
+        ) : editable(entitlement) ? (
           <RowActionsMenu
             label={nameOf(entitlement)}
             onEdit={() => setEditing(entitlement)}
@@ -3913,19 +4160,56 @@ function EntitlementsSection({
     <FormCard
       title="Entitlements"
       icon={<KeyRoundIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
-      description={`From the ${planLabel ? `${planLabel} ` : ''}plan. Change one for this contract alone from its row.`}
+      adornment={
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-3"
+          disabled={isLoading || available.length === 0}
+          onClick={() => setAdding('new')}
+        >
+          <PlusIcon aria-hidden />
+          Add entitlement
+        </Button>
+      }
+      description={`From the ${planLabel ? `${planLabel} ` : ''}plan. Change one from its row or add an entitlement for this contract alone.`}
     >
       <div className="px-5 py-4 sm:px-6">
         <Frame>
           {isLoading ? (
             <EmptyLine>Loading the plan&apos;s entitlements…</EmptyLine>
-          ) : entitlements.length === 0 ? (
+          ) : entitlements.length + staged.length === 0 ? (
             <EmptyLine>This plan includes no entitlements.</EmptyLine>
           ) : (
-            <SimpleTable columns={columns} rows={entitlements} />
+            <SimpleTable columns={columns} rows={[...entitlements, ...staged]} />
           )}
         </Frame>
       </div>
+      <FormDialog
+        open={adding !== null}
+        onOpenChange={(open) => !open && setAdding(null)}
+        title={adding === 'new' ? 'Add entitlement' : 'Edit entitlement'}
+      >
+        {adding !== null ? (
+          <EntitlementCreateForm
+            key={adding}
+            grantModel
+            features={available}
+            {...(typeof adding === 'number' && additions[adding]
+              ? { defaultValue: additions[adding] }
+              : {})}
+            submitLabel={adding === 'new' ? 'Add entitlement' : 'Save entitlement'}
+            onSubmit={(draft) => {
+              onAdditionsChange(
+                adding === 'new'
+                  ? [...additions, draft]
+                  : additions.map((row, index) => (index === adding ? draft : row)),
+              )
+              setAdding(null)
+            }}
+          />
+        ) : null}
+      </FormDialog>
       <EntitlementOverrideDialog
         key={editing?.id ?? 'closed'}
         entitlement={editing}
@@ -4557,7 +4841,6 @@ function BillingStep({
     })
   const nameOf = (externalId: string) =>
     payerOptions.find((o) => o.value === externalId)?.label ?? externalId
-  const [pickerKey, setPickerKey] = useState(0)
   // The contract's own customer's contracts are not a parent for it.
   const parentOptions = (parentContracts ?? []).filter(
     (option) => !option.customerId || option.customerId !== values.customerId,
@@ -4674,56 +4957,22 @@ function BillingStep({
               error={errors.inheritedCustomerExternalIds?.message}
             >
               {({ id, ...field }) => (
-                <div className="flex flex-col gap-2">
-                  {values.inheritedCustomerExternalIds.length > 0 ? (
-                    <ul className="flex flex-wrap gap-1.5">
-                      {values.inheritedCustomerExternalIds.map((externalId) => (
-                        <li key={externalId}>
-                          <Badge variant="secondary" className="gap-1 pr-1">
-                            {nameOf(externalId)}
-                            <button
-                              type="button"
-                              aria-label={`Remove ${nameOf(externalId)}`}
-                              className="hover:text-foreground rounded-sm"
-                              onClick={() =>
-                                onChange(
-                                  'inheritedCustomerExternalIds',
-                                  values.inheritedCustomerExternalIds.filter(
-                                    (e) => e !== externalId,
-                                  ),
-                                )
-                              }
-                            >
-                              <XIcon aria-hidden className="size-3" />
-                            </button>
-                          </Badge>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  <OptionCombobox
-                    key={pickerKey}
-                    id={id}
-                    {...field}
-                    value=""
-                    onValueChange={(value) => {
-                      if (!value) return
-                      onChange('inheritedCustomerExternalIds', [
-                        ...values.inheritedCustomerExternalIds,
-                        value,
-                      ])
-                      setPickerKey((n) => n + 1)
-                    }}
-                    options={inheritable}
-                    placeholder={
-                      values.inheritedCustomerExternalIds.length > 0
-                        ? 'Add another customer…'
-                        : 'Add customers to inherit…'
-                    }
-                    emptyText="No other customer has an external ID."
-                    disabled={isSubmitting}
-                  />
-                </div>
+                <OptionMultiCombobox
+                  id={id}
+                  {...field}
+                  value={values.inheritedCustomerExternalIds}
+                  onValueChange={(value) => onChange('inheritedCustomerExternalIds', value)}
+                  options={[
+                    ...values.inheritedCustomerExternalIds.map((externalId) => ({
+                      value: externalId,
+                      label: nameOf(externalId),
+                    })),
+                    ...inheritable,
+                  ]}
+                  placeholder="Search and select customers…"
+                  emptyText="No eligible customers."
+                  disabled={isSubmitting}
+                />
               )}
             </FormRow>
           </>
@@ -4999,24 +5248,30 @@ function ReviewStep({
         <ReviewRow
           label="Entitlements"
           value={
-            entitlements.length === 0
-              ? 'None'
-              : `${entitlements.length}, from the plan${
-                  changedEntitlements > 0 ? ` · ${changedEntitlements} changed` : ''
-                }`
+            (values.additionalEntitlements?.length ?? 0) > 0
+              ? `${entitlements.length} from the plan · ${values.additionalEntitlements!.length} added`
+              : entitlements.length === 0
+                ? 'None'
+                : `${entitlements.length}, from the plan${
+                    changedEntitlements > 0 ? ` · ${changedEntitlements} changed` : ''
+                  }`
           }
         />
-        <ReviewRow
-          label="Spending allowances"
-          value={
-            (values.spendingAllowances ?? [])
-              .map(
-                (allowance) =>
-                  `${money(allowance.quota, values.currency)} / ${allowance.unit === 'subscription_period' ? 'billing period' : `${allowance.every} ${allowance.unit}`} · ${allowance.startDate || 'contract start'} → ${allowance.endDate || 'no end'}`,
-              )
-              .join(', ') || 'None'
-          }
-        />
+        {(values.spendingAllowances?.length ?? 0) > 0 ? (
+          <>
+            <ReviewRow
+              label="Spending allowances"
+              value={
+                (values.spendingAllowances ?? [])
+                  .map(
+                    (allowance) =>
+                      `${money(allowance.quota, values.currency)} / ${allowance.unit === 'subscription_period' ? 'billing period' : `${allowance.every} ${allowance.unit}`} · ${allowance.startDate || 'contract start'} → ${allowance.endDate || 'no end'}`,
+                  )
+                  .join(', ') || 'None'
+              }
+            />
+          </>
+        ) : null}
         <ReviewRow
           label="Credit grants"
           value={

@@ -1,0 +1,182 @@
+- main:
+  - generic: You are on the new Flexprice console.
+  - link "Go back to old UI":
+    - /url: https://dev.legacy.flexprice.io
+  - button "Toggle Sidebar":
+    - generic: Toggle Sidebar
+  - navigation "breadcrumb":
+    - list:
+      - 'button "Environment: Harshit''s home, sandbox. Change environment"':
+        - generic: Harshit's home
+      - link "Edit" [disabled]:
+        - generic: Edit
+  - button "Search":
+    - generic: Search everything
+    - generic: ⌘K
+  - button "Create something new":
+    - text: Create
+  - button "Close form":
+  - separator
+  - heading "Edit INV-202611-00031" [level=1]
+  - button "Cancel"
+  - button "Save changes" [disabled]:
+    - text: Save changes
+  - generic: Invoice details
+  - generic: Change the dates, lines, statuses and metadata of this invoice.
+  - generic: Status
+  - text: Finalized
+  - generic: USD
+  - separator
+  - alert:
+    - generic: This invoice is finalized
+    - generic: The due date, metadata and statuses change in place. Changing lines or re-applying discounts voids this invoice and creates a draft copy with your changes; you are asked to confirm first.
+  - group "Invoice form":
+    - generic: Invoice form
+    - paragraph: Customer, dates, line items, taxes and notes.
+    - heading "Customer" [level=2]
+    - paragraph: Who the invoice bills, and its number.
+    - generic: Customer
+    - button "More information":
+    - textbox "Customer" [disabled]: PUP Acme 1792753923
+    - generic: Invoice number
+    - button "More information":
+    - textbox "Invoice number" [disabled]:
+      - /placeholder: To be generated
+      - text: INV-202611-00031
+    - generic: From
+    - generic: Acme
+    - generic: zoro20014311@gmail.com
+    - generic: MIG 47
+    - generic: Bara khamba road
+    - generic: Andkhoy, FYB 211001
+    - generic: AF
+    - generic: Bill to
+    - generic: PUP Acme 1792753923
+    - separator
+    - heading "Dates and currency" [level=2]
+    - paragraph: When it is issued and due, and what it is billed in.
+    - generic: Issue date
+    - button "More information":
+    - button "Issue date" [disabled]:
+      - generic: Nov 5, 2026
+    - generic: Due date
+    - button "More information":
+    - button "Due date":
+      - generic: Nov 6, 2026
+    - generic: Currency
+    - button "More information":
+    - combobox "Currency" [disabled]:
+      - generic: USD
+    - textbox [disabled]: USD
+    - separator
+    - heading "Line items" [level=2]
+    - generic: 2 items
+    - paragraph: "What the invoice charges for: quantity × unit price, with a note and service period."
+    - button "Add item":
+      - text: Add item
+    - table "Invoice line items":
+      - rowgroup:
+        - row "Item Qty Unit price Amount Remove":
+          - columnheader "Item"
+          - columnheader "Qty"
+          - columnheader "Unit price"
+          - columnheader "Amount"
+          - columnheader "Remove":
+            - generic: Remove
+      - rowgroup:
+        - row "Base 1 $100.00 Remove line 1":
+          - cell "Base":
+            - textbox "Line 1 name":
+              - /placeholder: What this line charges for
+              - text: Base
+          - cell "1":
+            - textbox "Quantity for line 1": "1"
+          - cell:
+            - group: USD
+            - textbox "Unit price for line 1":
+              - /placeholder: "0.00"
+              - text: "100"
+          - cell "$100.00":
+            - generic: $100.00
+          - cell "Remove line 1":
+            - button "Remove line 1":
+        - row "Base (Fixed Charge) Nov 5, 2026 Dec 5, 2026":
+          - cell "Base (Fixed Charge) Nov 5, 2026 Dec 5, 2026":
+            - textbox "Note for line 1":
+              - /placeholder: Note, printed under the line (optional)
+              - text: Base (Fixed Charge)
+            - button "Nov 5, 2026":
+              - generic: Nov 5, 2026
+            - button "Dec 5, 2026":
+              - generic: Dec 5, 2026
+        - row "Seat 1 $10.00 Remove line 2":
+          - cell "Seat":
+            - textbox "Line 2 name":
+              - /placeholder: What this line charges for
+              - text: Seat
+          - cell "1":
+            - textbox "Quantity for line 2": "1"
+          - cell:
+            - group: USD
+            - textbox "Unit price for line 2":
+              - /placeholder: "0.00"
+              - text: "10"
+          - cell "$10.00":
+            - generic: $10.00
+          - cell "Remove line 2":
+            - button "Remove line 2":
+        - row "Seat (Fixed Charge) Nov 5, 2026 Dec 5, 2026":
+          - cell "Seat (Fixed Charge) Nov 5, 2026 Dec 5, 2026":
+            - textbox "Note for line 2":
+              - /placeholder: Note, printed under the line (optional)
+              - text: Seat (Fixed Charge)
+            - button "Nov 5, 2026":
+              - generic: Nov 5, 2026
+            - button "Dec 5, 2026":
+              - generic: Dec 5, 2026
+    - separator
+    - heading "Status and payment" [level=2]
+    - paragraph: Applied after the other changes are saved.
+    - generic: Invoice status
+    - button "More information":
+    - combobox "Invoice status":
+      - generic: Keep finalized
+    - textbox: keep
+    - generic: Payment status
+    - button "More information":
+    - combobox "Payment status":
+      - generic: Keep pending
+    - textbox: keep
+    - paragraph: Paid $0.00 of $112.20.
+    - generic: Re-apply discounts
+    - button "More information":
+    - switch "Re-apply discounts"
+    - checkbox
+    - separator
+    - heading "Notes" [level=2]
+    - generic: Optional
+    - paragraph: A memo printed on the invoice, and metadata for your own systems.
+    - generic: Memo
+    - button "More information":
+    - textbox "Memo" [disabled]:
+      - /placeholder: No memo
+      - text: Invoice for advance charges - subscription subs_01M6PB0QNZCZJHXZNC8593MVHP
+    - generic: Metadata
+    - textbox "Metadata key":
+      - /placeholder: Key
+      - text: stripe_hosted_invoice_url
+    - textbox "Metadata value":
+      - /placeholder: Value
+      - text: https://invoice.stripe.com/i/acct_1SHvkUPkGoeCGaiJ/test_YWNjdF8xU0h2a1VQa0dvZUNHYWlKLF9WWmRSYkY0WmFKRkN3dmZwT3dsdmd4cXphS2xzV243LDE4NDQzOTQxMQ0200jFfl1jVK?s=ap
+    - button "Remove stripe_hosted_invoice_url":
+    - button "Add key":
+      - text: Add key
+  - term: Subtotal
+  - definition: $110.00
+  - term: Tax
+  - definition: $2.20
+  - term: Total
+  - definition: $112.20
+- region "Notifications alt+T"
+- region "Notifications alt+T"
+- region "Notifications alt+T"

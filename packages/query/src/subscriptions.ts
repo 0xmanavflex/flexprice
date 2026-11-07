@@ -9,6 +9,7 @@ import {
 } from '@fp/api'
 import {
   type SpendingAllowance,
+  spendingAllowanceSchema,
   type AddContractAddon,
   type RemoveContractAddon,
   type AddContractCharge,
@@ -1001,7 +1002,7 @@ export interface ParentContractCandidate {
 }
 
 /**
- * The contracts that can be a parent: running ones (active or trialing) that
+ * The contracts that can be a parent: active ones that
  * do not sit under a parent themselves, since a child cannot have children.
  */
 export function toParentContractCandidates(
@@ -1022,7 +1023,7 @@ export function toParentContractCandidates(
 
 /**
  * Contracts a new contract can sit under (`inheritance.parent_subscription_id`):
- * the first page of running contracts, with their customer and plan named.
+ * every page of active contracts, with their customer and plan named.
  */
 export function useParentContractCandidates(enabled = true) {
   const client = useFlexprice()
@@ -1036,7 +1037,7 @@ export function useParentContractCandidates(enabled = true) {
           (options) =>
             client.subscriptions.querySubscription(
               {
-                subscriptionStatus: ['active', 'trialing'],
+                subscriptionStatus: ['active'],
                 expand: 'customer,plan',
                 limit: 100,
                 offset,
@@ -1552,7 +1553,15 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
           addons: draft.addons.map((addon) => ({
             addonId: addon.addonId,
             ...addonPricing(addon),
-            ...(addon.startDate ? { startDate: utcDay(addon.startDate) } : {}),
+            ...(addon.startDate
+              ? { startDate: contractDateToInstant(addon.startDate) }
+              : addon.changeAt
+                ? { changeAt: addon.changeAt }
+                : {}),
+            ...(addon.prorate === undefined
+              ? {}
+              : { prorationBehavior: addon.prorate ? 'create_prorations' : 'none' }),
+            ...(addon.cadence === 'one_time' ? { billingPeriod: 'ONETIME' } : {}),
           })),
         }
       : {}),
@@ -1587,6 +1596,25 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
   }
 }
 
+/** Attach staged entitlements after creation without retrying an already committed contract. */
+export async function createSubscriptionWithEntitlements<T extends { id?: string | undefined }>(
+  draft: CreateSubscription,
+  create: () => Promise<T>,
+  attach: (id: string, entitlement: CreateEntitlement) => Promise<unknown>,
+): Promise<T & { entitlementFailures: string[] }> {
+  const created = await create()
+  const entitlementFailures: string[] = []
+  for (const entitlement of draft.additionalEntitlements ?? []) {
+    try {
+      if (!created.id) throw new Error('The created contract has no ID')
+      await attach(created.id, entitlement)
+    } catch {
+      entitlementFailures.push(entitlement.featureId)
+    }
+  }
+  return { ...created, entitlementFailures }
+}
+
 /** Start a subscription: `POST /subscriptions`. Call `mutateAsync(draft)`. */
 export function useCreateSubscription() {
   const client = useFlexprice()
@@ -1595,8 +1623,22 @@ export function useCreateSubscription() {
   return useMutation({
     meta: { notify: { success: 'Contract created', error: 'Could not create the contract.' } },
     mutationFn: (draft: CreateSubscription) =>
-      call(() =>
-        client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never),
+      createSubscriptionWithEntitlements(
+        draft,
+        () =>
+          call(() =>
+            client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never),
+          ),
+        (id, entitlement) =>
+          call(() =>
+            client.entitlements.createEntitlement(
+              toEntitlementRequest(
+                entitlement,
+                EntitlementEntityType.Subscription,
+                id,
+              ) as FlexpriceModels.CreateEntitlementRequest,
+            ),
+          ),
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
@@ -2053,7 +2095,7 @@ export function toLineItemChangeRequest(
   const quantity = draft.quantity.trim()
   const amount = draft.amount.trim()
   // The SDK serialises this field from a Date, unlike the line-item PUT/DELETE, which take a string.
-  const from = draft.effectiveDate ? new Date(`${draft.effectiveDate}T00:00:00Z`) : undefined
+  const from = draft.effectiveDate ? contractDateToInstant(draft.effectiveDate) : undefined
   return {
     type: 'line_item_change',
     lineItemChangeParams: {
@@ -2490,7 +2532,11 @@ export function toSubscriptionCoupon(
   const percentage = coupon?.type === CouponType.Percentage
   const off = percentage || !coupon?.amountOff ? null : moneyOr(coupon.amountOff, coupon.currency)
   const endDate = realDate(wire.endDate)
+  const startDate = realDate(wire.startDate)
+  const ended = wire.status === 'archived' || (endDate !== null && endDate <= now)
+  const status = ended ? 'Ended' : startDate && startDate > now ? 'Scheduled' : 'Active'
   return {
+    status,
     id: wire.id ?? wire.couponId ?? '',
     lineItemId: wire.subscriptionLineItemId,
     name: coupon?.name || wire.couponId || 'Coupon',
@@ -2686,6 +2732,7 @@ export function toAddAddonRequest(
         ? { changeAt: draft.changeAt }
         : {}),
     ...(draft.prorate === undefined ? {} : { prorationBehavior: prorationOf(draft.prorate) }),
+    ...(draft.cadence === 'one_time' ? { billingPeriod: 'ONETIME' } : {}),
   }
 }
 
@@ -2909,6 +2956,7 @@ export function useCancelSubscriptionCreditGrant() {
 export function toSpendingAllowanceRequest(
   draft: SpendingAllowance,
 ): FlexpriceModels.CreateSubscriptionEntitlementGrantRequest {
+  draft = spendingAllowanceSchema.parse(draft)
   const period = draft.unit === 'subscription_period'
   return {
     grantQuota: draft.quota,
@@ -2922,18 +2970,28 @@ export function toSpendingAllowanceRequest(
   }
 }
 
+/** POST /entitlements: the subscription owner and amount measure imply featureless scope. */
+export function toCreateSpendingAllowanceRequest(
+  subscriptionId: string,
+  draft: SpendingAllowance,
+): FlexpriceModels.CreateEntitlementRequest {
+  return {
+    ...toSpendingAllowanceRequest(draft),
+    entityType: 'SUBSCRIPTION',
+    entityId: subscriptionId,
+    grantMeasure: 'amount',
+  }
+}
+
 export function useCreateSpendingAllowance(subscriptionId: string) {
   const client = useFlexprice()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (draft: SpendingAllowance) =>
       call(() =>
-        client.entitlements.createEntitlement({
-          ...toSpendingAllowanceRequest(draft),
-          entityType: 'SUBSCRIPTION',
-          entityId: subscriptionId,
-          grantMeasure: 'amount',
-        }),
+        client.entitlements.createEntitlement(
+          toCreateSpendingAllowanceRequest(subscriptionId, draft),
+        ),
       ),
     onSuccess: () => invalidateContract(queryClient),
   })
@@ -2976,5 +3034,25 @@ export function useChangeInheritedCustomers(subscriptionId: string) {
         ),
       ),
     onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/**
+ * Clear only the relationship: PUT with an empty parent ID preserves the child
+ * and customer. Do not use modify/inheritance remove here: that schedules child
+ * cancellation (backend subscription_modification.executeRemoveInheritance).
+ */
+export function useDetachInheritedContract() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (childSubscriptionId: string) =>
+      call(() =>
+        client.subscriptions.updateSubscription(childSubscriptionId, { parentSubscriptionId: '' }),
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.customers.usageAll() })
+    },
   })
 }

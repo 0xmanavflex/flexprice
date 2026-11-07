@@ -845,7 +845,7 @@ export const ChargesTab: Story = {
     await expect(canvas.getByText('Fixed · Set on this contract')).toBeVisible()
     // And the one the contract changed carries the flag for it.
     await expect(
-      canvas.getByRole('button', { name: /Price changed: open Onboarding/ }),
+      canvas.getByRole('button', { name: /Changed here: open Onboarding/ }),
     ).toBeVisible()
     await expect(canvas.queryByText(/shared by every contract/)).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Activity' })).toBeNull()
@@ -1444,7 +1444,9 @@ export const EditASetAsideAddon: Story = {
     await userEvent.click(
       await screen.findByRole('option', { name: 'At the end of the current period' }),
     )
-    await userEvent.click(dialog.getByRole('switch', { name: 'Prorate the current period' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Advanced options' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Proration' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'No proration' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
@@ -1505,7 +1507,9 @@ export const AddonTimingAndRemoval: Story = {
     await userEvent.click(
       await screen.findByRole('option', { name: 'At the end of the current period' }),
     )
-    await userEvent.click(dialog.getByRole('switch', { name: 'Prorate the current period' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Advanced options' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Proration' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'No proration' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
@@ -1551,6 +1555,12 @@ export const AddAddonWithCommitment: Story = {
     await expect(await dialog.findByText('Support seat')).toBeVisible()
     await expect(dialog.getByText('Support tickets')).toBeVisible()
 
+    const seats = dialog.getByRole('textbox', { name: 'Quantity of Support seat' })
+    await userEvent.clear(seats)
+    await userEvent.type(seats, '2')
+    await userEvent.click(dialog.getByRole('button', { name: 'Advanced options' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Proration' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'No proration' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Actions for Support seat' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Override price' }))
     const price = within(
@@ -1568,6 +1578,11 @@ export const AddAddonWithCommitment: Story = {
     await userEvent.type(await commitment.findByRole('textbox', { name: /^Commitment \(/ }), '500')
     await userEvent.click(commitment.getByRole('button', { name: 'Save commitment' }))
     const back = within(await screen.findByRole('dialog', { name: 'Modify add-ons' }))
+    await expect(back.getByRole('textbox', { name: 'Quantity of Support seat' })).toHaveValue('2')
+    await userEvent.click(back.getByRole('button', { name: 'Advanced options' }))
+    await expect(back.getByRole('combobox', { name: 'Proration' })).toHaveTextContent(
+      'No proration',
+    )
     await userEvent.click(back.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
@@ -1577,6 +1592,8 @@ export const AddAddonWithCommitment: Story = {
             expect.objectContaining({ billingModel: BillingModel.FlatFee, amount: '40' }),
           ],
           commitments: [expect.objectContaining({ value: '500' })],
+          quantities: [expect.objectContaining({ quantity: '2' })],
+          prorate: false,
         }),
       ]),
     )
@@ -1876,6 +1893,10 @@ export const AddCharge: Story = {
     await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
     const dialog = within(await screen.findByRole('dialog'))
     await dialog.findByLabelText(/^Amount/)
+    await expect(dialog.getByRole('heading', { name: 'Add fixed charge' })).toBeVisible()
+    await expect(dialog.getByRole('combobox', { name: 'Invoice timing' })).toHaveTextContent(
+      'Arrears',
+    )
     // The contract's currency is fixed.
     await expect(dialog.getByLabelText(/^Currency/)).toBeDisabled()
     // Empty fields are refused, not sent.
@@ -1900,6 +1921,7 @@ export const AddCharge: Story = {
         amount: '400',
         currency: 'USD',
         billingPeriod: 'MONTHLY',
+        invoiceCadence: InvoiceCadence.Arrear,
       }),
       quantity: '3',
       // "Now" goes out as the instant now, not empty: the API reads no start
@@ -1926,6 +1948,7 @@ export const AddUsageCharge: Story = {
     // Usage terms exist only on a metered charge; quantity does not.
     await expect(dialog.queryByLabelText(/^Quantity/)).toBeNull()
     await userEvent.click(dialog.getByRole('checkbox', { name: 'Add a commitment' }))
+    await userEvent.click(dialog.getByRole('checkbox', { name: 'Enable true-up' }))
     await userEvent.type(dialog.getByLabelText(/^Commitment \(/), '500')
     // The commitment can run for its own period, as on an existing charge.
     await userEvent.click(dialog.getByRole('combobox', { name: 'Commitment period' }))
@@ -1962,7 +1985,7 @@ export const AddUsageCharge: Story = {
           value: '500',
           windowed: false,
           overageFactor: '1.5',
-          trueUp: false,
+          trueUp: true,
           duration: 'QUARTERLY',
         },
       },
@@ -2027,7 +2050,7 @@ export const ChangeQuantity: Story = {
     await userEvent.click(dialog.getByRole('button', { name: 'Preview change' }))
     await expect(args.onPreviewQuantity).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'line_1' }),
-      { quantity: '5', amount: '1500', effectiveDate: '' },
+      { quantity: '5', amount: '1500', effectiveDate: '2026-10-31T23:59:59.999Z' },
     )
     // The preview is shown before anything is saved.
     const newLine = (await dialog.findByText('New line')).closest('tr')!
@@ -2573,5 +2596,26 @@ export const ParentWithInherited: Story = {
     const canvas = within(canvasElement)
     await expect(await canvas.findByRole('heading', { name: 'Inherited contracts' })).toBeVisible()
     await expect(canvas.getByText('Initech Labs')).toBeVisible()
+  },
+}
+
+export const ScheduledCoupon: Story = {
+  args: {
+    ...BASE,
+    onRemoveCoupon: fn(async () => undefined),
+    coupons: ready([
+      {
+        ...COUPONS[0]!,
+        active: false,
+        status: 'Scheduled' as const,
+        startDate: new Date('2030-01-01'),
+      },
+    ]),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const section = canvas.getByRole('region', { name: 'Coupons' })
+    await expect(within(section).getByText('Scheduled')).toBeVisible()
+    await expect(within(section).getByRole('button', { name: /Actions for/ })).toBeVisible()
   },
 }

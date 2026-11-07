@@ -18,7 +18,7 @@ import {
   currentVersion,
 } from './price'
 import { priceOverrideSchema, type PriceOverride } from './priceOverride'
-import { meteredGrantSchema } from './entitlement'
+import { createEntitlementSchema, meteredGrantSchema } from './entitlement'
 
 /**
  * A subscription, as the list reads it.
@@ -551,6 +551,7 @@ export const createSubscriptionSchema = z
     enableTrueUp: z.boolean(),
     chargeCommitments: z.array(chargeCommitmentSchema),
     spendingAllowances: z.array(spendingAllowanceSchema).optional(),
+    additionalEntitlements: z.array(createEntitlementSchema).optional(),
     entitlementOverrides: z.array(
       z.object({
         entitlementId: z.string().min(1),
@@ -610,6 +611,12 @@ export const createSubscriptionSchema = z
         quantities: z.array(addonQuantitySchema).optional(),
         /** When this add-on starts. Blank starts it with the contract. An instant, or a day. */
         startDate: z.string().optional(),
+        /** With no start date: now, or at the end of the current period. */
+        changeAt: z.enum(['immediate', 'end_of_period']).optional(),
+        /** Charge for the part of the period it is on for. */
+        prorate: z.boolean().optional(),
+        /** Recurring with the contract, or billed once. */
+        cadence: z.enum(['recurring', 'one_time']).optional(),
       }),
     ),
     /**
@@ -1157,12 +1164,13 @@ export function validateLineChange(
   if (amount !== '' && !DECIMAL.test(amount)) errors.amount = 'Enter a price of 0 or more.'
 
   if (draft.effectiveDate) {
-    const at = new Date(`${draft.effectiveDate}T00:00:00Z`)
+    const at = contractDateToInstant(draft.effectiveDate)
     const lower = [line.startDate, period.start].filter((d): d is Date => d !== null)
     const earliest = lower.length ? new Date(Math.max(...lower.map((d) => d.getTime()))) : null
     const latest = [line.endDate, period.end].filter((d): d is Date => d !== null)
     const last = latest.length ? new Date(Math.min(...latest.map((d) => d.getTime()))) : null
-    if (earliest && at < earliest)
+    if (Number.isNaN(at.getTime())) errors.effectiveDate = 'Pick a valid date.'
+    else if (earliest && at < earliest)
       errors.effectiveDate = 'Pick a date inside the current billing period.'
     else if (last && at >= last) errors.effectiveDate = 'Pick a date before this period ends.'
   }
@@ -1293,6 +1301,8 @@ export interface SubscriptionAddon {
 
 /** A coupon applied to a contract. */
 export interface SubscriptionCoupon {
+  /** Lifecycle includes discounts whose start date is still in the future. */
+  status?: 'Active' | 'Scheduled' | 'Ended' | undefined
   /** Only this line receives the discount; absent means contract/phase scope. */
   lineItemId?: string | undefined
   id: string
@@ -1333,6 +1343,8 @@ export interface AddContractAddon {
   changeAt?: AddonChangeAt
   /** Charge or credit the part of the period it is on for. Absent: the API's default. */
   prorate?: boolean
+  /** Recurring with the contract, or billed once. Absent: recurring. */
+  cadence?: 'recurring' | 'one_time'
 }
 
 export type AddonChangeAt = 'immediate' | 'end_of_period'

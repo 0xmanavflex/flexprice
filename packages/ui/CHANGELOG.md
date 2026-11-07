@@ -6,6 +6,10 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-11-07
+
+- Contract creation: add, edit and remove contract-only entitlements from the Benefits step using the existing entitlement form; keep plan overrides separate and include additions in review.
+
 ## 2026-10-26
 
 - Charge tables (R-10): plan detail now shows Billing timing and In effect on screen, as the contract's charges table does, through `showDates`. That prop now also brings Billing timing on in the narrow layout. The contract wizard's charges table gains both columns: plan charges show their own dates or "With the phase", and added charges show "From <date>". The wizard reads a plan charge's dates in UTC, as `ChargeTable` does, so a viewer west of UTC does not see the day before (review 4380959115).

@@ -1,0 +1,166 @@
+- main:
+  - generic: You are on the new Flexprice console.
+  - link "Go back to old UI":
+    - /url: https://dev.legacy.flexprice.io
+  - button "Toggle Sidebar":
+    - generic: Toggle Sidebar
+  - navigation "breadcrumb":
+    - list:
+      - 'button "Environment: Harshit''s home, sandbox. Change environment"':
+        - generic: Harshit's home
+      - link "Contract details" [disabled]:
+        - generic: Contract details
+  - button "Search":
+    - generic: Search everything
+    - generic: ⌘K
+  - button "Create something new":
+    - text: Create
+  - heading "Grp Parent 1791813398 on GRP Plan 1791813384" [level=1]
+  - generic "Active":
+    - generic: Active
+  - generic "Monthly":
+    - generic: Monthly
+  - generic "USD":
+    - generic: USD
+  - button "Copy ID subs_01M4R6DCJHKBARJ9TKKRWZ5NKC":
+    - generic: ID
+  - button "Chargebee integration":
+    - generic "Chargebee":
+      - generic: Chargebee
+  - button "Stripe integration":
+    - generic "Stripe":
+      - generic: Stripe
+  - button "Razorpay integration":
+    - generic "Razorpay":
+      - generic: Razorpay
+  - button "Contract actions" [active]:
+  - tablist:
+    - tab "Overview"
+    - tab "Charges 7" [selected]:
+      - text: Charges
+      - generic: "7"
+    - tab "Invoices 7":
+      - text: Invoices
+      - generic: "7"
+    - tab "Information"
+  - region "Charges":
+    - heading "Charges" [level=2]
+    - region "Charges table":
+      - heading "Charges table" [level=3]
+      - search "Search and filter charges":
+        - textbox "Search charges":
+          - /placeholder: Search charges…
+        - button "Filter":
+        - button "Sort by , ascending. Change sorting":
+        - button "Table options":
+        - button "Add charge":
+          - text: Add charge
+      - status
+      - table:
+        - rowgroup:
+          - row "Sort by Charge Sort by In effect Quantity Billing timing Price Flags Actions":
+            - columnheader "Sort by Charge":
+              - button "Sort by Charge":
+                - generic: Charge
+            - columnheader "Sort by In effect":
+              - button "Sort by In effect":
+                - generic: In effect
+            - columnheader "Quantity"
+            - columnheader "Billing timing"
+            - columnheader "Price"
+            - columnheader "Flags"
+            - columnheader "Actions":
+              - generic: Actions
+        - rowgroup:
+          - 'row "Analytics Core Fixed · From an add-on In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing 1 In advance $50 Actions for Analytics Core"':
+            - cell "Analytics Core Fixed · From an add-on":
+              - generic: Analytics Core
+              - generic: Fixed · From an add-on
+            - 'cell "In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing"': 5 Nov 2026 → Ongoing
+            - cell "1"
+            - cell "In advance"
+            - cell "$50":
+              - generic: $50
+            - cell
+            - cell "Actions for Analytics Core":
+              - button "Actions for Analytics Core":
+          - 'row "Analytics Export Fixed · From an add-on In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing 1 In advance $30 Actions for Analytics Export"':
+            - cell "Analytics Export Fixed · From an add-on":
+              - generic: Analytics Export
+              - generic: Fixed · From an add-on
+            - 'cell "In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing"': 5 Nov 2026 → Ongoing
+            - cell "1"
+            - cell "In advance"
+            - cell "$30":
+              - generic: $30
+            - cell
+            - cell "Actions for Analytics Export":
+              - button "Actions for Analytics Export":
+          - 'row "Backup Fixed · From an add-on In effect: start 12 Oct 2026, 19:30:14 GMT+05:30, end ongoing 1 In advance $40 Actions for Backup"':
+            - cell "Backup Fixed · From an add-on":
+              - generic: Backup
+              - generic: Fixed · From an add-on
+            - 'cell "In effect: start 12 Oct 2026, 19:30:14 GMT+05:30, end ongoing"': 12 Oct 2026 → Ongoing
+            - cell "1"
+            - cell "In advance"
+            - cell "$40":
+              - generic: $40
+            - cell
+            - cell "Actions for Backup":
+              - button "Actions for Backup":
+          - 'row "Base Fixed · From GRP Plan 1791813384 In effect: start 12 Oct 2026, 19:26:24 GMT+05:30, end ongoing 1 In advance $100 Actions for Base"':
+            - cell "Base Fixed · From GRP Plan 1791813384":
+              - generic: Base
+              - generic: Fixed · From GRP Plan 1791813384
+            - 'cell "In effect: start 12 Oct 2026, 19:26:24 GMT+05:30, end ongoing"': 12 Oct 2026 → Ongoing
+            - cell "1"
+            - cell "In advance"
+            - cell "$100":
+              - generic: $100
+            - cell
+            - cell "Actions for Base":
+              - button "Actions for Base":
+          - 'row "monthly Fixed · From an add-on In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing 1 In advance $30 Actions for monthly"':
+            - cell "monthly Fixed · From an add-on":
+              - generic: monthly
+              - generic: Fixed · From an add-on
+            - 'cell "In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing"': 5 Nov 2026 → Ongoing
+            - cell "1"
+            - cell "In advance"
+            - cell "$30":
+              - generic: $30
+            - cell
+            - cell "Actions for monthly":
+              - button "Actions for monthly":
+          - 'row "Platform Fixed · Set on this contract In effect: start 02 Oct 2026, 05:30:00 GMT+05:30, end ongoing 1 In advance $10 Actions for Platform"':
+            - cell "Platform Fixed · Set on this contract":
+              - generic: Platform
+              - generic: Fixed · Set on this contract
+            - 'cell "In effect: start 02 Oct 2026, 05:30:00 GMT+05:30, end ongoing"': 2 Oct 2026 → Ongoing
+            - cell "1"
+            - cell "In advance"
+            - cell "$10":
+              - generic: $10
+            - cell
+            - cell "Actions for Platform":
+              - button "Actions for Platform":
+          - 'row "Seat Fixed · From GRP Plan 1791813384 In effect: start 12 Oct 2026, 19:26:26 GMT+05:30, end ongoing 1 In advance $10 Actions for Seat"':
+            - cell "Seat Fixed · From GRP Plan 1791813384":
+              - generic: Seat
+              - generic: Fixed · From GRP Plan 1791813384
+            - 'cell "In effect: start 12 Oct 2026, 19:26:26 GMT+05:30, end ongoing"': 12 Oct 2026 → Ongoing
+            - cell "1"
+            - cell "In advance"
+            - cell "$10":
+              - generic: $10
+            - cell
+            - cell "Actions for Seat":
+              - button "Actions for Seat":
+      - generic: Rows per page
+      - combobox "Rows per page":
+        - generic: "10"
+      - textbox: "10"
+      - generic: 1 - 7 of 7 charges
+- region "Notifications alt+T"
+- region "Notifications alt+T"
+- region "Notifications alt+T"

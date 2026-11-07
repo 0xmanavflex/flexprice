@@ -1,0 +1,477 @@
+- generic "Main":
+  - generic: Acme
+  - list:
+    - button "Home":
+      - generic: Home
+    - button "Customers":
+      - generic: Customers
+    - button "Product catalog":
+      - generic: Product catalog
+    - button "Contracts":
+      - generic: Contracts
+    - button "Billing":
+      - generic: Billing
+    - button "Collections":
+      - generic: Collections
+    - button "Reports":
+      - generic: Reports
+    - button "Developers":
+      - generic: Developers
+  - region "What's new":
+    - generic: Subscriptions are now contracts
+    - paragraph: Charges split into Current, Upcoming and History, and a contract can have a parent.
+    - generic: rest
+    - link:
+      - /url: https://docs.flexprice.io/docs/subscriptions/customers-create-subscription
+      - text: Read more
+    - button: Dismiss
+    - generic: A new console
+    - paragraph: Search every record with ⌘K, and switch environments from the breadcrumb.
+    - link "Read more":
+      - /url: https://docs.flexprice.io/docs/welcome-to-flexprice
+      - text: Read more
+    - button "Dismiss"
+  - list:
+    - button "Integrations":
+      - generic: Integrations
+    - link "Documentation":
+      - /url: https://docs.flexprice.io/docs/welcome-to-flexprice
+      - generic: Documentation
+  - list:
+    - 'button "Account: demo-user-v2@flexprice.io. Open account menu"':
+      - generic: DU
+      - generic: demo-user-v2@flexprice.io
+  - button "Toggle Sidebar"
+- main:
+  - generic: You are on the new Flexprice console.
+  - link "Go back to old UI":
+    - /url: https://dev.legacy.flexprice.io
+  - navigation "breadcrumb":
+    - list:
+      - 'button "Environment: Harshit''s home, sandbox. Change environment"':
+        - generic: Harshit's home
+      - button "Contracts":
+        - generic: Contracts
+      - link "Contract details" [disabled]:
+        - generic: Contract details
+  - button "Search":
+    - generic: Search everything
+    - generic: ⌘K
+  - button "Create something new":
+    - text: Create
+  - heading "Grp Parent 1791813398 on GRP Plan 1791813384" [level=1]
+  - generic "Active":
+    - generic: Active
+  - generic "Monthly":
+    - generic: Monthly
+  - generic "USD":
+    - generic: USD
+  - button "Copy ID subs_01M4R6DCJHKBARJ9TKKRWZ5NKC":
+    - generic: ID
+  - button "Chargebee integration":
+    - generic "Chargebee":
+      - generic: Chargebee
+  - button "Stripe integration":
+    - generic "Stripe":
+      - generic: Stripe
+  - button "Razorpay integration":
+    - generic "Razorpay":
+      - generic: Razorpay
+  - button "Contract actions":
+  - tablist:
+    - tab "Overview" [selected]
+    - tab "Charges 7":
+      - text: Charges
+      - generic: "7"
+    - tab "Invoices 7":
+      - text: Invoices
+      - generic: "7"
+    - tab "Information"
+  - region "Inherited contracts":
+    - heading "Inherited contracts" [level=2]
+    - region "Inherited contracts table":
+      - heading "Inherited contracts table" [level=3]
+      - status
+      - table:
+        - rowgroup:
+          - row "Customer Plan Status":
+            - columnheader "Customer"
+            - columnheader "Plan"
+            - columnheader "Status"
+        - rowgroup:
+          - row "Grp Child 1791813398 GRP Plan 1791813384 Active":
+            - cell "Grp Child 1791813398"
+            - cell "GRP Plan 1791813384"
+            - cell "Active":
+              - generic "Active":
+                - generic: Active
+      - generic: Rows per page
+      - combobox "Rows per page":
+        - generic: "10"
+      - textbox: "10"
+      - generic: 1 - 1 of 1 contracts
+  - region "Upcoming invoice":
+    - heading "Upcoming invoice" [level=2]
+    - generic: Nov 5, 2026 – Dec 2, 2026
+    - button "Filter":
+    - button "Sort":
+    - region "Upcoming invoice lines table":
+      - heading "Upcoming invoice lines table" [level=3]
+      - status
+      - table:
+        - rowgroup:
+          - row "Description Quantity Unit price Amount":
+            - columnheader "Description"
+            - columnheader "Quantity":
+              - generic: Quantity
+            - columnheader "Unit price":
+              - generic: Unit price
+            - columnheader "Amount":
+              - generic: Amount
+        - rowgroup:
+          - row "Platform Dec 2, 2026 – Jan 2, 2027 1 $10.00 $10.00":
+            - cell "Platform Dec 2, 2026 – Jan 2, 2027":
+              - generic: Platform
+              - generic: Dec 2, 2026 – Jan 2, 2027
+            - cell "1"
+            - cell "$10.00"
+            - cell "$10.00"
+          - row "monthly Dec 2, 2026 – Jan 2, 2027 1 $30.00 $30.00":
+            - cell "monthly Dec 2, 2026 – Jan 2, 2027":
+              - generic: monthly
+              - generic: Dec 2, 2026 – Jan 2, 2027
+            - cell "1"
+            - cell "$30.00"
+            - cell "$30.00"
+          - row "Analytics Export Dec 2, 2026 – Jan 2, 2027 1 $30.00 $30.00":
+            - cell "Analytics Export Dec 2, 2026 – Jan 2, 2027":
+              - generic: Analytics Export
+              - generic: Dec 2, 2026 – Jan 2, 2027
+            - cell "1"
+            - cell "$30.00"
+            - cell "$30.00"
+          - row "Analytics Core Dec 2, 2026 – Jan 2, 2027 1 $50.00 $50.00":
+            - cell "Analytics Core Dec 2, 2026 – Jan 2, 2027":
+              - generic: Analytics Core
+              - generic: Dec 2, 2026 – Jan 2, 2027
+            - cell "1"
+            - cell "$50.00"
+            - cell "$50.00"
+          - row "Backup Dec 2, 2026 – Jan 2, 2027 1 $40.00 $40.00":
+            - cell "Backup Dec 2, 2026 – Jan 2, 2027":
+              - generic: Backup
+              - generic: Dec 2, 2026 – Jan 2, 2027
+            - cell "1"
+            - cell "$40.00"
+            - cell "$40.00"
+    - button "Show 7 more"
+    - term: Subtotal
+    - definition: $740.00
+    - term: Discount
+    - definition: −$458.00
+    - term: Amount due
+    - definition: $282.00
+    - paragraph: This is a preview of the invoice that will be billed on Dec 2, 2026. It may change if the contract is updated.
+  - region "Charges":
+    - heading "Charges" [level=2]
+    - button "Show all charges":
+      - text: Show all charges
+    - region "Charges table":
+      - heading "Charges table" [level=3]
+      - status
+      - table:
+        - rowgroup:
+          - row "Sort by Charge Sort by In effect Price Flags Actions":
+            - columnheader "Sort by Charge":
+              - button "Sort by Charge":
+                - generic: Charge
+            - columnheader "Sort by In effect":
+              - button "Sort by In effect":
+                - generic: In effect
+            - columnheader "Price"
+            - columnheader "Flags"
+            - columnheader "Actions":
+              - generic: Actions
+        - rowgroup:
+          - 'row "Analytics Core Fixed · From an add-on In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing $50 Actions for Analytics Core"':
+            - cell "Analytics Core Fixed · From an add-on":
+              - generic: Analytics Core
+              - generic: Fixed · From an add-on
+            - 'cell "In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing"': 5 Nov 2026 → Ongoing
+            - cell "$50":
+              - generic: $50
+            - cell
+            - cell "Actions for Analytics Core":
+              - button "Actions for Analytics Core":
+          - 'row "Analytics Export Fixed · From an add-on In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing $30 Actions for Analytics Export"':
+            - cell "Analytics Export Fixed · From an add-on":
+              - generic: Analytics Export
+              - generic: Fixed · From an add-on
+            - 'cell "In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing"': 5 Nov 2026 → Ongoing
+            - cell "$30":
+              - generic: $30
+            - cell
+            - cell "Actions for Analytics Export":
+              - button "Actions for Analytics Export":
+          - 'row "Backup Fixed · From an add-on In effect: start 12 Oct 2026, 19:30:14 GMT+05:30, end ongoing $40 Actions for Backup"':
+            - cell "Backup Fixed · From an add-on":
+              - generic: Backup
+              - generic: Fixed · From an add-on
+            - 'cell "In effect: start 12 Oct 2026, 19:30:14 GMT+05:30, end ongoing"': 12 Oct 2026 → Ongoing
+            - cell "$40":
+              - generic: $40
+            - cell
+            - cell "Actions for Backup":
+              - button "Actions for Backup":
+          - 'row "Base Fixed · From GRP Plan 1791813384 In effect: start 12 Oct 2026, 19:26:24 GMT+05:30, end ongoing $100 Actions for Base"':
+            - cell "Base Fixed · From GRP Plan 1791813384":
+              - generic: Base
+              - generic: Fixed · From GRP Plan 1791813384
+            - 'cell "In effect: start 12 Oct 2026, 19:26:24 GMT+05:30, end ongoing"': 12 Oct 2026 → Ongoing
+            - cell "$100":
+              - generic: $100
+            - cell
+            - cell "Actions for Base":
+              - button "Actions for Base":
+          - 'row "monthly Fixed · From an add-on In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing $30 Actions for monthly"':
+            - cell "monthly Fixed · From an add-on":
+              - generic: monthly
+              - generic: Fixed · From an add-on
+            - 'cell "In effect: start 05 Nov 2026, 22:07:57 GMT+05:30, end ongoing"': 5 Nov 2026 → Ongoing
+            - cell "$30":
+              - generic: $30
+            - cell
+            - cell "Actions for monthly":
+              - button "Actions for monthly":
+      - generic: Rows per page
+      - combobox "Rows per page":
+        - generic: "10"
+      - textbox: "10"
+      - generic: 1 - 5 of 5 charges
+  - region "Credit grants":
+    - heading "Credit grants" [level=2]
+    - button "Sort":
+    - button "Add credit grant":
+      - text: Add credit grant
+    - region "Credit grants table":
+      - heading "Credit grants table" [level=3]
+      - status
+      - table:
+        - rowgroup:
+          - row "Grant Credits Cadence Expiry Ends Actions":
+            - columnheader "Grant"
+            - columnheader "Credits"
+            - columnheader "Cadence"
+            - columnheader "Expiry"
+            - columnheader "Ends"
+            - columnheader "Actions":
+              - generic: Actions
+        - rowgroup:
+          - row "Free Credits 30 Recurring · monthly Expires at the end of the billing period No end Actions for Free Credits":
+            - cell "Free Credits"
+            - cell "30"
+            - cell "Recurring · monthly"
+            - cell "Expires at the end of the billing period"
+            - cell "No end"
+            - cell "Actions for Free Credits":
+              - button "Actions for Free Credits":
+  - region "Add-ons":
+    - heading "Add-ons" [level=2]
+    - button "Sort":
+    - button "Add add-on":
+      - text: Add add-on
+    - region "Add-ons table":
+      - heading "Add-ons table" [level=3]
+      - status
+      - table:
+        - rowgroup:
+          - row "Add-on Status Starts Ends Actions":
+            - columnheader "Add-on"
+            - columnheader "Status"
+            - columnheader "Starts"
+            - columnheader "Ends"
+            - columnheader "Actions":
+              - generic: Actions
+        - rowgroup:
+          - row "monthly Active Nov 5, 2026 — Actions for monthly":
+            - cell "monthly"
+            - cell "Active":
+              - generic "Active":
+                - generic: Active
+            - cell "Nov 5, 2026"
+            - cell "—"
+            - cell "Actions for monthly":
+              - button "Actions for monthly":
+          - row "Analytics 1791813384 Active Nov 5, 2026 — Actions for Analytics 1791813384":
+            - cell "Analytics 1791813384"
+            - cell "Active":
+              - generic "Active":
+                - generic: Active
+            - cell "Nov 5, 2026"
+            - cell "—"
+            - cell "Actions for Analytics 1791813384":
+              - button "Actions for Analytics 1791813384":
+          - row "Backup 1791813384 Active Oct 12, 2026 — Actions for Backup 1791813384":
+            - cell "Backup 1791813384"
+            - cell "Active":
+              - generic "Active":
+                - generic: Active
+            - cell "Oct 12, 2026"
+            - cell "—"
+            - cell "Actions for Backup 1791813384":
+              - button "Actions for Backup 1791813384":
+  - region "Coupons":
+    - heading "Coupons" [level=2]
+    - button "Filter":
+    - button "Sort":
+    - button "Add coupon":
+      - text: Add coupon
+    - region "Coupons table":
+      - heading "Coupons table" [level=3]
+      - status
+      - table:
+        - rowgroup:
+          - row "Coupon Code Discount Status Ends Actions":
+            - columnheader "Coupon"
+            - columnheader "Code"
+            - columnheader "Discount"
+            - columnheader "Status"
+            - columnheader "Ends"
+            - columnheader "Actions":
+              - generic: Actions
+        - rowgroup:
+          - row "GRP 50pct 1791813384 grp501791813384 50% off Active — Actions for GRP 50pct 1791813384":
+            - cell "GRP 50pct 1791813384"
+            - cell "grp501791813384"
+            - cell "50% off"
+            - cell "Active":
+              - generic "Active":
+                - generic: Active
+            - cell "—"
+            - cell "Actions for GRP 50pct 1791813384":
+              - button "Actions for GRP 50pct 1791813384":
+          - row "GRP 15 off 1791813449 grp151791813449 $15.00 off Active — Actions for GRP 15 off 1791813449":
+            - cell "GRP 15 off 1791813449"
+            - cell "grp151791813449"
+            - cell "$15.00 off"
+            - cell "Active":
+              - generic "Active":
+                - generic: Active
+            - cell "—"
+            - cell "Actions for GRP 15 off 1791813449":
+              - button "Actions for GRP 15 off 1791813449":
+          - row "GRP 15 off 1791813449 grp151791813449 $15.00 off Ended Nov 5, 2026":
+            - cell "GRP 15 off 1791813449"
+            - cell "grp151791813449"
+            - cell "$15.00 off"
+            - cell "Ended":
+              - generic "Ended":
+                - generic: Ended
+            - cell "Nov 5, 2026"
+            - cell
+          - row "STG 3155 10pct stgpct1792753921 10% off Ended Nov 5, 2026":
+            - cell "STG 3155 10pct"
+            - cell "stgpct1792753921"
+            - cell "10% off"
+            - cell "Ended":
+              - generic "Ended":
+                - generic: Ended
+            - cell "Nov 5, 2026"
+            - cell
+  - region "Entitlements":
+    - heading "Entitlements" [level=2]
+    - button "Add entitlement":
+      - text: Add entitlement
+    - status:
+      - paragraph: No features
+      - paragraph: This contract includes no features.
+  - region "Taxes":
+    - heading "Taxes" [level=2]
+    - button "Add tax":
+      - text: Add tax
+    - status:
+      - paragraph: No taxes
+      - paragraph: No tax rates are applied to this contract.
+  - region "Activity":
+    - heading "Activity" [level=2]
+    - region "Activity history":
+      - list:
+        - paragraph:
+          - link "Contract resumed":
+            - /url: /contracts/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC
+        - paragraph: 5 Nov · 22:02
+        - paragraph: Active
+        - paragraph: By Subrat · Dashboard
+        - paragraph:
+          - link "Contract paused":
+            - /url: /contracts/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC
+        - paragraph: 5 Nov · 22:02
+        - paragraph: Paused
+        - paragraph: By Subrat · Dashboard
+        - paragraph:
+          - link "Contract updated":
+            - /url: /contracts/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC
+        - paragraph: 2 Nov · 05:30
+        - paragraph: Active
+        - paragraph: By Workflow
+        - paragraph:
+          - link "Contract updated":
+            - /url: /contracts/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC
+        - paragraph: 2 Nov · 05:30
+        - paragraph: Active
+        - paragraph: By Workflow
+        - paragraph:
+          - link "Contract updated":
+            - /url: /contracts/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC
+        - paragraph: 2 Nov · 05:30
+        - paragraph: Active
+        - paragraph: By Workflow
+        - paragraph:
+          - link "Contract updated":
+            - /url: /contracts/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC
+        - paragraph: 2 Nov · 05:30
+        - paragraph: Active
+        - paragraph: By Workflow
+        - paragraph:
+          - link "Contract updated":
+            - /url: /contracts/subs_01M4R6DCJHKBARJ9TKKRWZ5NKC
+        - paragraph: 2 Nov · 05:30
+        - paragraph: Active
+        - paragraph: By Workflow
+  - region "Related":
+    - heading "Related" [level=2]
+    - term: Customer
+    - definition:
+      - button "Grp Parent 1791813398":
+        - generic "Grp Parent 1791813398"
+      - button "Copy Customer ID":
+    - term: Plan
+    - definition:
+      - button "GRP Plan 1791813384":
+        - generic "GRP Plan 1791813384"
+    - generic "Chargebee":
+      - generic: Chargebee
+    - generic: Chargebee
+    - button "Chargebee ID AzZKQnVXqMV1QKMo":
+      - generic: AzZKQnVXqMV1QKMo
+    - button "Copy customer ID":
+    - button "Manage Chargebee integration":
+    - generic "Stripe":
+      - generic: Stripe
+    - generic: Stripe
+    - button "Stripe ID cus_VQauNqunB7mbtg":
+      - generic: cus_VQauNqunB7mbtg
+    - button "Copy customer ID":
+    - button "Manage Stripe integration":
+    - generic "Razorpay":
+      - generic: Razorpay
+    - generic: Razorpay
+    - button "Razorpay ID cust_Tn1NG9VH9cG4yA":
+      - generic: cust_Tn1N…G4yA
+    - button "Copy customer ID":
+    - button "Manage Razorpay integration":
+    - button "Link integration":
+      - text: Link integration
+- region "Notifications alt+T"
+- region "Notifications alt+T"
+- region "Notifications alt+T"

@@ -126,10 +126,6 @@ export function CustomerDetailPage({
     pushEntityId !== null
       ? connectionForEntity(integration, pushEntityId, entities.data ?? [])
       : integration.connections[0]
-  // The providers a push reaches: connected, with customer sync on outbound.
-  const pushTargets = (integrations.data ?? [])
-    .filter((integration) => customerConnection(integration)?.syncConfig.customer?.outbound)
-    .map((integration) => integration.name)
   // Where a card can be saved: the connected providers with a hosted setup page.
   const cardProviders = (integrations.data ?? [])
     .filter(
@@ -243,26 +239,26 @@ export function CustomerDetailPage({
                 onUnlink: (input: { providerType: string }) => unlinkIntegration.mutateAsync(input),
                 syncing: pushCustomer.isPending,
                 syncRuns: syncWatch.runs,
-                ...(pushTargets.length > 0
-                  ? {
-                      pushProviders: pushTargets,
-                      onPush: () =>
-                        pushCustomer.mutate(undefined, {
-                          onSuccess: () => {
-                            syncWatch.watch(pushTargets)
-                            toast(`Pushing customer to ${pushTargets.join(', ')}`, {
-                              description: 'You are told here when each provider has it.',
-                            })
-                          },
-                          onError: (cause) =>
-                            toast.error(
-                              cause instanceof Error
-                                ? cause.message
-                                : 'Could not push this customer.',
-                            ),
-                        }),
-                    }
-                  : {}),
+                onPushLink: (link) => {
+                  const integration = (integrations.data ?? []).find(
+                    (item) => item.providerType === link.providerType,
+                  )
+                  const connectionId = integration
+                    ? customerConnection(integration)?.id
+                    : undefined
+                  pushCustomer.mutate(connectionId, {
+                    onSuccess: () => {
+                      syncWatch.watch([link.name])
+                      toast(`Pushing customer to ${link.name}`, {
+                        description: 'You are told here when the provider has it.',
+                      })
+                    },
+                    onError: (cause) =>
+                      toast.error(
+                        cause instanceof Error ? cause.message : 'Could not push this customer.',
+                      ),
+                  })
+                },
               },
             }
           : {})}

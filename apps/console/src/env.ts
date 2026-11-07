@@ -496,6 +496,9 @@ const marketplace = {
 
 export const env = {
   useMocks,
+  // Opt in only after this deployment's API enables featureless monetary entitlements.
+  // No read capability is exposed yet; unknown support must not show a failing create form.
+  spendingAllowancesEnabled: flag(import.meta.env.VITE_SPENDING_ALLOWANCES_ENABLED),
   problem,
   apiUrl: api.apiUrl,
   /**

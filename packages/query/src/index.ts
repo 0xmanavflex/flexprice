@@ -623,6 +623,7 @@ export {
   toDataExportFilter,
   toExportRun,
   toS3Connection,
+  toUpdateS3ConnectionRequest,
   useCreateDataExport,
   useCreateS3Connection,
   useDataExport,
@@ -634,6 +635,7 @@ export {
   useRunDataExport,
   useS3Connections,
   useSetDataExportEnabled,
+  useUpdateS3Connection,
 } from './dataExports'
 export type { DataExportPage, DataExportWire, ExportRunWire, S3ConnectionWire } from './dataExports'
 export {
@@ -869,3 +871,5 @@ export {
 } from './contractBenefits'
 
 export { useContractPickerFeatures, useContractPickerPriceUnits } from './contractPickers'
+
+export { useDetachInheritedContract } from './subscriptions'

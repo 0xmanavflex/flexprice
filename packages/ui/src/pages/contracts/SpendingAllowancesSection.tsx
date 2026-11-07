@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { emptySpendingAllowance, spendingAllowanceSchema, type SpendingAllowance } from '@fp/domain'
+import {
+  emptySpendingAllowance,
+  spendingAllowanceSchema,
+  formatUnitAmount,
+  type SpendingAllowance,
+} from '@fp/domain'
 import { PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
@@ -27,6 +32,8 @@ export const SpendingAllowancesSectionProvenance = provenance({
 
 export function SpendingAllowanceForm({
   initial = emptySpendingAllowance(),
+  currency,
+  creatingContract = false,
   onSubmit,
   onCancel,
   pending = false,
@@ -34,6 +41,8 @@ export function SpendingAllowanceForm({
   quotaOnly = false,
 }: {
   initial?: SpendingAllowance | undefined
+  currency: string
+  creatingContract?: boolean
   onSubmit: (draft: SpendingAllowance) => void
   onCancel: () => void
   pending?: boolean
@@ -41,35 +50,46 @@ export function SpendingAllowanceForm({
   quotaOnly?: boolean
 }) {
   const [draft, setDraft] = useState(initial)
-  const [problem, setProblem] = useState<string | null>(null)
+  const [problems, setProblems] = useState<Partial<Record<keyof SpendingAllowance, string>>>({})
   const set = <K extends keyof SpendingAllowance>(key: K, value: SpendingAllowance[K]) => {
-    setProblem(null)
+    setProblems({})
     setDraft((old) => ({ ...old, [key]: value }))
   }
   return (
     <Composer
+      noValidate
       submitLabel="Save allowance"
       onCancel={onCancel}
       submitting={pending}
       onSubmit={() => {
+        if (pending) return
         const parsed = spendingAllowanceSchema.safeParse(draft)
         if (!parsed.success) {
-          setProblem(parsed.error.issues[0]?.message ?? 'Check the allowance')
+          setProblems(
+            Object.fromEntries(parsed.error.issues.map((issue) => [issue.path[0], issue.message])),
+          )
           return
         }
-        setProblem(null)
+        setProblems({})
         onSubmit(parsed.data)
       }}
     >
       <Field
-        label="Spending allowance"
+        label={currency ? `Spending allowance (${currency.toUpperCase()})` : 'Spending allowance'}
         hint="An amount shared across all usage charges, in the contract’s currency."
         required
+        error={problems.quota}
       >
-        {({ id }) => (
+        {({ id, ...field }) => (
           <Input
             id={id}
+            {...field}
+            type="number"
             inputMode="decimal"
+            min={0}
+            step="any"
+            placeholder="For example 250"
+            disabled={pending}
             value={draft.quota}
             onChange={(event) => set('quota', event.target.value)}
           />
@@ -81,6 +101,7 @@ export function SpendingAllowanceForm({
             {({ id }) => (
               <OptionSelect
                 id={id}
+                disabled={pending}
                 value={draft.unit}
                 onValueChange={(value) => set('unit', value as SpendingAllowance['unit'])}
                 options={[
@@ -94,10 +115,17 @@ export function SpendingAllowanceForm({
           </Field>
           {draft.unit !== 'subscription_period' ? (
             <>
-              <Field label="Every" hint="Number of units in each window.">
-                {({ id }) => (
+              <Field
+                label="Every"
+                hint="Number of units in each window."
+                error={problems.every}
+                required
+              >
+                {({ id, ...field }) => (
                   <Input
                     id={id}
+                    {...field}
+                    disabled={pending}
                     type="number"
                     min={1}
                     step={1}
@@ -110,6 +138,7 @@ export function SpendingAllowanceForm({
                 {({ id }) => (
                   <OptionSelect
                     id={id}
+                    disabled={pending}
                     value={draft.allocation}
                     onValueChange={(value) =>
                       set('allocation', value as SpendingAllowance['allocation'])
@@ -123,10 +152,14 @@ export function SpendingAllowanceForm({
               </Field>
             </>
           ) : null}
-          <Field label="Stacking">
+          <Field
+            label="Stacking"
+            hint="Additive allowances are consumed in sequence. Parallel allowances apply to the same usage at the same time."
+          >
             {({ id }) => (
               <OptionSelect
                 id={id}
+                disabled={pending}
                 value={draft.aggregation}
                 onValueChange={(value) =>
                   set('aggregation', value as SpendingAllowance['aggregation'])
@@ -140,20 +173,34 @@ export function SpendingAllowanceForm({
           </Field>
           <Field
             label="Start date"
-            hint="Leave blank to start with the contract, or now for an existing contract."
+            hint={
+              creatingContract
+                ? 'Leave blank to start with the contract.'
+                : 'Leave blank to start now.'
+            }
+            error={problems.startDate}
           >
-            {({ id }) => (
+            {({ id, ...field }) => (
               <DateInput
                 id={id}
+                {...field}
+                disabled={pending}
+                clearable
+                clearLabel="Clear start date"
                 value={draft.startDate}
                 onValueChange={(value) => set('startDate', value)}
               />
             )}
           </Field>
-          <Field label="End date" hint="Leave blank for no end date.">
-            {({ id }) => (
+          <Field label="End date" hint="Leave blank for no end date." error={problems.endDate}>
+            {({ id, ...field }) => (
               <DateInput
                 id={id}
+                {...field}
+                disabled={pending}
+                clearable
+                clearLabel="Clear end date"
+                {...(draft.startDate ? { min: draft.startDate } : {})}
                 value={draft.endDate}
                 onValueChange={(value) => set('endDate', value)}
               />
@@ -161,9 +208,9 @@ export function SpendingAllowanceForm({
           </Field>
         </>
       ) : null}
-      {problem || error ? (
+      {error ? (
         <p role="alert" className="text-destructive text-sm">
-          {problem ?? error}
+          {error}
         </p>
       ) : null}
     </Composer>
@@ -171,9 +218,11 @@ export function SpendingAllowanceForm({
 }
 
 export function SpendingAllowancesSection({
+  currency,
   value,
   onChange,
 }: {
+  currency: string
   value: SpendingAllowance[]
   onChange: (next: SpendingAllowance[]) => void
 }) {
@@ -201,7 +250,11 @@ export function SpendingAllowancesSection({
             rows={value}
             toolbar={false}
             columns={[
-              { key: 'amount', header: 'Amount', cell: (row) => row.quota },
+              {
+                key: 'amount',
+                header: 'Amount',
+                cell: (row) => formatUnitAmount(row.quota, currency),
+              },
               {
                 key: 'window',
                 header: 'Window',
@@ -238,6 +291,8 @@ export function SpendingAllowancesSection({
         {edit !== null ? (
           <SpendingAllowanceForm
             key={edit}
+            currency={currency}
+            creatingContract
             initial={edit === 'new' ? emptySpendingAllowance() : value[edit]}
             onCancel={() => setEdit(null)}
             onSubmit={(draft) => {

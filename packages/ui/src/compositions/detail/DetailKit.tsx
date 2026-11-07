@@ -648,6 +648,7 @@ export function Composer({
   submitting,
   disabled,
   secondary,
+  noValidate = false,
 }: {
   title?: string
   children: ReactNode
@@ -659,11 +660,14 @@ export function Composer({
   disabled?: boolean
   /** A footer action on the left, apart from Cancel and submit (e.g. "Clear"). */
   secondary?: ReactNode
+  /** Let the caller render schema errors beside its fields instead of native browser bubbles. */
+  noValidate?: boolean
 }) {
   const inDialog = useInFormDialog()
   return (
     <form
       {...NOT_A_LOGIN}
+      noValidate={noValidate}
       className={cn('flex flex-col gap-6', !inDialog && 'p-6')}
       onSubmit={(event) => {
         event.preventDefault()

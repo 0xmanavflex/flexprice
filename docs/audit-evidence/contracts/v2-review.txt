@@ -1,0 +1,105 @@
+- main:
+  - generic: You are on the new Flexprice console.
+  - link "Go back to old UI":
+    - /url: https://dev.legacy.flexprice.io
+  - button "Toggle Sidebar":
+    - generic: Toggle Sidebar
+  - navigation "breadcrumb":
+    - list:
+      - 'button "Environment: Harshit''s home, sandbox. Change environment"':
+        - generic: Harshit's home
+      - link "New contract" [disabled]:
+        - generic: New contract
+  - button "Search":
+    - generic: Search everything
+    - generic: ⌘K
+  - button "Create something new":
+    - text: Create
+  - button "Close form":
+  - separator
+  - group "Contract steps":
+    - navigation:
+      - 'button "Step 1 of 5: Contract"':
+        - generic: "1"
+      - 'button "Step 2 of 5: Charges & add-ons"':
+        - generic: "2"
+      - 'button "Step 3 of 5: Commitments & benefits"':
+        - generic: "3"
+      - 'button "Step 4 of 5: Billing"':
+        - generic: "4"
+      - 'button "Step 5 of 5: Review"':
+        - generic: "5"
+    - paragraph: Review
+  - button "Previous":
+    - text: Previous
+  - button "Save as draft"
+  - button "Create contract"
+  - heading "Contract" [level=2]
+  - button "Edit contract":
+    - text: Edit
+  - separator
+  - generic: Customer
+  - generic: PUP Acme 1792753923
+  - separator
+  - generic: Plan
+  - generic: Usage properties test (1792753923)
+  - separator
+  - generic: Billing
+  - generic: USD · Monthly
+  - separator
+  - generic: Runs
+  - generic: Nov 5, 2026, 11:23 PM → until cancelled
+  - separator
+  - generic: Bill on
+  - generic: The contract start date
+  - separator
+  - generic: Free trial
+  - generic: None
+  - separator
+  - generic: Proration
+  - generic: No proration
+  - heading "Charges & add-ons" [level=2]
+  - button "Edit charges & add-ons":
+    - text: Edit
+  - separator
+  - generic: Charges
+  - generic: 3 charges · all at the plan's prices
+  - separator
+  - generic: Discount
+  - generic: None
+  - separator
+  - generic: Add-ons
+  - generic: "2: Storage 1791813384 (1 repriced), Analytics 1791813384"
+  - heading "Commitments & benefits" [level=2]
+  - button "Edit commitments & benefits":
+    - text: Edit
+  - separator
+  - generic: Contract commitment
+  - generic: None
+  - separator
+  - generic: Entitlements
+  - generic: None
+  - separator
+  - generic: Credit grants
+  - generic: None
+  - separator
+  - generic: Taxes
+  - generic: None
+  - heading "Billing" [level=2]
+  - button "Edit billing":
+    - text: Edit
+  - separator
+  - generic: Payment terms
+  - generic: Due on receipt
+  - separator
+  - generic: Billing customer
+  - generic: Same customer
+  - separator
+  - generic: Inherited customers
+  - generic: None
+  - separator
+  - generic: Auto-invoice threshold
+  - generic: Each period
+- region "Notifications alt+T"
+- region "Notifications alt+T"
+- region "Notifications alt+T"

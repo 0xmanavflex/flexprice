@@ -2,7 +2,9 @@ import { useWriteAccess } from '@ui/compositions/access/Access'
 import { useState } from 'react'
 import {
   entitlementToEdit,
+  FeatureType,
   emptySpendingAllowance,
+  formatUnitAmount,
   type CreateEntitlement,
   type EditEntitlement,
   type Entitlement,
@@ -10,7 +12,8 @@ import {
   type SubscriptionEntitlement,
   type TenantFeatureUsage,
 } from '@fp/domain'
-import { PlusIcon } from '@ui/icons'
+import { PlusIcon, PencilIcon, RotateCcwIcon, Trash2Icon } from '@ui/icons'
+import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
@@ -18,7 +21,11 @@ import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { DetailTable } from '../shared/DetailTable'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
-import { EntitlementUsageTable, entitlementRowsForContract } from '../shared/EntitlementUsage'
+import {
+  EntitlementUsageTable,
+  entitlementRowsForContract,
+  type EntitlementUsageRow,
+} from '../shared/EntitlementUsage'
 import {
   EntitlementEditForm,
   EntitlementCreateForm,
@@ -39,6 +46,8 @@ export const ContractBenefitsEditorProvenance = provenance({
 })
 
 export interface ContractBenefitsEditorProps {
+  currency: string
+  spendingAllowancesEnabled?: boolean
   subscriptionId: string
   entitlements: SubscriptionEntitlement[]
   usage?: TenantFeatureUsage[] | undefined
@@ -55,6 +64,8 @@ export interface ContractBenefitsEditorProps {
 }
 
 export function ContractBenefitsEditor({
+  currency,
+  spendingAllowancesEnabled = false,
   subscriptionId,
   entitlements,
   usage,
@@ -112,6 +123,71 @@ export function ContractBenefitsEditor({
         removeLabel={entitlement.parentEntitlementId ? 'Reset to inherited value' : 'Remove'}
       />
     )
+  const sourceLabel = (row: (typeof records)[number]) =>
+    own(row.entitlement)
+      ? row.entitlement.parentEntitlementId
+        ? `Contract override · ${row.source}`
+        : 'Contract'
+      : row.source
+  const effectiveRows: EntitlementUsageRow[] = entitlementRowsForContract(entitlements, usage)
+  const byFeature = new Map<string, typeof records>()
+  for (const record of sourceRows) {
+    const id = record.entitlement.featureId
+    byFeature.set(id, [...(byFeature.get(id) ?? []), record])
+    if (!effectiveRows.some((row) => row.id === id)) {
+      effectiveRows.push({
+        id,
+        feature: record.name,
+        enabled: record.entitlement.isEnabled ?? true,
+        limit: null,
+        featureType: record.entitlement.featureType,
+        ...(record.entitlement.featureType === FeatureType.Boolean
+          ? {}
+          : { valueLabel: 'Not reported' }),
+      })
+    }
+  }
+  const rows = effectiveRows.map((row) => ({
+    ...row,
+    sources: (byFeature.get(row.id) ?? []).map((record) => ({ label: sourceLabel(record) })),
+  }))
+  const featureActions = (row: EntitlementUsageRow) => {
+    const sources = byFeature.get(row.id) ?? []
+    if (readOnly || isLoading || error || !sources.length) return null
+    if (sources.length === 1) return menu(sources[0]!.entitlement, row.feature)
+    return (
+      <RowActionsMenu
+        label={row.feature}
+        extra={sources.flatMap((source) => {
+          const entitlement = source.entitlement
+          const label = sourceLabel(source)
+          return [
+            {
+              label: `Edit ${label}`,
+              icon: <PencilIcon aria-hidden />,
+              onSelect: () => open(entitlement),
+            },
+            ...(own(entitlement)
+              ? [
+                  {
+                    label: `${entitlement.parentEntitlementId ? 'Reset' : 'Remove'} ${label}`,
+                    icon: entitlement.parentEntitlementId ? (
+                      <RotateCcwIcon aria-hidden />
+                    ) : (
+                      <Trash2Icon aria-hidden />
+                    ),
+                    onSelect: () => {
+                      setProblem(null)
+                      setRemoving(entitlement)
+                    },
+                  },
+                ]
+              : []),
+          ]
+        })}
+      />
+    )
+  }
   return (
     <>
       <Section
@@ -127,18 +203,15 @@ export function ContractBenefitsEditor({
           ) : undefined
         }
       >
-        {entitlements.length ? (
-          <EntitlementUsageTable rows={entitlementRowsForContract(entitlements, usage)} />
-        ) : (
-          <SectionEmpty title="No features" description="This contract includes no features." />
-        )}
-        {isLoading ? (
+        {rows.length ? (
+          <EntitlementUsageTable rows={rows} rowActions={featureActions} />
+        ) : isLoading ? (
           <p role="status" className="text-muted-foreground p-4 text-sm">
-            Loading entitlement sources…
+            Loading entitlements…
           </p>
         ) : error ? (
           <SectionEmpty
-            title="Entitlement sources could not be loaded"
+            title="Entitlements could not be loaded"
             description={error}
             action={
               <Button variant="outline" onClick={onRetry}>
@@ -146,110 +219,111 @@ export function ContractBenefitsEditor({
               </Button>
             }
           />
-        ) : sourceRows.length ? (
-          <DetailTable
-            label="Entitlement sources"
-            noun="sources"
-            rows={sourceRows}
-            getRowId={(row) => row.entitlement.id}
-            columns={[
-              { key: 'feature', header: 'Feature', cell: (row) => row.name },
-              {
-                key: 'source',
-                header: 'Source',
-                cell: (row) =>
-                  own(row.entitlement)
-                    ? row.entitlement.parentEntitlementId
-                      ? `Contract override · ${row.source}`
-                      : 'Contract'
-                    : row.source,
-              },
-              {
-                key: 'actions',
-                header: '',
-                cell: (row) => menu(row.entitlement, `${row.name} from ${row.source}`),
-              },
-            ]}
-          />
+        ) : (
+          <SectionEmpty title="No features" description="This contract includes no features." />
+        )}
+        {rows.length > 0 && error ? (
+          <Alert variant="destructive">
+            <AlertDescription>
+              {error} Editing is unavailable until sources reload.
+            </AlertDescription>
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              Try again
+            </Button>
+          </Alert>
         ) : null}
       </Section>
-      <Section
-        title="Spending allowances"
-        table
-        showTitle
-        description="Money allowances shared across all usage charges."
-        action={
-          !readOnly ? (
-            <Button variant="outline" size="sm" onClick={() => open('allowance')}>
-              <PlusIcon aria-hidden />
-              Add allowance
-            </Button>
-          ) : undefined
-        }
-      >
-        {allowanceRows.length ? (
-          <DetailTable
-            label="Spending allowances"
-            noun="allowances"
-            rows={allowanceRows}
-            getRowId={(row) => row.entitlement.id}
-            columns={[
-              { key: 'quota', header: 'Amount', cell: (row) => row.entitlement.grantQuota ?? '—' },
-              {
-                key: 'window',
-                header: 'Window',
-                cell: (row) =>
-                  row.entitlement.grantDurationUnit === 'subscription_period'
-                    ? 'Billing period'
-                    : `Every ${row.entitlement.grantDurationValue ?? 1} ${row.entitlement.grantDurationUnit}`,
-              },
-              {
-                key: 'starts',
-                header: 'Starts',
-                cell: (row) =>
-                  row.entitlement.startDate
-                    ? new Intl.DateTimeFormat('en-US', {
-                        timeZone: 'UTC',
-                        dateStyle: 'medium',
-                      }).format(row.entitlement.startDate)
-                    : 'Contract start',
-              },
-              {
-                key: 'ends',
-                header: 'Ends',
-                cell: (row) =>
-                  row.entitlement.endDate
-                    ? new Intl.DateTimeFormat('en-US', {
-                        timeZone: 'UTC',
-                        dateStyle: 'medium',
-                      }).format(row.entitlement.endDate)
-                    : 'No end',
-              },
-              {
-                key: 'stacking',
-                header: 'Stacking',
-                cell: (row) => row.entitlement.aggregationMode ?? 'additive',
-              },
-              {
-                key: 'actions',
-                header: '',
-                cell: (row) => menu(row.entitlement, 'Spending allowance'),
-              },
-            ]}
-          />
-        ) : (
-          <SectionEmpty
-            title="No spending allowances"
-            description={
-              isLoading
-                ? 'Loading allowances…'
-                : error
-                  ? 'Allowances could not be loaded.'
-                  : 'Usage charges have no shared allowance.'
+      {spendingAllowancesEnabled || allowanceRows.length > 0 ? (
+        <>
+          <Section
+            title="Spending allowances"
+            table
+            showTitle
+            description="Money allowances shared across all usage charges."
+            action={
+              !readOnly && spendingAllowancesEnabled ? (
+                <Button variant="outline" size="sm" onClick={() => open('allowance')}>
+                  <PlusIcon aria-hidden />
+                  Add allowance
+                </Button>
+              ) : undefined
             }
-          />
-        )}
-      </Section>
+          >
+            {allowanceRows.length ? (
+              <DetailTable
+                label="Spending allowances"
+                noun="allowances"
+                rows={allowanceRows}
+                getRowId={(row) => row.entitlement.id}
+                columns={[
+                  {
+                    key: 'quota',
+                    header: 'Amount',
+                    cell: (row) =>
+                      row.entitlement.grantQuota
+                        ? formatUnitAmount(row.entitlement.grantQuota, currency)
+                        : '—',
+                  },
+                  {
+                    key: 'window',
+                    header: 'Window',
+                    cell: (row) =>
+                      row.entitlement.grantDurationUnit === 'subscription_period'
+                        ? 'Billing period'
+                        : `Every ${row.entitlement.grantDurationValue ?? 1} ${row.entitlement.grantDurationUnit}`,
+                  },
+                  {
+                    key: 'starts',
+                    header: 'Starts',
+                    cell: (row) =>
+                      row.entitlement.startDate
+                        ? new Intl.DateTimeFormat('en-US', {
+                            timeZone: 'UTC',
+                            dateStyle: 'medium',
+                          }).format(row.entitlement.startDate)
+                        : 'Contract start',
+                  },
+                  {
+                    key: 'ends',
+                    header: 'Ends',
+                    cell: (row) =>
+                      row.entitlement.endDate
+                        ? new Intl.DateTimeFormat('en-US', {
+                            timeZone: 'UTC',
+                            dateStyle: 'medium',
+                          }).format(row.entitlement.endDate)
+                        : 'No end',
+                  },
+                  {
+                    key: 'stacking',
+                    header: 'Stacking',
+                    cell: (row) => row.entitlement.aggregationMode ?? 'additive',
+                  },
+                  {
+                    key: 'actions',
+                    header: '',
+                    cell: (row) =>
+                      spendingAllowancesEnabled
+                        ? menu(row.entitlement, 'Spending allowance')
+                        : null,
+                  },
+                ]}
+              />
+            ) : (
+              <SectionEmpty
+                title="No spending allowances"
+                description={
+                  isLoading
+                    ? 'Loading allowances…'
+                    : error
+                      ? 'Allowances could not be loaded.'
+                      : 'Usage charges have no shared allowance.'
+                }
+              />
+            )}
+          </Section>
+        </>
+      ) : null}
       <FormDialog
         open={editing !== null}
         onOpenChange={(next) => !next && !pending && setEditing(null)}
@@ -258,7 +332,9 @@ export function ContractBenefitsEditor({
             ? 'Add entitlement'
             : editing === 'allowance'
               ? 'Add spending allowance'
-              : 'Edit entitlement'
+              : editing && !editing.featureId
+                ? 'Edit spending allowance'
+                : 'Edit entitlement'
         }
         isPending={pending}
       >
@@ -272,6 +348,7 @@ export function ContractBenefitsEditor({
           />
         ) : editing === 'allowance' ? (
           <SpendingAllowanceForm
+            currency={currency}
             onCancel={() => setEditing(null)}
             pending={pending}
             error={problem}
@@ -279,6 +356,7 @@ export function ContractBenefitsEditor({
           />
         ) : editing && !editing.featureId ? (
           <SpendingAllowanceForm
+            currency={currency}
             quotaOnly
             initial={{ ...emptySpendingAllowance(), quota: editing.grantQuota ?? '' }}
             pending={pending}

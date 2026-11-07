@@ -1,3 +1,4 @@
+import { env } from '@/env'
 import { useMemo, useState } from 'react'
 import {
   explainContractCreateError,
@@ -31,7 +32,7 @@ import {
   PriceEntityType,
   TaxRateStatus,
 } from '@fp/domain'
-import { SubscriptionForm } from '@fp/ui/pages'
+import { SubscriptionForm, toast } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
 import { usePlanFormOptions, withMeters } from '../plans/planFormOptions'
 
@@ -41,7 +42,7 @@ export interface SubscriptionFormPageProps {
   step?: string
   onStepChange: (id: string) => void
   onCancel: () => void
-  onDone: (subscriptionId: string) => void
+  onDone: (subscriptionId: string, draft?: boolean) => void
 }
 
 const PICKER_PAGE = { page: 1, pageSize: Number.MAX_SAFE_INTEGER }
@@ -181,6 +182,7 @@ export function SubscriptionFormPage({
 
   return (
     <SubscriptionForm
+      spendingAllowancesEnabled={env.spendingAllowancesEnabled}
       pickerStatus={
         customers.isError ||
         plans.isError ||
@@ -224,6 +226,7 @@ export function SubscriptionFormPage({
         rate: rate.rate,
       }))}
       onCustomerChange={setChosenCustomer}
+      features={formOptions.featureOptions}
       meters={meters}
       priceUnits={formOptions.units}
       couponsStatus={coupons.isPending ? 'loading' : coupons.isError ? 'failed' : 'ready'}
@@ -268,7 +271,14 @@ export function SubscriptionFormPage({
       submitError={explainContractCreateError(create.error, nameOf)}
       onSubmit={(draft) =>
         create.mutate(draft, {
-          onSuccess: (created) => onDone((created as { id?: string }).id ?? ''),
+          onSuccess: (created) => {
+            if (created.entitlementFailures.length)
+              toast.warning('Contract created with missing entitlements', {
+                description: `Could not add ${created.entitlementFailures.map((id) => formOptions.featureOptions.find((feature) => feature.id === id)?.name ?? id).join(', ')}. Open Entitlements on the contract to retry.`,
+                duration: 12000,
+              })
+            onDone((created as { id?: string }).id ?? '', draft.draft)
+          },
         })
       }
     />
