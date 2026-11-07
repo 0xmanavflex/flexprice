@@ -81,6 +81,8 @@ export interface ContractIntegrationsProps {
     { id: string; name: string; providerType: string; providerName: string }[] | undefined
   onPushConnection?: ((connectionId: string) => void) | undefined
   onPush?: () => void
+  /** Push this one mapping from its row menu. */
+  onPushLink?: (link: IntegrationLink) => void
   /** Provider names a pull reads from (inbound sync on); one "Pull from {names}" action. */
   pullProviders?: string[]
   onPull?: () => void
@@ -106,6 +108,12 @@ export interface ContractIntegrationsProps {
 const stamp = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+})
+const stampWithYear = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
   year: 'numeric',
   hour: 'numeric',
   minute: '2-digit',
@@ -122,7 +130,9 @@ const SYNC_STATE: Record<string, { label: string; tone: PillTone }> = {
 }
 
 function when(value: Date | null): string {
-  return value && !Number.isNaN(value.getTime()) ? stamp.format(value) : 'Unknown'
+  if (!value || Number.isNaN(value.getTime())) return 'Unknown'
+  const format = value.getFullYear() === new Date().getFullYear() ? stamp : stampWithYear
+  return format.format(value)
 }
 
 export function ContractIntegrations({
@@ -139,6 +149,7 @@ export function ContractIntegrations({
   connectionActions,
   onPushConnection,
   onPush,
+  onPushLink,
   pullProviders,
   onPull,
   syncing = false,
@@ -222,41 +233,40 @@ export function ContractIntegrations({
               updatedAt: null,
             }
             return (
-              <div key={connection.id} className="flex items-center gap-3 px-6 py-3">
-                <span className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <IntegrationMark integration={mark} />
-                  <span className="min-w-0">
-                    <span className="block text-sm">{connection.providerName}</span>
-                    <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
-                      <span className="truncate">{connection.name}</span>
-                      <span aria-hidden>·</span>
-                      {link ? (
-                        <Tooltip>
-                          <TooltipTrigger
-                            aria-label={`${connection.providerName} ID ${link.providerEntityId}`}
-                            className="truncate font-mono"
-                          >
-                            {link.providerEntityId}
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="max-w-72 font-mono break-all">
-                            {link.providerEntityId}
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <Pill size="sm" tone="neutral">
-                          Not mapped
-                        </Pill>
-                      )}
-                    </span>
+              <div key={connection.id} className="flex items-start gap-2.5 px-4 py-3">
+                <IntegrationMark integration={mark} />
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-sm">{connection.providerName}</span>
+                    <Pill size="sm" tone={shown.tone}>
+                      {failed ? 'Failed' : shown.label}
+                    </Pill>
                   </span>
-                </span>
-                <span className="flex shrink-0 flex-col items-end gap-1">
-                  <Pill size="sm" tone={shown.tone}>
-                    {failed ? 'Failed' : shown.label}
-                  </Pill>
-                  {at ? (
-                    <span className="text-muted-foreground text-xs tabular-nums">{when(at)}</span>
-                  ) : null}
+                  <span className="text-muted-foreground truncate text-xs" title={connection.name}>
+                    {connection.name}
+                  </span>
+                  <span className="text-muted-foreground flex min-w-0 items-center gap-2 text-xs">
+                    {link ? (
+                      <Tooltip>
+                        <TooltipTrigger
+                          aria-label={`${connection.providerName} ID ${link.providerEntityId}`}
+                          className="min-w-0 flex-1 truncate text-left font-mono"
+                        >
+                          {link.providerEntityId}
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-72 font-mono break-all">
+                          {link.providerEntityId}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Pill size="sm" tone="neutral">
+                        Not mapped
+                      </Pill>
+                    )}
+                    {at ? (
+                      <span className="ml-auto shrink-0 tabular-nums">{when(at)}</span>
+                    ) : null}
+                  </span>
                 </span>
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -388,6 +398,8 @@ export function ContractIntegrations({
                     link={link}
                     entityLabel={entityLabel}
                     href={providerHref?.(link) ?? null}
+                    onPush={write.allowed && onPushLink ? () => onPushLink(link) : undefined}
+                    syncing={syncing}
                     onUnlink={write.allowed ? onUnlink : undefined}
                     onAskUnlink={() => {
                       setError(null)
@@ -474,7 +486,7 @@ export function ContractIntegrations({
           </Tooltip>
         )
       ) : null}
-      {canPush && pushTo && onPush ? (
+      {canPush && pushTo && onPush && !onPushLink ? (
         <Button
           type="button"
           variant="ghost"
@@ -595,17 +607,26 @@ function IntegrationMenu({
   link,
   entityLabel,
   href,
+  onPush,
+  syncing = false,
   onUnlink,
   onAskUnlink,
 }: {
   link: IntegrationLink
   entityLabel: string
   href: string | null
+  onPush?: () => void
+  syncing?: boolean
   onUnlink?: ContractIntegrationsProps['onUnlink']
   onAskUnlink: () => void
 }) {
   return (
     <DropdownMenuContent align="end" className="min-w-48">
+      {onPush ? (
+        <DropdownMenuItem disabled={syncing} onClick={onPush}>
+          <UploadIcon aria-hidden /> Push to {link.name}
+        </DropdownMenuItem>
+      ) : null}
       {href ? (
         <DropdownMenuItem onClick={() => void window.open(href, '_blank', 'noopener,noreferrer')}>
           <ArrowUpRightIcon aria-hidden /> Open in {link.name}

@@ -14,13 +14,14 @@ export function usePushCustomerToIntegrations(customerId: string) {
   const auth = useFlexpriceAuth()
   const queryClient = useQueryClient()
   const push = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (connectionId?: string) => {
       const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
       if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to push this customer.')
       if (!environmentId) throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
       await pushToIntegrations(serverURL, token, environmentId, {
         entityType: 'customer',
         entityId: customerId,
+        ...(connectionId ? { connectionId } : {}),
       })
     },
     onSuccess: () => {
