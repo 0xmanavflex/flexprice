@@ -283,6 +283,46 @@
       "usedBy": [],
       "story": "./src/pages/product-catalog/addons/AddonGrid.stories.tsx"
     },
+    "AddonScheduleFields": {
+      "file": "src/pages/contracts/SubscriptionForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "CalendarIcon",
+        "ChargeCommitmentDialog",
+        "ChargeCouponDialog",
+        "ChoiceCards",
+        "Composer",
+        "ConfirmDialog",
+        "ContractChargeDialog",
+        "CreditGrantCreateForm",
+        "DateInput",
+        "DetailTable",
+        "EmptyState",
+        "Field",
+        "FormCard",
+        "FormDialog",
+        "FormPage",
+        "FormRow",
+        "GrantAllowanceFields",
+        "LabelWithHint",
+        "OptionCombobox",
+        "OptionMultiCombobox",
+        "OptionSelect",
+        "PencilIcon",
+        "PlusIcon",
+        "PriceOverrideForm",
+        "RowActionsMenu",
+        "SimpleTable",
+        "SpendingAllowancesSection",
+        "UserIcon",
+        "UsersIcon",
+        "WalletIcon"
+      ],
+      "usedBy": [
+        "ContractSectionDialogs"
+      ],
+      "story": "./src/pages/contracts/SubscriptionForm.stories.tsx"
+    },
     "AddonSubscriptionsView": {
       "file": "src/pages/product-catalog/addons/AddonSubscriptionsView.tsx",
       "layer": "surface",
@@ -1054,6 +1094,7 @@
       "usedBy": [
         "AccountRollforward",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ApiCard",
         "CustomerAnalyticsView",
         "DashboardHome",
@@ -1150,6 +1191,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionForm"
       ],
       "story": null
@@ -1165,6 +1207,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionForm"
       ],
       "story": "./src/pages/contracts/ChargeCouponDialog.stories.tsx"
@@ -1477,6 +1520,7 @@
       "usedBy": [
         "AddChargeDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ChargeForm",
         "ContractChargeDialog",
         "CreditGrantCreateForm",
@@ -1652,6 +1696,7 @@
         "AddCardDialog",
         "AddCreditsDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AutoTopupDialog",
         "CardLinkDialog",
         "ChargeAlertForm",
@@ -1689,6 +1734,7 @@
       "usedBy": [
         "AddCreditsDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AutoTopupDialog",
         "CardLinkDialog",
         "ChargeSheet",
@@ -1852,6 +1898,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionDetailView",
         "SubscriptionForm"
       ],
@@ -1922,6 +1969,7 @@
       "layer": "surface",
       "composes": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "CheckboxRow",
         "Composer",
         "CreditGrantCreateForm",
@@ -1932,7 +1980,6 @@
         "LabelWithHint",
         "OptionCombobox",
         "OptionSelect",
-        "PencilIcon",
         "PlusIcon",
         "TaxDialog"
       ],
@@ -2281,6 +2328,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ContractSectionDialogs",
         "PlanForm",
         "SubscriptionForm"
@@ -2774,6 +2822,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ChargeForm",
         "ContractAddChargeForm",
         "ContractChargeDialog",
@@ -2981,6 +3030,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AddonSubscriptionsView",
         "ChargeTable",
         "ContractBenefitsEditor",
@@ -3232,6 +3282,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AddonSubscriptionsView",
         "CostMarginCard",
         "CouponRedemptionsView",
@@ -3899,6 +3950,7 @@
         "AddCardDialog",
         "AddCreditsDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AutoTopupDialog",
         "BillingEntityField",
         "CardLinkDialog",
@@ -4283,6 +4335,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonForm",
+        "AddonScheduleFields",
         "BillingEntityForm",
         "CostSheetForm",
         "CouponCreateForm",
@@ -4314,6 +4367,7 @@
         "AddChargeDialog",
         "AddCreditsDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AutoTopupDialog",
         "CardLinkDialog",
         "ChargeCommitmentDialog",
@@ -4398,6 +4452,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonForm",
+        "AddonScheduleFields",
         "BillingEntityForm",
         "CostSheetForm",
         "CouponCreateForm",
@@ -4436,6 +4491,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonForm",
+        "AddonScheduleFields",
         "BillingEntityForm",
         "CostSheetForm",
         "CouponCreateForm",
@@ -4580,6 +4636,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "EntitlementCreateForm",
         "EntitlementEditForm",
         "SubscriptionForm"
@@ -5152,6 +5209,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ContractIntegrations",
         "ContractSectionDialogs",
         "CustomerTaxSection",
@@ -5860,6 +5918,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "AddressPicker",
         "BillingEntityForm",
         "ChargeForm",
@@ -5883,6 +5942,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ContractHierarchyEditor",
         "SubscriptionForm"
       ],
@@ -5895,6 +5955,7 @@
       "usedBy": [
         "AddCardDialog",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "BillingEntityField",
         "BonusSlabTable",
         "ChargeCommitmentDialog",
@@ -6216,10 +6277,10 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonGrid",
+        "AddonScheduleFields",
         "ConnectionExports",
         "ContractBenefitsEditor",
         "ContractHierarchyEditor",
-        "ContractSectionDialogs",
         "CostSheetGrid",
         "CouponGrid",
         "CreateWithAiButton",
@@ -6575,6 +6636,7 @@
       "usedBy": [
         "AddonChargesDialog",
         "AddonGrid",
+        "AddonScheduleFields",
         "BillingEntityForm",
         "BillingEntityGrid",
         "ChargeCommitmentDialog",
@@ -6815,6 +6877,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionForm"
       ],
       "story": "./src/pages/product-catalog/charges/PriceOverrideForm.stories.tsx"
@@ -7260,6 +7323,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "BillingEntityIntegrations",
         "ChargeTable",
         "ContractBenefitsEditor",
@@ -7875,6 +7939,7 @@
       "usedBy": [
         "AccountRollforward",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "BillingEntityIntegrations",
         "BonusSlabTable",
         "ConnectionExports",
@@ -8045,6 +8110,7 @@
       ],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "SubscriptionForm"
       ],
       "story": "./src/pages/contracts/SpendingAllowancesSection.stories.tsx"
@@ -8916,6 +8982,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "ContractHierarchyEditor",
         "CustomerActivityView",
         "CustomerGrid",
@@ -8946,6 +9013,7 @@
       "composes": [],
       "usedBy": [
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "PageShell",
         "ShellSearch",
         "SubscriptionForm"
@@ -8992,6 +9060,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonChargesDialog",
+        "AddonScheduleFields",
         "CustomerActivityView",
         "CustomerDetail",
         "CustomerWalletView",
