@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import { SpendingAllowancesSection } from './SpendingAllowancesSection'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
@@ -14,6 +15,7 @@ import {
   InfoIcon,
   MoreHorizontalIcon,
   CircleDollarSignIcon,
+  CopyIcon,
   PencilIcon,
   PlusIcon,
   PuzzleIcon,
@@ -2235,11 +2237,22 @@ function ChargesTable({
             ) : (
               <>
                 <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(row.charge.id)
+                        .then(() => toast.success('Charge ID copied'))
+                        .catch(() => toast.error('Couldn’t copy the charge ID'))
+                    }}
+                  >
+                    <CopyIcon aria-hidden />
+                    Copy ID
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setRepricing(row.charge.id)}>
                     <CircleDollarSignIcon aria-hidden />
                     Override price
                   </DropdownMenuItem>
-                  {onCommitment && row.type === 'Usage' ? (
+                  {onCommitment ? (
                     <DropdownMenuItem onClick={() => setCommitting(row.charge.id)}>
                       <ScaleIcon aria-hidden />
                       {commitmentOf.has(row.charge.id) ? 'Edit commitment' : 'Add commitment'}
@@ -3338,19 +3351,26 @@ export function AddonChargesDialog({
             label={name}
             extra={[
               {
+                label: 'Copy ID',
+                icon: <CopyIcon aria-hidden />,
+                readOnly: true,
+                onSelect: () => {
+                  void navigator.clipboard
+                    .writeText(charge.id)
+                    .then(() => toast.success('Charge ID copied'))
+                    .catch(() => toast.error('Couldn’t copy the charge ID'))
+                },
+              },
+              {
                 label: overrideOf(charge.id) ? 'Edit price' : 'Override price',
                 icon: <CircleDollarSignIcon aria-hidden />,
                 onSelect: () => setEditing({ kind: 'price', charge }),
               },
-              ...(charge.type === PriceType.Usage
-                ? [
-                    {
-                      label: commitmentOf(charge.id) ? 'Edit commitment' : 'Add commitment',
-                      icon: <ScaleIcon aria-hidden />,
-                      onSelect: () => setEditing({ kind: 'commitment', charge }),
-                    },
-                  ]
-                : []),
+              {
+                label: commitmentOf(charge.id) ? 'Edit commitment' : 'Add commitment',
+                icon: <ScaleIcon aria-hidden />,
+                onSelect: () => setEditing({ kind: 'commitment', charge }),
+              },
               ...(changed
                 ? [
                     {
@@ -3528,7 +3548,15 @@ function withAddonPricing(
     ...(pricing.priceOverrides.length > 0 ? { priceOverrides: pricing.priceOverrides } : {}),
     ...(pricing.commitments.length > 0 ? { commitments: pricing.commitments } : {}),
     ...(pricing.quantities?.length ? { quantities: pricing.quantities } : {}),
-    ...(pricing.startDate ? { startDate: pricing.startDate } : {}),
+    ...(pricing.startWhen === 'date' && pricing.startDate
+      ? { startDate: pricing.startDate }
+      : pricing.startWhen && pricing.startWhen !== 'date'
+        ? { changeAt: pricing.startWhen }
+        : pricing.startDate
+          ? { startDate: pricing.startDate }
+          : {}),
+    ...(pricing.prorate === undefined ? {} : { prorate: pricing.prorate }),
+    ...(pricing.cadence === 'one_time' ? { cadence: 'one_time' as const } : {}),
   }
 }
 
@@ -3564,6 +3592,8 @@ function AddonsSection({
     adding: boolean
     pricing: AddonPricing
   } | null>(null)
+  // Add-ons set aside inside this dialog, attached together when it is saved.
+  const [staged, setStaged] = useState<CreateSubscription['addons']>([])
   // Only the prices the API will attach (this currency, this period or one-time).
   const chargesFor = (addonId: string) => {
     const charges = chargesOf?.(addonId)
@@ -3588,9 +3618,16 @@ function AddonsSection({
       currency,
       billingPeriod,
     }),
-    ...(addon.startDate ? { startDate: addon.startDate } : {}),
+    ...(addon.startDate
+      ? { startDate: addon.startDate, startWhen: 'date' as const }
+      : { startWhen: addon.changeAt ?? 'immediate' }),
+    ...(addon.prorate === undefined ? {} : { prorate: addon.prorate }),
+    ...(addon.cadence ? { cadence: addon.cadence } : {}),
   })
-  const available = options.filter((o) => !selected.some((a) => a.addonId === o.value))
+  const available = options.filter(
+    (o) =>
+      !selected.some((a) => a.addonId === o.value) && !staged.some((a) => a.addonId === o.value),
+  )
   const optionOf = (addonId: string) => options.find((o) => o.value === addonId)
   const nameOf = (addon: CreateSubscription['addons'][number]) =>
     addon.name || optionOf(addon.addonId)?.label || addon.addonId
@@ -3603,13 +3640,24 @@ function AddonsSection({
     })
   const save = () => {
     if (!open) return
-    const next = withAddonPricing(open, open.pricing)
+    const next = open.addonId ? withAddonPricing(open, open.pricing) : null
     onChange(
       open.adding
-        ? [...selected, next]
-        : selected.map((addon) => (addon.addonId === open.addonId ? next : addon)),
+        ? [...selected, ...staged, ...(next ? [next] : [])]
+        : selected.map((addon) => (addon.addonId === open.addonId && next ? next : addon)),
     )
+    setStaged([])
     setOpen(null)
+  }
+  const stageCurrent = () => {
+    if (!open?.addonId) return
+    setStaged((list) => [...list, withAddonPricing(open, open.pricing)])
+    setOpen({
+      addonId: '',
+      name: '',
+      adding: true,
+      pricing: { priceOverrides: [], commitments: [] },
+    })
   }
   const columns: SimpleColumn<CreateSubscription['addons'][number]>[] = [
     {
@@ -3713,12 +3761,12 @@ function AddonsSection({
                   if (!option) return
                   const addon = { addonId: option.value, name: option.label }
                   // Without the add-on's charges there is nothing to price: add it as it is.
-                  if (!chargesOf) onChange([...selected, addon])
+                  if (!chargesOf) onChange([...selected, ...staged, addon])
                   else
                     setOpen({
                       ...addon,
                       adding: true,
-                      pricing: { priceOverrides: [], commitments: [] },
+                      pricing: { priceOverrides: [], commitments: [], startWhen: 'immediate' },
                     })
                 }}
               />
@@ -3727,19 +3775,70 @@ function AddonsSection({
         </FormRow>
         <AddonChargesDialog
           open={open !== null}
-          title={open ? `${open.adding ? 'Add add-on' : 'Edit add-on'} · ${open.name}` : ''}
+          title={
+            open
+              ? open.adding
+                ? open.name
+                  ? `Add add-on · ${open.name}`
+                  : 'Add add-ons'
+                : `Edit add-on · ${open.name}`
+              : ''
+          }
           submitLabel={open?.adding ? 'Add add-on' : 'Save add-on'}
-          charges={open ? chargesFor(open.addonId) : null}
+          charges={open?.addonId ? chargesFor(open.addonId) : null}
           chargesFailed={chargesFailed}
           currency={currency}
           meters={meters}
           value={open?.pricing ?? { priceOverrides: [], commitments: [] }}
+          timing
           onChange={(pricing) =>
             setOpen((current) => (current ? { ...current, pricing } : current))
           }
-          onClose={() => setOpen(null)}
+          onClose={() => {
+            setStaged([])
+            setOpen(null)
+          }}
           onSubmit={save}
-        />
+        >
+          {open?.adding && staged.length > 0 ? (
+            <ul className="text-muted-foreground flex flex-col gap-1 text-sm">
+              {staged.map((addon) => (
+                <li key={addon.addonId}>{nameOf(addon)} will be added with this one.</li>
+              ))}
+            </ul>
+          ) : null}
+          {open?.adding && !open.addonId ? (
+            <OptionCombobox
+              searchable
+              id="create-addon-another"
+              value=""
+              placeholder="Select another add-on"
+              options={available}
+              onValueChange={(addonId) => {
+                const option = available.find((o) => o.value === addonId)
+                if (!option) return
+                setOpen({
+                  addonId: option.value,
+                  name: option.label,
+                  adding: true,
+                  pricing: { priceOverrides: [], commitments: [], startWhen: 'immediate' },
+                })
+              }}
+            />
+          ) : null}
+          {open?.adding && open.addonId && available.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={stageCurrent}
+            >
+              <PlusIcon aria-hidden />
+              Add another add-on
+            </Button>
+          ) : null}
+        </AddonChargesDialog>
       </div>
     </FormCard>
   )

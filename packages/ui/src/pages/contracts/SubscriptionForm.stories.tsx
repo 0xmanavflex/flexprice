@@ -1142,8 +1142,8 @@ export const AddonPriceOverride: Story = {
     expect(dialog.queryByText('Storage archive (GB)')).toBeNull()
     await userEvent.click(dialog.getByRole('button', { name: 'Actions for Storage base' }))
     const override = await screen.findByRole('menuitem', { name: 'Override price' })
-    // A fixed charge takes no commitment.
-    expect(screen.queryByRole('menuitem', { name: 'Add commitment' })).toBeNull()
+    await expect(screen.getByRole('menuitem', { name: 'Add commitment' })).toBeVisible()
+    await expect(screen.getByRole('menuitem', { name: 'Copy ID' })).toBeVisible()
     await userEvent.click(override)
     const price = within(
       await screen.findByRole('dialog', { name: 'Override price · Storage base' }),

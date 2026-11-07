@@ -1553,7 +1553,15 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
           addons: draft.addons.map((addon) => ({
             addonId: addon.addonId,
             ...addonPricing(addon),
-            ...(addon.startDate ? { startDate: utcDay(addon.startDate) } : {}),
+            ...(addon.startDate
+              ? { startDate: contractDateToInstant(addon.startDate) }
+              : addon.changeAt
+                ? { changeAt: addon.changeAt }
+                : {}),
+            ...(addon.prorate === undefined
+              ? {}
+              : { prorationBehavior: addon.prorate ? 'create_prorations' : 'none' }),
+            ...(addon.cadence === 'one_time' ? { billingPeriod: 'ONETIME' } : {}),
           })),
         }
       : {}),

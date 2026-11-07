@@ -312,7 +312,7 @@ const MAX_ADDONS = 20
 /**
  * Attach add-ons, repricing their charges first if you like, as V1's add-on
  * dialog: choosing one lists all its charges, fixed and usage, each with
- * Override price (sent as `override_line_items`) and, on a usage charge, Add
+ * Override price (sent as `override_line_items`) and Add
  * commitment, the same dialogs as a plan charge. "Add another add-on" sets the
  * one in hand aside with its pricing and clears the picker, so several are
  * attached together as one change.
