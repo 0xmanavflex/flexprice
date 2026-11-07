@@ -204,8 +204,9 @@ export function UsageTermsFields({
               checked={commitment.trueUp}
               disabled={disabled}
               onCheckedChange={(trueUp) => setCommitment({ trueUp })}
+              description="Bill the committed minimum even when usage is below it."
             >
-              Bill the unused commitment
+              Enable true-up
             </CheckboxRow>
           </div>
         </div>

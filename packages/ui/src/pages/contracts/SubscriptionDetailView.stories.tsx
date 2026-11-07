@@ -1580,7 +1580,9 @@ export const AddAddonWithCommitment: Story = {
     const back = within(await screen.findByRole('dialog', { name: 'Modify add-ons' }))
     await expect(back.getByRole('textbox', { name: 'Quantity of Support seat' })).toHaveValue('2')
     await userEvent.click(back.getByRole('button', { name: 'Advanced options' }))
-    await expect(back.getByRole('combobox', { name: 'Proration' })).toHaveTextContent('No proration')
+    await expect(back.getByRole('combobox', { name: 'Proration' })).toHaveTextContent(
+      'No proration',
+    )
     await userEvent.click(back.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
@@ -1891,6 +1893,10 @@ export const AddCharge: Story = {
     await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
     const dialog = within(await screen.findByRole('dialog'))
     await dialog.findByLabelText(/^Amount/)
+    await expect(dialog.getByRole('heading', { name: 'Add fixed charge' })).toBeVisible()
+    await expect(dialog.getByRole('combobox', { name: 'Invoice timing' })).toHaveTextContent(
+      'Arrears',
+    )
     // The contract's currency is fixed.
     await expect(dialog.getByLabelText(/^Currency/)).toBeDisabled()
     // Empty fields are refused, not sent.
@@ -1915,6 +1921,7 @@ export const AddCharge: Story = {
         amount: '400',
         currency: 'USD',
         billingPeriod: 'MONTHLY',
+        invoiceCadence: InvoiceCadence.Arrear,
       }),
       quantity: '3',
       // "Now" goes out as the instant now, not empty: the API reads no start
@@ -1941,6 +1948,7 @@ export const AddUsageCharge: Story = {
     // Usage terms exist only on a metered charge; quantity does not.
     await expect(dialog.queryByLabelText(/^Quantity/)).toBeNull()
     await userEvent.click(dialog.getByRole('checkbox', { name: 'Add a commitment' }))
+    await userEvent.click(dialog.getByRole('checkbox', { name: 'Enable true-up' }))
     await userEvent.type(dialog.getByLabelText(/^Commitment \(/), '500')
     // The commitment can run for its own period, as on an existing charge.
     await userEvent.click(dialog.getByRole('combobox', { name: 'Commitment period' }))
@@ -1977,7 +1985,7 @@ export const AddUsageCharge: Story = {
           value: '500',
           windowed: false,
           overageFactor: '1.5',
-          trueUp: false,
+          trueUp: true,
           duration: 'QUARTERLY',
         },
       },

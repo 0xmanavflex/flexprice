@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CircleAlertIcon, GaugeIcon, RepeatIcon } from '@ui/icons'
 import {
   type AddContractCharge,
@@ -82,11 +82,17 @@ export function ContractChargeDialog({
   addTitle = 'Add charge',
   addDescription = 'Only this contract gets the charge; the plan does not change.',
 }: ContractChargeDialogProps) {
+  const [addType, setAddType] = useState<PriceType | null>(null)
+  useEffect(() => setAddType(null), [state])
   const title =
     state?.mode === 'add'
       ? state.initial
         ? 'Edit charge'
-        : addTitle
+        : addType === PriceType.Fixed
+          ? 'Add fixed charge'
+          : addType === PriceType.Usage
+            ? 'Add usage charge'
+            : addTitle
       : state?.mode === 'edit'
         ? 'Edit charge'
         : 'End charge'
@@ -104,6 +110,7 @@ export function ContractChargeDialog({
         <AddStep
           key="add"
           initial={state.initial}
+          onTypeChosen={setAddType}
           description={addDescription}
           currency={currency}
           billingPeriod={billingPeriod ?? Period.Monthly}
@@ -143,6 +150,7 @@ export function ContractChargeDialog({
 
 /** First step: fixed or metered. The form that follows is the granular one for that type. */
 function AddStep({
+  onTypeChosen,
   initial,
   description,
   currency,
@@ -155,6 +163,7 @@ function AddStep({
   submitError,
   earliestStart,
 }: {
+  onTypeChosen: (type: PriceType) => void
   /** A drafted charge to change: skips the type choice. */
   initial?: AddContractCharge | undefined
   description: string
@@ -215,7 +224,14 @@ function AddStep({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="button" onClick={() => setChosen(true)}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            onTypeChosen(type)
+            setChosen(true)
+          }}
+        >
           Continue
         </Button>
       </div>

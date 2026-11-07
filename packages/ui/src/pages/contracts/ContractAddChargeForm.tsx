@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   BillingModel,
+  InvoiceCadence,
   type BillingPeriod,
   type AddContractCharge,
   NO_USAGE_TERMS,
@@ -10,6 +11,7 @@ import {
   type Proration,
   type UsageTerms,
   emptyCharge,
+  contractDateToInstant,
   hasTermsErrors,
   validateContractTerms,
 } from '@fp/domain'
@@ -82,11 +84,18 @@ export function ContractAddChargeForm({
   const [showErrors, setShowErrors] = useState(false)
 
   const errors = validateContractTerms(isUsage ? { terms } : { quantity })
+  const startError =
+    earliestStart &&
+    startDate &&
+    contractDateToInstant(startDate).getTime() < contractDateToInstant(earliestStart).getTime()
+      ? 'The charge cannot start before the contract.'
+      : undefined
 
   const defaultValue = initial?.charge ?? {
     ...emptyCharge(type, BillingModel.FlatFee),
     currency: currency.toUpperCase() || 'USD',
     billingPeriod,
+    invoiceCadence: InvoiceCadence.Arrear,
   }
 
   return (
@@ -104,7 +113,7 @@ export function ContractAddChargeForm({
       submitError={submitError}
       submitLabel={initial ? 'Save charge' : 'Add charge'}
       onSubmit={(charge) => {
-        if (hasTermsErrors(errors)) {
+        if (hasTermsErrors(errors) || startError) {
           setShowErrors(true)
           return
         }
@@ -141,6 +150,7 @@ export function ContractAddChargeForm({
             )}
             <Field
               label="Starts on"
+              error={showErrors ? startError : undefined}
               hint={
                 earliestStart
                   ? 'Leave empty to start with the contract. A charge cannot start before it.'
@@ -151,6 +161,9 @@ export function ContractAddChargeForm({
                 <DateInput
                   id={id}
                   value={startDate}
+                  withTime
+                  clearable
+                  clearLabel="Clear charge start date"
                   onValueChange={setStartDate}
                   {...(earliestDay ? { min: earliestDay } : {})}
                   placeholder={earliestStart ? 'With the contract' : 'Now'}
