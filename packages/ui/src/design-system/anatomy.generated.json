@@ -232,6 +232,7 @@
         "DateInput",
         "DetailTable",
         "EmptyState",
+        "EntitlementCreateForm",
         "Field",
         "FormCard",
         "FormDialog",
@@ -300,6 +301,7 @@
         "DateInput",
         "DetailTable",
         "EmptyState",
+        "EntitlementCreateForm",
         "Field",
         "FormCard",
         "FormDialog",
@@ -3329,9 +3331,12 @@
         "PlusIcon"
       ],
       "usedBy": [
+        "AddonChargesDialog",
+        "AddonScheduleFields",
         "ContractBenefitsEditor",
         "ContractSectionDialogs",
-        "PlanForm"
+        "PlanForm",
+        "SubscriptionForm"
       ],
       "story": "./src/pages/product-catalog/entitlements/EntitlementForm.stories.tsx"
     },
@@ -8300,6 +8305,7 @@
         "DateInput",
         "DetailTable",
         "EmptyState",
+        "EntitlementCreateForm",
         "Field",
         "FormCard",
         "FormDialog",

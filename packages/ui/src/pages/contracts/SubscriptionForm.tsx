@@ -102,6 +102,10 @@ import {
 } from '@ui/compositions/detail/DetailKit'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { Field } from '@ui/compositions/forms/Field'
+import {
+  EntitlementCreateForm,
+  type FeatureOption,
+} from '@ui/pages/product-catalog/entitlements/EntitlementForm'
 import { GrantAllowanceFields } from '@ui/pages/product-catalog/entitlements/GrantAllowanceFields'
 import { parseDateValue } from '@ui/compositions/forms/DateInput'
 import { DateInput } from '@ui/compositions/forms/DateInput'
@@ -183,6 +187,7 @@ export const SubscriptionFormProvenance = provenance({
     'compositions/form-dialog',
     'ui/dropdown-menu',
     'pages/credit-grant-form',
+    'pages/EntitlementForm',
   ],
   note: 'RHF + the domain schema, five steps with Previous/Next, Save as draft and the stepper in the toolbar (ChoiceCards and SimpleTable from the detail kit); sub-forms (price override, credit grant) sit outside the form element.',
 })
@@ -279,6 +284,7 @@ export interface SubscriptionFormProps {
   addonChargesFailed?: boolean | undefined
   /** For charges added to this contract alone: the metered features and price units. */
   meters?: MeterOption[]
+  features?: FeatureOption[]
   priceUnits?: PriceUnitOption[]
   customerLocked?: boolean
   /**
@@ -446,6 +452,7 @@ export function SubscriptionForm({
   addonCharges,
   addonChargesFailed = false,
   meters = [],
+  features = [],
   priceUnits = [],
   customerLocked = false,
   inheritanceBlocks = NO_BLOCKS,
@@ -618,7 +625,11 @@ export function SubscriptionForm({
     })
     if (name === 'customerId') onCustomerChange?.(value)
     // Entitlement changes name the old plan's entitlements: another plan starts without them.
-    if (name === 'planId' && value !== values.planId) form.setValue('entitlementOverrides', [])
+    if (name === 'planId' && value !== values.planId) {
+      form.setValue('entitlementOverrides', [])
+      // The replacement plan may already include one of the staged features.
+      form.setValue('additionalEntitlements', [])
+    }
   }
 
   // V1 starts a contract with the chosen customer's tax rates; once per customer.
@@ -1257,6 +1268,9 @@ export function SubscriptionForm({
         />
         {values.planId ? (
           <EntitlementsSection
+            features={features}
+            additions={values.additionalEntitlements ?? []}
+            onAdditionsChange={(next) => set('additionalEntitlements', next)}
             planLabel={planLabel}
             entitlements={plan?.entitlements ?? []}
             isLoading={plan?.isLoading ?? true}
@@ -4011,19 +4025,56 @@ function entitlementResetsText(entitlement: Entitlement, override?: EntitlementO
  * A config entitlement keeps the plan's.
  */
 function EntitlementsSection({
+  features,
+  additions,
+  onAdditionsChange,
   planLabel,
   entitlements,
   isLoading,
   overrides,
   onChange,
 }: {
+  features: FeatureOption[]
+  additions: NonNullable<CreateSubscription['additionalEntitlements']>
+  onAdditionsChange: (next: NonNullable<CreateSubscription['additionalEntitlements']>) => void
   planLabel: string | undefined
   entitlements: Entitlement[]
   isLoading: boolean
   overrides: EntitlementOverride[]
   onChange: (next: EntitlementOverride[]) => void
 }) {
+  const [adding, setAdding] = useState<number | 'new' | null>(null)
   const [editing, setEditing] = useState<Entitlement | null>(null)
+  const staged: Entitlement[] = additions.map((draft, index) => ({
+    id: `staged-${index}`,
+    featureId: draft.featureId,
+    featureName: features.find((f) => f.id === draft.featureId)?.name ?? draft.featureId,
+    featureType: draft.featureType,
+    entityType: 'SUBSCRIPTION',
+    entityId: '',
+    usageLimit: 'usageLimit' in draft ? draft.usageLimit : null,
+    usageResetPeriod: 'usageResetPeriod' in draft ? draft.usageResetPeriod : null,
+    isSoftLimit: 'isSoftLimit' in draft ? draft.isSoftLimit : false,
+    isEnabled: 'isEnabled' in draft ? draft.isEnabled : null,
+    staticValue: 'staticValue' in draft ? draft.staticValue : null,
+    configValue: 'configValue' in draft ? draft.configValue : null,
+    ...('grant' in draft && draft.grant
+      ? {
+          grantQuota: draft.grant.quota,
+          grantMeasure: draft.grant.measure,
+          grantDurationUnit: draft.grant.unit,
+          grantDurationValue: draft.grant.every ?? 1,
+          grantAllocationBehavior: draft.grant.allocation,
+          aggregationMode: draft.grant.aggregation,
+        }
+      : {}),
+    createdAt: null,
+  }))
+  const available = features.filter(
+    (feature) =>
+      !entitlements.some((e) => e.featureId === feature.id) &&
+      !additions.some((e, index) => e.featureId === feature.id && index !== adding),
+  )
   const overrideOf = (id: string) => overrides.find((o) => o.entitlementId === id)
   const nameOf = (entitlement: Entitlement) => entitlement.featureName ?? entitlement.featureId
   const editable = (entitlement: Entitlement) =>
@@ -4037,6 +4088,11 @@ function EntitlementsSection({
       cell: (entitlement) => (
         <span className="flex items-center gap-1.5">
           <span className="font-medium">{nameOf(entitlement)}</span>
+          {entitlement.id.startsWith('staged-') ? (
+            <Badge variant="outline" size="sm">
+              Added
+            </Badge>
+          ) : null}
           {overrideOf(entitlement.id) ? (
             <Badge variant="outline" size="sm" className="shrink-0 font-normal">
               Changed
@@ -4069,7 +4125,17 @@ function EntitlementsSection({
       header: '',
       className: 'w-10 text-right',
       cell: (entitlement) =>
-        editable(entitlement) ? (
+        entitlement.id.startsWith('staged-') ? (
+          <RowActionsMenu
+            label={nameOf(entitlement)}
+            onEdit={() => setAdding(Number(entitlement.id.slice(7)))}
+            onRemove={() =>
+              onAdditionsChange(
+                additions.filter((_, index) => index !== Number(entitlement.id.slice(7))),
+              )
+            }
+          />
+        ) : editable(entitlement) ? (
           <RowActionsMenu
             label={nameOf(entitlement)}
             onEdit={() => setEditing(entitlement)}
@@ -4094,19 +4160,56 @@ function EntitlementsSection({
     <FormCard
       title="Entitlements"
       icon={<KeyRoundIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
-      description={`From the ${planLabel ? `${planLabel} ` : ''}plan. Change one for this contract alone from its row.`}
+      adornment={
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-3"
+          disabled={isLoading || available.length === 0}
+          onClick={() => setAdding('new')}
+        >
+          <PlusIcon aria-hidden />
+          Add entitlement
+        </Button>
+      }
+      description={`From the ${planLabel ? `${planLabel} ` : ''}plan. Change one from its row or add an entitlement for this contract alone.`}
     >
       <div className="px-5 py-4 sm:px-6">
         <Frame>
           {isLoading ? (
             <EmptyLine>Loading the plan&apos;s entitlements…</EmptyLine>
-          ) : entitlements.length === 0 ? (
+          ) : entitlements.length + staged.length === 0 ? (
             <EmptyLine>This plan includes no entitlements.</EmptyLine>
           ) : (
-            <SimpleTable columns={columns} rows={entitlements} />
+            <SimpleTable columns={columns} rows={[...entitlements, ...staged]} />
           )}
         </Frame>
       </div>
+      <FormDialog
+        open={adding !== null}
+        onOpenChange={(open) => !open && setAdding(null)}
+        title={adding === 'new' ? 'Add entitlement' : 'Edit entitlement'}
+      >
+        {adding !== null ? (
+          <EntitlementCreateForm
+            key={adding}
+            grantModel
+            features={available}
+            {...(typeof adding === 'number' && additions[adding]
+              ? { defaultValue: additions[adding] }
+              : {})}
+            submitLabel={adding === 'new' ? 'Add entitlement' : 'Save entitlement'}
+            onSubmit={(draft) => {
+              onAdditionsChange(
+                adding === 'new'
+                  ? [...additions, draft]
+                  : additions.map((row, index) => (index === adding ? draft : row)),
+              )
+              setAdding(null)
+            }}
+          />
+        ) : null}
+      </FormDialog>
       <EntitlementOverrideDialog
         key={editing?.id ?? 'closed'}
         entitlement={editing}
@@ -5145,11 +5248,13 @@ function ReviewStep({
         <ReviewRow
           label="Entitlements"
           value={
-            entitlements.length === 0
-              ? 'None'
-              : `${entitlements.length}, from the plan${
-                  changedEntitlements > 0 ? ` · ${changedEntitlements} changed` : ''
-                }`
+            (values.additionalEntitlements?.length ?? 0) > 0
+              ? `${entitlements.length} from the plan · ${values.additionalEntitlements!.length} added`
+              : entitlements.length === 0
+                ? 'None'
+                : `${entitlements.length}, from the plan${
+                    changedEntitlements > 0 ? ` · ${changedEntitlements} changed` : ''
+                  }`
           }
         />
         {(values.spendingAllowances?.length ?? 0) > 0 ? (

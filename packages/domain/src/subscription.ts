@@ -18,7 +18,7 @@ import {
   currentVersion,
 } from './price'
 import { priceOverrideSchema, type PriceOverride } from './priceOverride'
-import { meteredGrantSchema } from './entitlement'
+import { createEntitlementSchema, meteredGrantSchema } from './entitlement'
 
 /**
  * A subscription, as the list reads it.
@@ -551,6 +551,7 @@ export const createSubscriptionSchema = z
     enableTrueUp: z.boolean(),
     chargeCommitments: z.array(chargeCommitmentSchema),
     spendingAllowances: z.array(spendingAllowanceSchema).optional(),
+    additionalEntitlements: z.array(createEntitlementSchema).optional(),
     entitlementOverrides: z.array(
       z.object({
         entitlementId: z.string().min(1),

@@ -1596,6 +1596,25 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
   }
 }
 
+/** Attach staged entitlements after creation without retrying an already committed contract. */
+export async function createSubscriptionWithEntitlements<T extends { id?: string | undefined }>(
+  draft: CreateSubscription,
+  create: () => Promise<T>,
+  attach: (id: string, entitlement: CreateEntitlement) => Promise<unknown>,
+): Promise<T & { entitlementFailures: string[] }> {
+  const created = await create()
+  const entitlementFailures: string[] = []
+  for (const entitlement of draft.additionalEntitlements ?? []) {
+    try {
+      if (!created.id) throw new Error('The created contract has no ID')
+      await attach(created.id, entitlement)
+    } catch {
+      entitlementFailures.push(entitlement.featureId)
+    }
+  }
+  return { ...created, entitlementFailures }
+}
+
 /** Start a subscription: `POST /subscriptions`. Call `mutateAsync(draft)`. */
 export function useCreateSubscription() {
   const client = useFlexprice()
@@ -1604,8 +1623,22 @@ export function useCreateSubscription() {
   return useMutation({
     meta: { notify: { success: 'Contract created', error: 'Could not create the contract.' } },
     mutationFn: (draft: CreateSubscription) =>
-      call(() =>
-        client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never),
+      createSubscriptionWithEntitlements(
+        draft,
+        () =>
+          call(() =>
+            client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never),
+          ),
+        (id, entitlement) =>
+          call(() =>
+            client.entitlements.createEntitlement(
+              toEntitlementRequest(
+                entitlement,
+                EntitlementEntityType.Subscription,
+                id,
+              ) as FlexpriceModels.CreateEntitlementRequest,
+            ),
+          ),
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
