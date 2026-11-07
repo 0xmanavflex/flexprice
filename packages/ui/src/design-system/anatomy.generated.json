@@ -1863,16 +1863,19 @@
       "composes": [
         "Composer",
         "ConfirmDialog",
-        "DetailTable",
+        "EntityLink",
+        "EyeIcon",
         "Field",
         "FormDialog",
+        "InfoHint",
         "OptionCombobox",
         "OptionMultiCombobox",
         "PencilIcon",
+        "Pill",
         "PlusIcon",
-        "RowActionsMenu",
         "Section",
-        "SectionEmpty"
+        "SectionEmpty",
+        "UserIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/contracts/ContractHierarchyEditor.stories.tsx"
@@ -2981,7 +2984,6 @@
         "AddonSubscriptionsView",
         "ChargeTable",
         "ContractBenefitsEditor",
-        "ContractHierarchyEditor",
         "CouponRedemptionsView",
         "CreditGrantTable",
         "CustomerAnalyticsView",
@@ -3399,6 +3401,7 @@
       ],
       "usedBy": [
         "AccountRollforward",
+        "ContractHierarchyEditor",
         "CustomerDetail",
         "EntitlementTable",
         "EntitlementUsage",
@@ -3740,6 +3743,7 @@
         "BillingEntityField",
         "ChargeTable",
         "ConnectionExports",
+        "ContractHierarchyEditor",
         "CustomerActivityView",
         "CustomerDetail",
         "DataExportDetail",
@@ -4827,6 +4831,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ContractHierarchyEditor",
         "CustomerWalletView",
         "DashedRule",
         "Field",
@@ -6302,6 +6307,7 @@
         "ChargeTable",
         "CheckoutLinkPanel",
         "ConnectionExports",
+        "ContractHierarchyEditor",
         "ContractIntegrations",
         "CreditNoteDetailView",
         "CustomerActivityView",
@@ -7257,7 +7263,6 @@
         "BillingEntityIntegrations",
         "ChargeTable",
         "ContractBenefitsEditor",
-        "ContractHierarchyEditor",
         "CreditGrantTable",
         "CustomerDetail",
         "EntitlementTable",
@@ -8911,6 +8916,7 @@
       "usedBy": [
         "ActivityEventSheet",
         "AddonChargesDialog",
+        "ContractHierarchyEditor",
         "CustomerActivityView",
         "CustomerGrid",
         "InvoiceDetailView",
