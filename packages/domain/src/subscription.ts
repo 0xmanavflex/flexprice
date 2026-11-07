@@ -1336,6 +1336,8 @@ export interface AddContractAddon {
   changeAt?: AddonChangeAt
   /** Charge or credit the part of the period it is on for. Absent: the API's default. */
   prorate?: boolean
+  /** Recurring with the contract, or billed once. Absent: recurring. */
+  cadence?: 'recurring' | 'one_time'
 }
 
 export type AddonChangeAt = 'immediate' | 'end_of_period'

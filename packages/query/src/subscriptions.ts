@@ -2691,6 +2691,7 @@ export function toAddAddonRequest(
         ? { changeAt: draft.changeAt }
         : {}),
     ...(draft.prorate === undefined ? {} : { prorationBehavior: prorationOf(draft.prorate) }),
+    ...(draft.cadence === 'one_time' ? { billingPeriod: 'ONETIME' } : {}),
   }
 }
 

@@ -1200,6 +1200,7 @@ export function SubscriptionForm({
     phases: values.planId ? (
       <div className="flex flex-col gap-5">
         <PhasesStep
+          timeZone={customer?.timezone}
           phases={values.phases}
           starts={starts}
           startDate={values.startDate}
@@ -2587,6 +2588,7 @@ function PhaseNumber({ n }: { n: number }) {
  * starts where the one before it ends, so only ends are chosen after the first.
  */
 function PhasesStep({
+  timeZone,
   phases,
   starts,
   startDate,
@@ -2606,6 +2608,7 @@ function PhasesStep({
   priceUnits,
   planLabel,
 }: {
+  timeZone: string | undefined
   phases: SubscriptionPhase[]
   starts: string[]
   startDate: string
@@ -2984,6 +2987,8 @@ function PhasesStep({
                       id={id}
                       {...field}
                       value={startDate}
+                      withTime
+                      timeZone={timeZone}
                       onValueChange={onStartDate}
                       placeholder={`Today, ${formatDay(today)}`}
                     />
@@ -3012,6 +3017,8 @@ function PhasesStep({
                     id={id}
                     {...field}
                     value={phase.endDate}
+                    withTime
+                    timeZone={timeZone}
                     onValueChange={(endDate) => update(index, { endDate })}
                     placeholder={
                       index === phases.length - 1 ? 'Runs until cancelled' : 'Choose a date'
@@ -3067,9 +3074,13 @@ function RemoveButton({ label, onClick }: { label: string; onClick: () => void }
 /** An add-on's own pricing on one contract: new prices on its charges, commitments on its usage charges. */
 /** When an add-on starts or ends on a running contract, as V1 offers it. */
 export const ADDON_TIMING_OPTIONS: Option[] = [
-  { value: 'immediate', label: 'Immediately' },
-  { value: 'end_of_period', label: 'At the end of the current period' },
-  { value: 'date', label: 'On a date' },
+  { value: 'immediate', label: 'Now', description: 'Attach the add-on right away.' },
+  {
+    value: 'end_of_period',
+    label: 'End of current period',
+    description: 'Attach when the current billing period ends.',
+  },
+  { value: 'date', label: 'Custom date', description: 'Pick the date the add-on starts.' },
 ]
 
 export interface AddonPricing {
@@ -3086,6 +3097,99 @@ export interface AddonPricing {
   startWhen?: AddonChangeAt | 'date'
   /** Charge for the part of the period it is on for (V1's proration). */
   prorate?: boolean
+  /** Recurring with the contract, or a single charge. */
+  cadence?: 'recurring' | 'one_time'
+}
+
+/** Starts, cadence, and proration for one add-on. */
+export function AddonScheduleFields({
+  value,
+  onChange,
+  idPrefix = 'addon',
+}: {
+  value: AddonPricing
+  onChange: (next: AddonPricing) => void
+  idPrefix?: string
+}) {
+  const [advanced, setAdvanced] = useState(false)
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
+        <LabelWithHint htmlFor={`${idPrefix}-when`} hint="When this add-on starts billing.">
+          Starts
+        </LabelWithHint>
+        <OptionSelect
+          id={`${idPrefix}-when`}
+          value={value.startWhen ?? 'immediate'}
+          onValueChange={(next) => {
+            const startWhen = next as AddonChangeAt | 'date'
+            const { startDate: _, ...rest } = value
+            onChange(startWhen === 'date' ? { ...value, startWhen } : { ...rest, startWhen })
+          }}
+          options={ADDON_TIMING_OPTIONS}
+        />
+      </div>
+      {value.startWhen === 'date' ? (
+        <div className="flex flex-col gap-2">
+          <LabelWithHint htmlFor={`${idPrefix}-start`} hint="The day this add-on starts.">
+            Start date
+          </LabelWithHint>
+          <DateInput
+            id={`${idPrefix}-start`}
+            value={value.startDate ?? ''}
+            onValueChange={(startDate) => onChange({ ...value, startDate })}
+          />
+        </div>
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="self-start"
+        aria-expanded={advanced}
+        onClick={() => setAdvanced((open) => !open)}
+      >
+        Advanced options
+      </Button>
+      {advanced ? (
+        <>
+          <div className="flex flex-col gap-2">
+            <LabelWithHint htmlFor={`${idPrefix}-cadence`} hint="Bill with every period, or once.">
+              Cadence
+            </LabelWithHint>
+            <OptionSelect
+              id={`${idPrefix}-cadence`}
+              value={value.cadence ?? 'recurring'}
+              onValueChange={(cadence) =>
+                onChange({ ...value, cadence: cadence as 'recurring' | 'one_time' })
+              }
+              options={[
+                { value: 'recurring', label: 'Recurring' },
+                { value: 'one_time', label: 'One time' },
+              ]}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <LabelWithHint
+              htmlFor={`${idPrefix}-prorate`}
+              hint="Charge for the part of the period this add-on is on for."
+            >
+              Proration
+            </LabelWithHint>
+            <OptionSelect
+              id={`${idPrefix}-prorate`}
+              value={value.prorate === false ? 'none' : 'prorate'}
+              onValueChange={(next) => onChange({ ...value, prorate: next === 'prorate' })}
+              options={[
+                { value: 'prorate', label: 'Prorate' },
+                { value: 'none', label: 'No proration' },
+              ]}
+            />
+          </div>
+        </>
+      ) : null}
+    </div>
+  )
 }
 
 /**
@@ -3315,47 +3419,9 @@ export function AddonChargesDialog({
               )}
             </div>
           )}
-          {timing ? (
-            <>
-              <div className="flex flex-col gap-2">
-                <LabelWithHint htmlFor="addon-when" hint="When this add-on starts billing.">
-                  Starts
-                </LabelWithHint>
-                <OptionSelect
-                  id="addon-when"
-                  value={value.startWhen ?? 'immediate'}
-                  onValueChange={(next) => {
-                    const startWhen = next as AddonChangeAt | 'date'
-                    const { startDate: _, ...rest } = value
-                    onChange(
-                      startWhen === 'date' ? { ...value, startWhen } : { ...rest, startWhen },
-                    )
-                  }}
-                  options={ADDON_TIMING_OPTIONS}
-                />
-              </div>
-              {value.startWhen === 'date' ? (
-                <div className="flex flex-col gap-2">
-                  <LabelWithHint htmlFor="addon-start" hint="The day this add-on starts.">
-                    Start date
-                  </LabelWithHint>
-                  <DateInput
-                    id="addon-start"
-                    value={value.startDate ?? ''}
-                    onValueChange={(startDate) => onChange({ ...value, startDate })}
-                  />
-                </div>
-              ) : null}
-              <span className="flex items-center justify-between gap-4 text-sm">
-                <label htmlFor="addon-prorate">Prorate the current period</label>
-                <Switch
-                  id="addon-prorate"
-                  checked={value.prorate ?? true}
-                  onCheckedChange={(prorate) => onChange({ ...value, prorate })}
-                />
-              </span>
-            </>
-          ) : (
+          {timing && charges !== null ? (
+            <AddonScheduleFields value={value} onChange={onChange} />
+          ) : timing ? null : (
             <div className="flex flex-col gap-2">
               <LabelWithHint
                 htmlFor="addon-start"

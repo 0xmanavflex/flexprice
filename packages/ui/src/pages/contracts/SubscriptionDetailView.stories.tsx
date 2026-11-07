@@ -1444,7 +1444,9 @@ export const EditASetAsideAddon: Story = {
     await userEvent.click(
       await screen.findByRole('option', { name: 'At the end of the current period' }),
     )
-    await userEvent.click(dialog.getByRole('switch', { name: 'Prorate the current period' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Advanced options' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Proration' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'No proration' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
@@ -1505,7 +1507,9 @@ export const AddonTimingAndRemoval: Story = {
     await userEvent.click(
       await screen.findByRole('option', { name: 'At the end of the current period' }),
     )
-    await userEvent.click(dialog.getByRole('switch', { name: 'Prorate the current period' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Advanced options' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Proration' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'No proration' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
@@ -1554,7 +1558,9 @@ export const AddAddonWithCommitment: Story = {
     const seats = dialog.getByRole('textbox', { name: 'Quantity of Support seat' })
     await userEvent.clear(seats)
     await userEvent.type(seats, '2')
-    await userEvent.click(dialog.getByRole('switch', { name: 'Prorate the current period' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Advanced options' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: 'Proration' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'No proration' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Actions for Support seat' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Override price' }))
     const price = within(
@@ -1573,10 +1579,8 @@ export const AddAddonWithCommitment: Story = {
     await userEvent.click(commitment.getByRole('button', { name: 'Save commitment' }))
     const back = within(await screen.findByRole('dialog', { name: 'Modify add-ons' }))
     await expect(back.getByRole('textbox', { name: 'Quantity of Support seat' })).toHaveValue('2')
-    await expect(back.getByRole('switch', { name: 'Prorate the current period' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    )
+    await userEvent.click(back.getByRole('button', { name: 'Advanced options' }))
+    await expect(back.getByRole('combobox', { name: 'Proration' })).toHaveTextContent('No proration')
     await userEvent.click(back.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
@@ -2038,7 +2042,7 @@ export const ChangeQuantity: Story = {
     await userEvent.click(dialog.getByRole('button', { name: 'Preview change' }))
     await expect(args.onPreviewQuantity).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'line_1' }),
-      { quantity: '5', amount: '1500', effectiveDate: '' },
+      { quantity: '5', amount: '1500', effectiveDate: '2026-10-31T23:59:59.999Z' },
     )
     // The preview is shown before anything is saved.
     const newLine = (await dialog.findByText('New line')).closest('tr')!
