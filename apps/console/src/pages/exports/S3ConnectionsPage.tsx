@@ -4,6 +4,7 @@ import {
   useDataExportCounts,
   useDisconnectIntegration,
   useS3Connections,
+  useUpdateS3Connection,
 } from '@fp/query'
 import { S3ConnectionList } from '@fp/ui/pages'
 import { toListFailure } from '../shared/listFailure'
@@ -19,6 +20,7 @@ export function S3ConnectionsPage({ onBack, onOpen }: S3ConnectionsPageProps) {
   const connections = useS3Connections()
   const counts = useDataExportCounts()
   const create = useCreateS3Connection()
+  const update = useUpdateS3Connection()
   const disconnect = useDisconnectIntegration()
   const failure = toListFailure(connections.error, 'S3 connections')
 
@@ -36,6 +38,13 @@ export function S3ConnectionsPage({ onBack, onOpen }: S3ConnectionsPageProps) {
           await create.mutateAsync(draft)
         } catch (error) {
           throw writeError(error, 'The connection could not be created.')
+        }
+      }}
+      onUpdate={async (connection, draft) => {
+        try {
+          await update.mutateAsync({ id: connection.id, draft })
+        } catch (error) {
+          throw writeError(error, 'The connection could not be updated.')
         }
       }}
       onDelete={async (connection) => {

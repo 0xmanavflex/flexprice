@@ -14,12 +14,14 @@ import {
   type ExportInterval,
   type ExportMetadataEntity,
   type ExportRunRequest,
+  type S3Connection,
   type S3ConnectionErrors,
   clampMetadataFields,
   emptyDataExport,
   emptyS3Connection,
   validateDataExport,
   validateS3Connection,
+  validateS3ConnectionEdit,
 } from '@fp/domain'
 import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { Button } from '@ui/components/primitives/button'
@@ -130,11 +132,27 @@ export interface S3ConnectionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (draft: CreateS3Connection) => Promise<unknown>
+  /** Edits this connection: rename it, or rotate its AWS keys. */
+  connection?: S3Connection | null
 }
 
 /** Connect a bucket: Flexprice-managed, or your own with AWS keys. */
-export function S3ConnectionDialog({ open, onOpenChange, onSubmit }: S3ConnectionDialogProps) {
-  const [draft, setDraft] = useState<CreateS3Connection>(emptyS3Connection)
+export function S3ConnectionDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  connection = null,
+}: S3ConnectionDialogProps) {
+  const editing = connection !== null
+  const [draft, setDraft] = useState<CreateS3Connection>(() =>
+    connection
+      ? {
+          ...emptyS3Connection(),
+          name: connection.name,
+          flexpriceManaged: connection.flexpriceManaged,
+        }
+      : emptyS3Connection(),
+  )
   const [errors, setErrors] = useState<S3ConnectionErrors>({})
   const submit = useSubmit()
   const set = <K extends keyof CreateS3Connection>(key: K, value: CreateS3Connection[K]) => {
@@ -151,11 +169,14 @@ export function S3ConnectionDialog({ open, onOpenChange, onSubmit }: S3Connectio
 
   const handle = (event: FormEvent) => {
     event.preventDefault()
-    const found = validateS3Connection(draft)
+    const found = editing ? validateS3ConnectionEdit(draft) : validateS3Connection(draft)
     setErrors(found)
     if (Object.keys(found).length > 0) return
     void submit
-      .run(() => onSubmit(draft), 'The connection could not be created.')
+      .run(
+        () => onSubmit(draft),
+        editing ? 'The connection could not be updated.' : 'The connection could not be created.',
+      )
       .then((ok) => ok && close(false))
   }
 
@@ -163,7 +184,7 @@ export function S3ConnectionDialog({ open, onOpenChange, onSubmit }: S3Connectio
     <FormDialog
       open={open}
       onOpenChange={close}
-      title="Connect Amazon S3"
+      title={editing ? 'Edit S3 connection' : 'Connect Amazon S3'}
       size="sm"
       isPending={submit.pending}
     >
@@ -183,26 +204,32 @@ export function S3ConnectionDialog({ open, onOpenChange, onSubmit }: S3Connectio
             />
           )}
         </Field>
-        <FieldRoot orientation="horizontal" className="rounded-lg border p-4">
-          <FieldContent>
-            <FieldLabel htmlFor="s3-flexprice-managed">Flexprice-managed bucket</FieldLabel>
-            <FieldDescription>
-              Flexprice hosts the bucket and its keys. Turn off to export to a bucket you own.
-            </FieldDescription>
-          </FieldContent>
-          <Switch
-            id="s3-flexprice-managed"
-            checked={draft.flexpriceManaged}
-            onCheckedChange={(checked) => set('flexpriceManaged', checked)}
-          />
-        </FieldRoot>
+        {editing ? null : (
+          <FieldRoot orientation="horizontal" className="rounded-lg border p-4">
+            <FieldContent>
+              <FieldLabel htmlFor="s3-flexprice-managed">Flexprice-managed bucket</FieldLabel>
+              <FieldDescription>
+                Flexprice hosts the bucket and its keys. Turn off to export to a bucket you own.
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="s3-flexprice-managed"
+              checked={draft.flexpriceManaged}
+              onCheckedChange={(checked) => set('flexpriceManaged', checked)}
+            />
+          </FieldRoot>
+        )}
         {draft.flexpriceManaged ? null : (
           <>
             <Field
-              label="AWS access key ID"
-              hint="An IAM user's key with write access to the bucket."
+              label={editing ? 'New AWS access key ID' : 'AWS access key ID'}
+              hint={
+                editing
+                  ? 'Leave both keys blank to keep the current ones.'
+                  : "An IAM user's key with write access to the bucket."
+              }
               error={errors.accessKeyId}
-              required
+              required={!editing}
             >
               {(field) => (
                 <Input
@@ -215,10 +242,10 @@ export function S3ConnectionDialog({ open, onOpenChange, onSubmit }: S3Connectio
               )}
             </Field>
             <Field
-              label="AWS secret access key"
+              label={editing ? 'New AWS secret access key' : 'AWS secret access key'}
               hint="Stored encrypted. It is never shown again."
               error={errors.secretAccessKey}
-              required
+              required={!editing}
             >
               {(field) => (
                 <Input
@@ -255,8 +282,8 @@ export function S3ConnectionDialog({ open, onOpenChange, onSubmit }: S3Connectio
         <Footer
           pending={submit.pending}
           error={submit.error}
-          label="Connect"
-          pendingLabel="Connecting…"
+          label={editing ? 'Save' : 'Connect'}
+          pendingLabel={editing ? 'Saving…' : 'Connecting…'}
           onCancel={() => close(false)}
         />
       </form>

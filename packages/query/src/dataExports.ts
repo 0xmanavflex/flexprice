@@ -6,6 +6,7 @@ import {
   call,
   createConnection,
   listConnections,
+  updateConnection,
 } from '@fp/api'
 import {
   type CreateDataExport,
@@ -446,6 +447,48 @@ export function useCreateS3Connection() {
     mutationFn: async (draft: CreateS3Connection) => {
       const { token, environmentId } = await credentials(auth, 'add')
       await createConnection(serverURL, token, environmentId, toCreateS3ConnectionRequest(draft))
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.s3Connections.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all() })
+    },
+  })
+}
+
+/** The edit request: the name, plus a new key pair (and its session token) when one was entered. */
+export function toUpdateS3ConnectionRequest(draft: CreateS3Connection) {
+  const accessKeyId = draft.accessKeyId.trim()
+  const sessionToken = draft.sessionToken.trim()
+  return {
+    name: draft.name.trim(),
+    ...(accessKeyId
+      ? {
+          encrypted_secret_data: {
+            provider_type: 's3',
+            aws_access_key_id: accessKeyId,
+            aws_secret_access_key: draft.secretAccessKey.trim(),
+            ...(sessionToken ? { aws_session_token: sessionToken } : {}),
+          },
+        }
+      : {}),
+  }
+}
+
+/** Renames a connection or rotates its AWS keys: `PUT /connections/{id}`. */
+export function useUpdateS3Connection() {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, draft }: { id: string; draft: CreateS3Connection }) => {
+      const { token, environmentId } = await credentials(auth, 'update')
+      await updateConnection(
+        serverURL,
+        token,
+        environmentId,
+        id,
+        toUpdateS3ConnectionRequest(draft),
+      )
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.s3Connections.all() })
