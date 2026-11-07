@@ -398,8 +398,9 @@ export function ContractIntegrations({
                     link={link}
                     entityLabel={entityLabel}
                     href={providerHref?.(link) ?? null}
-                    onPush={write.allowed && onPushLink ? () => onPushLink(link) : undefined}
-                    syncing={syncing}
+                    {...(write.allowed && onPushLink
+                      ? { onPush: () => onPushLink(link), syncing }
+                      : {})}
                     onUnlink={write.allowed ? onUnlink : undefined}
                     onAskUnlink={() => {
                       setError(null)

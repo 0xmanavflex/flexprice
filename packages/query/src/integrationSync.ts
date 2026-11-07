@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError, ErrorKind, createCustomerSetupIntent, pushToIntegrations } from '@fp/api'
 import { queryKeys } from './keys'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
-import { useSingleFlight } from './singleFlight'
 
 /**
  * Push a customer to the providers that sync customers outbound: V1's
@@ -13,7 +12,7 @@ export function usePushCustomerToIntegrations(customerId: string) {
   const serverURL = useFlexpriceServerURL()
   const auth = useFlexpriceAuth()
   const queryClient = useQueryClient()
-  const push = useMutation({
+  return useMutation({
     mutationFn: async (connectionId?: string) => {
       const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
       if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to push this customer.')
@@ -31,7 +30,6 @@ export function usePushCustomerToIntegrations(customerId: string) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
     },
   })
-  return useSingleFlight(push)
 }
 
 /**
