@@ -123,7 +123,7 @@ export function SummaryCell({
   action?: { label: string; run: () => void } | undefined
 }) {
   return (
-    <div className="flex flex-col gap-4 px-6 py-5">
+    <div className="flex h-full flex-col gap-4 px-6 py-5">
       <div className="flex items-center gap-3">
         <IconTile
           size="default"
@@ -153,7 +153,7 @@ export function SummaryCell({
       {action ? (
         <Button
           variant="link"
-          className="text-foreground h-auto self-start p-0 text-[13px]"
+          className="text-foreground mt-auto h-auto self-start p-0 text-[13px]"
           onClick={action.run}
         >
           {action.label}
