@@ -3492,12 +3492,13 @@ export const handlers = [
 
   /*
    * `GET /customers/portal/{external_id}`: a portal session. The token is
-   * what the portal mocks accept (anything but "expired"), so "Open customer
-   * portal" lands on a working portal.
+   * what the portal mocks accept (anything but "expired"). Like the API, it
+   * answers the full portal link, which the console copies and opens: here the
+   * mocked app's own portal, so "Open customer portal" lands on a working one.
    */
   http.get(`${BASE}/customers/portal/:externalId`, ({ params }) =>
     HttpResponse.json({
-      url: `https://portal.example/?token=demo-${String(params['externalId'])}`,
+      url: `${window.location.origin}/p?token=demo-${String(params['externalId'])}`,
       token: `demo-${String(params['externalId'])}`,
       expires_at: new Date(Date.now() + 6 * 3_600_000).toISOString(),
     }),
