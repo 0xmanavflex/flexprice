@@ -1,5 +1,6 @@
 import { ApiError, ErrorKind } from './errors'
 import { request } from './session'
+import { request as consoleRequest } from './settings'
 
 /**
  * One-time password links: how a self-hosted deployment (Flexprice's own
@@ -21,6 +22,10 @@ import { request } from './session'
  * None of these are in the OpenAPI document (they are dashboard-only), so the
  * SDK has no methods for them, and its `CreateUserResponse` schema drops
  * `invite_token`. That is why they speak `fetch` here.
+ *
+ * The signed-in calls go through `settings.ts`'s `request`, as the SDK would:
+ * it sends `X-Environment-ID` and reports a 401 so an expired session ends.
+ * The two link calls are public and carry no session at all.
  */
 
 export type PasswordLinkPurpose = 'invite' | 'reset'
@@ -62,12 +67,14 @@ export function toPasswordLink(body: unknown): PasswordLink {
 export async function createPasswordLink(
   serverURL: string,
   token: string,
+  environmentId: string,
   userId: string,
 ): Promise<PasswordLink> {
-  const body = await request(serverURL, `/users/${encodeURIComponent(userId)}/password-link`, {
-    method: 'POST',
-    token,
-  })
+  const body = await consoleRequest(
+    serverURL,
+    `/users/${encodeURIComponent(userId)}/password-link`,
+    { method: 'POST', token, environmentId },
+  )
   return toPasswordLink(body)
 }
 
@@ -75,9 +82,15 @@ export async function createPasswordLink(
 export async function changeOwnPassword(
   serverURL: string,
   token: string,
+  environmentId: string,
   password: string,
 ): Promise<void> {
-  await request(serverURL, '/users/me/password', { method: 'PUT', token, body: { password } })
+  await consoleRequest(serverURL, '/users/me/password', {
+    method: 'PUT',
+    token,
+    environmentId,
+    body: { password },
+  })
 }
 
 export interface PasswordLinkDetails {
@@ -137,14 +150,14 @@ export function toInviteResult(body: unknown): InviteResult {
 export async function inviteUser(
   serverURL: string,
   token: string,
-  environmentId: string | null,
+  environmentId: string,
   payload: Record<string, unknown>,
 ): Promise<InviteResult> {
-  const body = await request(serverURL, '/users', {
+  const body = await consoleRequest(serverURL, '/users', {
     method: 'POST',
     token,
+    environmentId,
     body: payload,
-    ...(environmentId ? { environmentId } : {}),
   })
   return toInviteResult(body)
 }

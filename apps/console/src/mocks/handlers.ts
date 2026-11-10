@@ -848,12 +848,15 @@ const TENANT_REF = { id: TENANT_ID, name: 'Northwind Systems' }
 
 /** `UserResponse`: flat, single-word keys, no snake_case, no timestamps. */
 /**
- * A mock one-time password link token: `mock.<purpose>.<user id>`. The real
- * one is HMAC-signed over the user's password hash; the mocks only need to
- * read back whose it is, and to refuse it once used.
+ * A mock one-time password link token: `mock.<purpose>.<serial>.<user id>`.
+ * The real one is HMAC-signed over the user's password hash; the mocks only
+ * need to read back whose it is, and to refuse it once used. The serial makes
+ * each link new, so a reissued link works after an earlier one was spent.
  */
+let mockLinkSerial = 0
 function mockPasswordLinkToken(purpose: 'invite' | 'reset', userId: string): string {
-  return `mock.${purpose}.${userId}`
+  mockLinkSerial += 1
+  return `mock.${purpose}.${mockLinkSerial}.${userId}`
 }
 
 const spentMockLinks = new Set<string>()
@@ -861,7 +864,7 @@ const spentMockLinks = new Set<string>()
 function readMockPasswordLink(
   token: string,
 ): { purpose: 'invite' | 'reset'; userId: string } | null {
-  const [prefix, purpose, ...rest] = token.split('.')
+  const [prefix, purpose, _serial, ...rest] = token.split('.')
   if (prefix !== 'mock' || (purpose !== 'invite' && purpose !== 'reset')) return null
   if (spentMockLinks.has(token)) return null
   return { purpose, userId: rest.join('.') }

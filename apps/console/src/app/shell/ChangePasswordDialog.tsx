@@ -43,7 +43,10 @@ export function ChangePasswordDialog({
               : 'The password could not be changed. Try again.'
             : null
         }
-        onCancel={() => onOpenChange(false)}
+        onCancel={() => {
+          change.reset()
+          onOpenChange(false)
+        }}
         onSubmit={(password) =>
           change.mutate(password, {
             onSuccess: () => {

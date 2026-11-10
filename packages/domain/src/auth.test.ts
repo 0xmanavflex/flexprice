@@ -47,6 +47,19 @@ describe('setPasswordSchema', () => {
     ).toBe(true)
   })
 
+  // bcrypt hashes at most 72 bytes, and the APIs refuse rather than truncate.
+  it('caps the password at 72 bytes, not 72 characters', () => {
+    const ascii = 'a'.repeat(72)
+    expect(setPasswordSchema.safeParse({ password: ascii, confirm: ascii }).success).toBe(true)
+    const tooLong = 'a'.repeat(73)
+    expect(setPasswordSchema.safeParse({ password: tooLong, confirm: tooLong }).success).toBe(false)
+    // 40 characters, 80 bytes.
+    const accented = 'é'.repeat(40)
+    expect(setPasswordSchema.safeParse({ password: accented, confirm: accented }).success).toBe(
+      false,
+    )
+  })
+
   // A typo in a password field is invisible by definition.
   it('catches a mismatch, and reports it against the confirmation', () => {
     const result = setPasswordSchema.safeParse({ ...valid, confirm: 'correct horse batteru' })

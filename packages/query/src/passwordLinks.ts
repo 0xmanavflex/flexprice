@@ -31,7 +31,12 @@ export function useCreatePasswordLink() {
 
   return useMutation({
     mutationFn: async (userId: string) =>
-      createPasswordLink(serverURL, await requireToken(auth.getToken), userId),
+      createPasswordLink(
+        serverURL,
+        await requireToken(auth.getToken),
+        (await auth.getEnvironmentId()) ?? '',
+        userId,
+      ),
   })
 }
 
@@ -42,7 +47,12 @@ export function useChangeOwnPassword() {
 
   return useMutation({
     mutationFn: async (password: string) =>
-      changeOwnPassword(serverURL, await requireToken(auth.getToken), password),
+      changeOwnPassword(
+        serverURL,
+        await requireToken(auth.getToken),
+        (await auth.getEnvironmentId()) ?? '',
+        password,
+      ),
   })
 }
 

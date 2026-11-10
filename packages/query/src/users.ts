@@ -253,7 +253,7 @@ export function useInviteMember() {
       const result = await inviteUser(
         serverURL,
         token,
-        await auth.getEnvironmentId(),
+        (await auth.getEnvironmentId()) ?? '',
         toInviteMemberRequest(draft),
       )
       return {
