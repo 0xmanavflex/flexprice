@@ -1,4 +1,4 @@
-import { LogOutIcon, MoreHorizontalIcon, SettingsIcon, UserIcon } from '@ui/icons'
+import { KeyRoundIcon, LogOutIcon, MoreHorizontalIcon, SettingsIcon, UserIcon } from '@ui/icons'
 import { Avatar, AvatarFallback } from '@ui/components/primitives/avatar'
 import {
   DropdownMenu,
@@ -37,6 +37,8 @@ export interface ShellAccountProps {
   user: ShellUser
   onProfile?: () => void
   onSettings?: () => void
+  /** Change your own password. Omitted where the deployment has no such action. */
+  onChangePassword?: () => void
   onSignOut?: () => void
 }
 
@@ -48,7 +50,13 @@ function initialsOf(user: ShellUser): string {
   return letters.toUpperCase()
 }
 
-export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAccountProps) {
+export function ShellAccount({
+  user,
+  onProfile,
+  onSettings,
+  onChangePassword,
+  onSignOut,
+}: ShellAccountProps) {
   const { isMobile } = useSidebar()
   /*
    * A display name that fell back to the email address is not a second fact.
@@ -118,6 +126,12 @@ export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAc
                 <DropdownMenuItem onClick={onSettings}>
                   <SettingsIcon className="text-muted-foreground" aria-hidden />
                   Settings
+                </DropdownMenuItem>
+              ) : null}
+              {onChangePassword ? (
+                <DropdownMenuItem onClick={onChangePassword}>
+                  <KeyRoundIcon className="text-muted-foreground" aria-hidden />
+                  Change password
                 </DropdownMenuItem>
               ) : null}
             </DropdownMenuGroup>

@@ -11,6 +11,8 @@ const PUBLIC = new Set([
   '/auth/signup/confirmation',
   '/forgot-password',
   '/reset-password',
+  '/set-password',
+  '/auth',
 ])
 
 const routePaths = [

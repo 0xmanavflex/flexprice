@@ -14,6 +14,9 @@ export const queryKeys = {
   session: {
     all: () => ['session'] as const,
     current: () => ['session', 'current'] as const,
+    /** What a one-time password link is for. Unscoped: read signed out. */
+    passwordLink: (serverURL: string, linkToken: string) =>
+      ['session', 'passwordLink', serverURL, linkToken] as const,
     /**
      * The role catalogue the signed-in principal's access is resolved from.
      * Under the unscoped `session` root: roles are tenant-wide, so switching

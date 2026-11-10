@@ -873,3 +873,10 @@ export {
 export { useContractPickerFeatures, useContractPickerPriceUnits } from './contractPickers'
 
 export { useDetachInheritedContract } from './subscriptions'
+export {
+  useChangeOwnPassword,
+  useCreatePasswordLink,
+  usePasswordLinkDetails,
+  useSetPasswordWithLink,
+} from './passwordLinks'
+export type { PasswordLink, PasswordLinkPurpose } from '@fp/api'

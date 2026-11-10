@@ -99,3 +99,43 @@ export const Rejected: Story = {
     await expect(canvas.getByRole('alert')).toHaveTextContent('at least one symbol')
   },
 }
+
+/** A self-hosted invitation link: the member's email, and their first password. */
+export const InvitationLink: Story = {
+  args: {
+    title: 'Set your password',
+    description: 'Choose the password you will sign in to Flexprice with.',
+    email: 'amara@northwind.example',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { level: 1 })).toHaveTextContent('Set your password')
+    await expect(canvas.getByLabelText('Email')).toHaveValue('amara@northwind.example')
+  },
+}
+
+/** While the link is being checked there is nothing to fill in. */
+export const CheckingLink: Story = {
+  args: { checking: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Checking your link…')).toBeInTheDocument()
+    await expect(canvas.queryByLabelText('New password')).not.toBeInTheDocument()
+  },
+}
+
+/** A spent admin link: the way on is the admin, not a request form. */
+export const ExpiredAdminLink: Story = {
+  render: ({ onRequestAnother: _omitted, ...args }) => <SetPasswordForm {...args} />,
+  args: {
+    expired: true,
+    expiredDescription: 'Links are good for one use. Ask your admin for a new one.',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/Ask your admin for a new one/)).toBeInTheDocument()
+    await expect(
+      canvas.queryByRole('button', { name: 'Request a new link' }),
+    ).not.toBeInTheDocument()
+  },
+}

@@ -847,6 +847,42 @@ const TENANT_ID = 'tenant_demo'
 const TENANT_REF = { id: TENANT_ID, name: 'Northwind Systems' }
 
 /** `UserResponse`: flat, single-word keys, no snake_case, no timestamps. */
+/**
+ * A mock one-time password link token: `mock.<purpose>.<serial>.<user id>`.
+ * The real one is HMAC-signed over the user's password hash; the mocks only
+ * need to read back whose it is, and to refuse it once used. The serial makes
+ * each link new, so a reissued link works after an earlier one was spent.
+ */
+let mockLinkSerial = 0
+function mockPasswordLinkToken(purpose: 'invite' | 'reset', userId: string): string {
+  mockLinkSerial += 1
+  return `mock.${purpose}.${mockLinkSerial}.${userId}`
+}
+
+const spentMockLinks = new Set<string>()
+
+function readMockPasswordLink(
+  token: string,
+): { purpose: 'invite' | 'reset'; userId: string } | null {
+  const [prefix, purpose, _serial, ...rest] = token.split('.')
+  if (prefix !== 'mock' || (purpose !== 'invite' && purpose !== 'reset')) return null
+  if (spentMockLinks.has(token)) return null
+  return { purpose, userId: rest.join('.') }
+}
+
+function mockLinkExpired() {
+  return HttpResponse.json(
+    {
+      success: false,
+      error: {
+        message: 'This link has expired or was already used. Ask your admin for a new one.',
+        internal_error: 'password link is invalid',
+      },
+    },
+    { status: 404 },
+  )
+}
+
 const users: Record<string, unknown>[] = [
   {
     id: 'user_demo',
@@ -3709,11 +3745,49 @@ export const handlers = [
       tenant: TENANT_REF,
     }
     users.push(created)
-    // A person gets a one-time password, returned once; a service account does not.
+    // The mocks have no Supabase, so they answer as a self-hosted deployment:
+    // a person gets an invite link token (flexprice#3123), not a password.
     return HttpResponse.json(
-      type === 'user' ? { ...created, password: `Tmp-${Date.now().toString(36)}!` } : created,
+      type === 'user'
+        ? {
+            ...created,
+            invite_token: mockPasswordLinkToken('invite', created.id),
+            invite_expires_at: new Date(Date.now() + 7 * 24 * 3_600_000).toISOString(),
+          }
+        : created,
       { status: 201 },
     )
+  }),
+
+  // One-time password links. Every person in the mocks has a password but the
+  // newest invitee, so a link for anyone else is a reset.
+  http.post(`${BASE}/users/:id/password-link`, ({ params }) => {
+    const row = users.find((item) => item['id'] === String(params['id']))
+    if (!row) return new HttpResponse(null, { status: 404 })
+    const invited = String(row['id']).startsWith('user_mock_')
+    return HttpResponse.json({
+      token: mockPasswordLinkToken(invited ? 'invite' : 'reset', String(row['id'])),
+      purpose: invited ? 'invite' : 'reset',
+      expires_at: new Date(Date.now() + (invited ? 7 * 24 : 24) * 3_600_000).toISOString(),
+    })
+  }),
+
+  http.put(`${BASE}/users/me/password`, () => new HttpResponse(null, { status: 204 })),
+
+  http.post(`${BASE}/auth/password/check`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const link = readMockPasswordLink(readString(body, 'token'))
+    if (!link) return mockLinkExpired()
+    const row = users.find((item) => item['id'] === link.userId)
+    return HttpResponse.json({ purpose: link.purpose, email: readString(row ?? {}, 'email') })
+  }),
+
+  http.post(`${BASE}/auth/password`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const link = readMockPasswordLink(readString(body, 'token'))
+    if (!link) return mockLinkExpired()
+    spentMockLinks.add(readString(body, 'token'))
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.put(`${BASE}/users/me`, async ({ request }) => {

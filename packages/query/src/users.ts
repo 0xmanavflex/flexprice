@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type Flexprice, call } from '@fp/api'
+import { ApiError, ErrorKind, type Flexprice, call, inviteUser } from '@fp/api'
 import {
   type CreateServiceAccount,
   type InviteMember,
@@ -10,7 +10,7 @@ import {
   normalizeRoleSelection,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { useFlexprice } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
  * Members: people and service accounts, one endpoint, two screens.
@@ -231,19 +231,36 @@ export function toCreateServiceAccountRequest(
 /**
  * Invite a teammate: `POST /users` with `type: 'user'`.
  *
- * Resolves with the new member and the one-time password the API generates for
- * them. The password is returned once and stored nowhere, so the caller must
- * show it now or it is lost.
+ * What comes back depends on the deployment:
+ *
+ *   - **Hosted (Supabase):** a one-time `password`, returned once and stored
+ *     nowhere, so the caller must show it now or it is lost.
+ *   - **Self-hosted:** no password; an `invite_token` the admin shares as a
+ *     link, at which the member sets their own password (flexprice#3123).
+ *
+ * Sent with `fetch` rather than the SDK: the SDK's `CreateUserResponse` schema
+ * strips `invite_token`, which is not in the OpenAPI document.
  */
 export function useInviteMember() {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (draft: InviteMember) => {
-      const wire = await call(() => client.users.createUser(toInviteMemberRequest(draft) as never))
-      const password = (wire as { password?: string | undefined }).password ?? ''
-      return { member: toMember(wire as UserWire), password }
+      const token = await auth.getToken()
+      if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to invite a member.')
+      const result = await inviteUser(
+        serverURL,
+        token,
+        (await auth.getEnvironmentId()) ?? '',
+        toInviteMemberRequest(draft),
+      )
+      return {
+        member: toMember(result.user as UserWire),
+        password: result.password,
+        inviteLink: result.inviteLink,
+      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.members.all() })

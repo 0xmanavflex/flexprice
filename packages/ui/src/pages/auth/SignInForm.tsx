@@ -48,6 +48,11 @@ export const SignInFormProvenance = provenance({
 export interface SignInFormProps {
   onSubmit: (credentials: SignInCredentials) => void
   onForgotPassword?: () => void
+  /**
+   * Said where "Forgot your password?" would be, when there is no reset to
+   * start: on self-hosted, that an admin makes reset links.
+   */
+  forgotPasswordNote?: React.ReactNode
   isSubmitting?: boolean
   /** A failure, already a sentence. The form never sees an ApiError. */
   error?: string | null
@@ -68,6 +73,7 @@ export interface SignInFormProps {
 export function SignInForm({
   onSubmit,
   onForgotPassword,
+  forgotPasswordNote,
   isSubmitting = false,
   error = null,
   alternatives,
@@ -205,6 +211,9 @@ export function SignInForm({
             <FieldError id={passwordErrorId} className="text-xs">
               {errors.password.message}
             </FieldError>
+          ) : null}
+          {!onForgotPassword && forgotPasswordNote ? (
+            <p className="text-muted-foreground text-xs">{forgotPasswordNote}</p>
           ) : null}
         </FieldRoot>
       </FieldGroup>

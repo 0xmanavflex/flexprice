@@ -13,6 +13,8 @@ import {
   canRemoveMember,
 } from '@fp/domain'
 import {
+  type PasswordLink,
+  useCreatePasswordLink,
   useInviteMember,
   useRemoveMember,
   useRoles,
@@ -28,7 +30,7 @@ import {
   WriteGate,
   useAccess,
 } from '@fp/ui/compositions'
-import { PencilIcon } from '@fp/ui/icons'
+import { KeyRoundIcon, PencilIcon } from '@fp/ui/icons'
 import { RowActionsMenu } from '@fp/ui/pages'
 import {
   Badge,
@@ -41,6 +43,8 @@ import {
   DialogTitle,
   Input,
 } from '@fp/ui/primitives'
+import { useRegion } from '@/app/region'
+import { passwordLinkUrl, passwordLinksAvailableFor } from '@/app/auth/passwordLink'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,
@@ -74,10 +78,22 @@ import { useDraft } from './useDraft'
  * indistinguishable from an accepted one in the payload, and a "Pending" badge
  * derived from nothing is a lie with a colour. When the API grows the fields,
  * the columns can follow.
+ *
+ * ## Passwords: a link on self-hosted, a one-time password on hosted
+ *
+ * A self-hosted deployment (no Supabase) never hands an admin a member's
+ * password. An invitation answers with a one-time link, and "Reset password"
+ * on a member's row makes another; the member sets their own password at it
+ * (flexprice#3123). Hosted regions keep the one-time password on invite and
+ * Supabase's own reset email, and offer no "Reset password" here.
  */
 export function MembersPanel() {
   const [isInviting, setIsInviting] = useState(false)
   const [credentials, setCredentials] = useState<Credentials | null>(null)
+  const [shared, setShared] = useState<SharedLink | null>(null)
+  const { region } = useRegion()
+  const selfHosted = passwordLinksAvailableFor(region)
+  const createLink = useCreatePasswordLink()
   const [editing, setEditing] = useState<Member | null>(null)
   const [removing, setRemoving] = useState<Member | null>(null)
 
@@ -123,7 +139,11 @@ export function MembersPanel() {
           <EmptyState
             size="inline"
             title="Nobody else is on your team yet"
-            description="Invite a teammate by email and choose their roles. You get a one-time password to share with them."
+            description={
+              selfHosted
+                ? 'Invite a teammate by email and choose their roles. You get a link to share, where they set their own password.'
+                : 'Invite a teammate by email and choose their roles. You get a one-time password to share with them.'
+            }
           />
         }
         columns={[
@@ -169,6 +189,28 @@ export function MembersPanel() {
                             icon: <PencilIcon aria-hidden className="size-4" />,
                             onSelect: () => setEditing(member),
                           },
+                          // Self-hosted only: hosted members reset through
+                          // Supabase's email, and the API refuses links there.
+                          ...(selfHosted
+                            ? [
+                                {
+                                  label: 'Reset password',
+                                  icon: <KeyRoundIcon aria-hidden className="size-4" />,
+                                  onSelect: () => {
+                                    setShared({ member, link: null })
+                                    createLink.reset()
+                                    createLink.mutate(member.id, {
+                                      onSuccess: (link) =>
+                                        setShared((current) =>
+                                          current?.member.id === member.id
+                                            ? { member, link }
+                                            : current,
+                                        ),
+                                    })
+                                  },
+                                },
+                              ]
+                            : []),
                         ]}
                         // Absent rather than disabled when this member cannot be
                         // removed (the last super admin, or yourself).
@@ -193,16 +235,28 @@ export function MembersPanel() {
       <InviteDialog
         open={isInviting}
         roles={roles.data ?? []}
+        selfHosted={selfHosted}
         onOpenChange={(open) => {
           if (!open) setIsInviting(false)
         }}
-        onInvited={(credentials) => {
+        onInvited={({ member, password, inviteLink }) => {
           setIsInviting(false)
-          if (credentials.password) setCredentials(credentials)
+          if (inviteLink) setShared({ member, link: inviteLink })
+          else if (password) setCredentials({ email: member.email, password })
         }}
       />
 
       <CredentialsDialog credentials={credentials} onClose={() => setCredentials(null)} />
+
+      <PasswordLinkDialog
+        shared={shared}
+        isPending={createLink.isPending}
+        error={mutationMessage(createLink.error, 'The link could not be created.')}
+        onClose={() => {
+          setShared(null)
+          createLink.reset()
+        }}
+      />
 
       {editing ? (
         <EditRolesDialog
@@ -248,14 +302,17 @@ export function MembersPanel() {
 function InviteDialog({
   open,
   roles,
+  selfHosted,
   onOpenChange,
   onInvited,
 }: {
   open: boolean
   roles: Role[]
+  /** Self-hosted answers with an invite link; hosted with a one-time password. */
+  selfHosted: boolean
   onOpenChange: (open: boolean) => void
-  /** The invitation went through; the password is the API's one-time one. */
-  onInvited: (credentials: Credentials) => void
+  /** The invitation went through, with whichever of the two the API sent. */
+  onInvited: (result: { member: Member; password: string; inviteLink: PasswordLink | null }) => void
 }) {
   const invite = useInviteMember()
   const draft = useDraft<InviteMember>(inviteMemberSchema, emptyInvite())
@@ -282,7 +339,9 @@ function InviteDialog({
         <DialogHeader>
           <DialogTitle>Invite a member</DialogTitle>
           <DialogDescription>
-            You get a one-time password to share with them, shown once.
+            {selfHosted
+              ? 'You get a link to share with them, where they set their own password.'
+              : 'You get a one-time password to share with them, shown once.'}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -291,7 +350,11 @@ function InviteDialog({
           noValidate
           onSubmit={draft.handleSubmit((value) =>
             invite.mutate(value, {
-              onSuccess: ({ password }) => onInvited({ email: value.email, password }),
+              onSuccess: (result) =>
+                onInvited({
+                  ...result,
+                  member: { ...result.member, email: result.member.email || value.email },
+                }),
             }),
           )}
         >
@@ -379,7 +442,9 @@ function csvCell(value: string): string {
  *
  * There is deliberately no sign-in link. A URL is not a private channel: it
  * lands in history, Referer headers, logs and chat link previews: so a link
- * carrying, or leading to, a working credential is never built here.
+ * carrying, or leading to, a working credential is never built here. (The
+ * self-hosted set-password link is different in kind: it signs nobody in, it
+ * works once, and its token rides in the fragment, which no server receives.)
  */
 function CredentialsDialog({
   credentials,
@@ -460,6 +525,98 @@ function CredentialsDialog({
           >
             {copied === 'all' ? 'Copied' : 'Copy all'}
           </Button>
+          <Button type="button" onClick={onClose}>
+            Done
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+interface SharedLink {
+  member: Member
+  /** null while it is being created. */
+  link: PasswordLink | null
+}
+
+function formatExpiry(iso: string): string | null {
+  const at = new Date(iso)
+  if (!iso || Number.isNaN(at.getTime())) return null
+  return at.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+/**
+ * A one-time link for a member to set their own password (self-hosted).
+ *
+ * From an invitation, or from "Reset password" on their row. The admin never
+ * sees a password: they share the link, and the member chooses one there.
+ * Setting it spends this link and every older one. Closing the dialog loses
+ * the link, but nothing is lost with it: "Reset password" makes another.
+ */
+function PasswordLinkDialog({
+  shared,
+  isPending,
+  error,
+  onClose,
+}: {
+  shared: SharedLink | null
+  isPending: boolean
+  error: string | null
+  onClose: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+  const linkToken = shared?.link?.token
+  useEffect(() => setCopied(false), [linkToken])
+  if (!shared) return null
+
+  const name = memberDisplayName(shared.member)
+  const link = shared.link
+  const url = link ? passwordLinkUrl(link.token) : ''
+  const expiry = link ? formatExpiry(link.expiresAt) : null
+  const invite = link?.purpose === 'invite'
+
+  return (
+    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {invite ? `Invitation link for ${name}` : `Password link for ${name}`}
+          </DialogTitle>
+          <DialogDescription>
+            {invite
+              ? `Send this to ${shared.member.email || name}. They open it to set their password and sign in.`
+              : `Send this to ${shared.member.email || name}. They open it to choose a new password; their current one keeps working until they do.`}{' '}
+            It works once{expiry ? ` and expires ${expiry}` : ''}. Anyone with it can set the
+            password, so send it privately.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          {link ? (
+            <Field label={invite ? 'Invitation link' : 'Password link'}>
+              {({ id, ...field }) => (
+                <span className="flex gap-2">
+                  <Input id={id} readOnly value={url} className="font-mono" {...field} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(url).then(() => setCopied(true))
+                    }}
+                  >
+                    {copied ? 'Copied' : 'Copy'}
+                  </Button>
+                </span>
+              )}
+            </Field>
+          ) : isPending ? (
+            <p className="text-muted-foreground text-sm" role="status">
+              Creating the link…
+            </p>
+          ) : null}
+          <ActionError message={error} />
+        </div>
+        <DialogFooter>
           <Button type="button" onClick={onClose}>
             Done
           </Button>

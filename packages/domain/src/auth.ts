@@ -57,13 +57,20 @@ export type ResetRequest = z.infer<typeof resetRequestSchema>
  * increases strength; composition rules ("one number, one symbol") mostly
  * produce `Password1!` and a sticky note. The confirmation field exists because
  * a typo in a password field is invisible by definition.
+ *
+ * At most 72 bytes of UTF-8, not 72 characters: bcrypt hashes no more than 72
+ * bytes, and both Supabase and the Flexprice API refuse a longer password rather
+ * than truncate it. An accented or non-Latin character takes two to four.
  */
 export const setPasswordSchema = z
   .object({
     password: z
       .string()
       .min(12, 'Use at least 12 characters')
-      .max(200, 'That is longer than we can store'),
+      .refine(
+        (value) => new TextEncoder().encode(value).length <= 72,
+        'That is too long: use at most 72 characters (fewer with accented or non-Latin letters)',
+      ),
     confirm: z.string().min(1, 'Type the password again'),
   })
   .refine((value) => value.password === value.confirm, {

@@ -260,3 +260,18 @@ export {
   updateBillingEntity,
 } from './billingEntities'
 export type { ListBillingEntitiesParams } from './billingEntities'
+export {
+  changeOwnPassword,
+  checkPasswordLink,
+  createPasswordLink,
+  inviteUser,
+  setPasswordWithLink,
+  toInviteResult,
+  toPasswordLink,
+} from './passwordLinks'
+export type {
+  InviteResult,
+  PasswordLink,
+  PasswordLinkDetails,
+  PasswordLinkPurpose,
+} from './passwordLinks'
