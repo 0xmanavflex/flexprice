@@ -820,6 +820,41 @@ export const Branded: Story = {
   args: { brandColor: '#0d6e66' },
 }
 
+/**
+ * Back from checkout in a browser with no portal session: the illustration takes
+ * the icon tile's place (the console passes its animated success mark), and the
+ * copy points back to the portal without claiming how the payment went.
+ */
+export const CheckoutReturnNoSession: Story = {
+  render: () => (
+    <PortalNotice
+      illustration={<span data-testid="return-illustration" className="size-28" />}
+      title="You’re all set!"
+      body="Head back to your billing portal to view your latest billing details."
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'You’re all set!' })).toBeVisible()
+    await expect(canvas.getByTestId('return-illustration')).toBeInTheDocument()
+    await expect(canvas.getByText(/view your latest billing details/)).toBeVisible()
+  },
+}
+
+/** A notice that is not about the link takes its own icon in the tile. */
+export const NoticeWithIcon: Story = {
+  render: () => (
+    <PortalNotice
+      icon={<span data-testid="notice-icon" />}
+      title="Billing is unavailable"
+      body="Try again in a few minutes."
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByTestId('notice-icon')).toBeInTheDocument()
+  },
+}
+
 /** The link has expired: say so, and who to ask. Never a sign-in page. */
 export const LinkExpired: Story = {
   render: () => (
