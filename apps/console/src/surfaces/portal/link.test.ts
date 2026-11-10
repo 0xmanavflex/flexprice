@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  consumeLeftForGateway,
   isGatewayReturn,
+  markLeavingForGateway,
   parsePortalLocation,
   portalHref,
   rememberForReturn,
@@ -191,5 +193,21 @@ describe('the session kept for a gateway return', () => {
     expect(tokenForReturn(1_000 + 61 * 60_000)).toBeNull()
     expect(tokenForReturn(1_000)).toBeNull()
     vi.unstubAllGlobals()
+  })
+})
+
+describe('a tab that left for a gateway', () => {
+  it('knows on return that the kept session is its own, even without our marker', () => {
+    const store = new Map<string, string>()
+    vi.stubGlobal('sessionStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+      removeItem: (key: string) => void store.delete(key),
+    })
+    markLeavingForGateway()
+    expect(consumeLeftForGateway()).toBe(true)
+    // Cleared for the next load, and a re-read in this load agrees.
+    expect(sessionStorage.getItem('flexprice.portal.leftForGateway')).toBeNull()
+    expect(consumeLeftForGateway()).toBe(true)
   })
 })

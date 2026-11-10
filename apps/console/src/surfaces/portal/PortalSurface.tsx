@@ -49,7 +49,9 @@ import { isSafeNavigationUrl } from '../safeUrl'
 import type { ApiUrls } from '../publicApi'
 import {
   RETURNED_PARAM,
+  consumeLeftForGateway,
   isGatewayReturn,
+  markLeavingForGateway,
   type PortalLocation,
   parsePortalLocation,
   portalHref,
@@ -93,7 +95,10 @@ export function PortalSurface({
   const [token] = useState(
     () =>
       location?.token ??
-      (new URLSearchParams(window.location.search).has(RETURNED_PARAM) ? tokenForReturn() : null),
+      // This tab's own trip to a gateway (marker or not), or a gateway tab carrying our marker.
+      (consumeLeftForGateway() || new URLSearchParams(window.location.search).has(RETURNED_PARAM)
+        ? tokenForReturn()
+        : null),
   )
   useEffect(() => {
     if (!token || !location || location.token) return
@@ -478,6 +483,7 @@ async function toGateway(
     return null
   }
   if (!isSafeNavigationUrl(url)) throw new Error(GENERIC_ERROR)
+  markLeavingForGateway()
   window.location.assign(url)
   return url
 }

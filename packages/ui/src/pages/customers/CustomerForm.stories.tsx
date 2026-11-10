@@ -1,5 +1,6 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { KEY_PREFIX, suggestKey } from '@fp/domain'
 import { CustomerForm } from './CustomerForm'
 
 /** Customer create and edit: one page, no preview rail. */
@@ -131,11 +132,31 @@ export const Edit: Story = {
     await expect(canvas.getByRole('textbox', { name: /^name/i })).toHaveValue('Acme Corp')
     await expect(canvas.queryByRole('complementary')).toBeNull()
     await expect(canvas.getByRole('textbox', { name: /city/i })).toBeInTheDocument()
-    // A custom external ID stays when the name changes.
+    // Renaming a saved customer never rewrites its external ID: events carry it.
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
     await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue('acme')
     await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
     await expect(args.onSubmit).toHaveBeenCalled()
+  },
+}
+
+/**
+ * An ID generated from the old name stays too: usage events already carry it,
+ * and a rename that rewrote it would leave them matching no customer.
+ */
+export const EditKeepsAGeneratedId: Story = {
+  args: {
+    mode: 'edit',
+    customerName: 'Acme',
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
+    defaultValue: { externalId: suggestKey(KEY_PREFIX.customer, 'Acme'), name: 'Acme' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const id = canvas.getByRole('textbox', { name: /external id/i })
+    const before = (id as HTMLInputElement).value
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
+    await expect(id).toHaveValue(before)
   },
 }
 

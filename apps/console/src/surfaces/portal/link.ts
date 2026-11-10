@@ -181,3 +181,36 @@ export function tokenForReturn(now = Date.now()): string | null {
     return null
   }
 }
+
+/** Set in a tab that sends itself to a gateway; that same tab finds it on return. */
+const LEFT_FOR_GATEWAY_KEY = 'flexprice.portal.leftForGateway'
+
+/**
+ * Note that this tab is going to a gateway and will come back. Session storage
+ * belongs to the tab and survives its round trip, so on return the portal knows
+ * it is this tab's own session to restore even when the gateway dropped our
+ * `returned` marker (a redirect address saved on the gateway's connection). It
+ * starts empty in any other tab, so a bare visit never picks up a kept session.
+ */
+export function markLeavingForGateway() {
+  try {
+    sessionStorage.setItem(LEFT_FOR_GATEWAY_KEY, '1')
+  } catch {
+    // Blocked storage: the return still restores the session when the marker survives.
+  }
+}
+
+/** Read once per page load, so a second read (React's strict-mode re-run) agrees. */
+let leftForGateway: boolean | null = null
+
+/** True when this page load is the tab that left for a gateway coming back. Clears the note. */
+export function consumeLeftForGateway(): boolean {
+  if (leftForGateway !== null) return leftForGateway
+  try {
+    leftForGateway = sessionStorage.getItem(LEFT_FOR_GATEWAY_KEY) !== null
+    sessionStorage.removeItem(LEFT_FOR_GATEWAY_KEY)
+  } catch {
+    leftForGateway = false
+  }
+  return leftForGateway
+}
