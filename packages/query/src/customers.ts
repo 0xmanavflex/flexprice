@@ -505,18 +505,20 @@ export function toCreateCustomerRequest(draft: CreateCustomer): Record<string, u
  * stores `''`. A field the draft carries is sent as it stands, blanks included
  * (the edit form carries every field; an inline edit only the one it changed); omitting a blank would make clearing a field
  * (address line 2, the billing currency) report success and change nothing.
- * The API takes `''` on each of these (its validators are all `omitempty`), and
- * reads a blank billing currency as "bill in the contract's currency". The
- * timezone is the one exception: the API has no "no timezone", so a blank one
- * is left out rather than stored as `''`.
+ * The API takes `''` on the address lines and the billing currency (a blank
+ * currency means "bill in the contract's currency"). A blank email fails the
+ * email check, and a blank country fails `len=2`, so those are left out rather
+ * than sent as `''`. The timezone is the same: the API has no "no timezone".
  */
+const OMIT_WHEN_BLANK = new Set(['email', 'addressCountry', 'timezone'])
+
 export function toUpdateCustomerRequest(draft: EditCustomer): Record<string, unknown> {
   const request: Record<string, unknown> = { externalId: draft.externalId, name: draft.name }
   for (const [field, wireKey] of CUSTOMER_TEXT_FIELDS) {
     const value = draft[field]
     // Absent (an inline edit of one field) keeps the stored value.
     if (value === undefined) continue
-    if (value || field !== 'timezone') request[wireKey] = value
+    if (value || !OMIT_WHEN_BLANK.has(field)) request[wireKey] = value
   }
   if (draft.taxTreatment) request.taxTreatment = draft.taxTreatment
   if (draft.metadata) request.metadata = draft.metadata

@@ -237,9 +237,11 @@ describe('customer requests', () => {
       addressLine1: '1 Main',
       addressLine2: '',
       billingCurrency: '',
-      email: '',
     })
-    // The API has no "no timezone": a blank one keeps the stored zone.
+    // A blank email fails the email check, a blank country fails len=2, and
+    // the API has no "no timezone". Leaving them out keeps the stored value.
+    expect(request).not.toHaveProperty('email')
+    expect(request).not.toHaveProperty('addressCountry')
     expect(request).not.toHaveProperty('timezone')
     survives(UpdateCustomerRequest$outboundSchema as never, request)
   })
