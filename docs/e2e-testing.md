@@ -21,7 +21,7 @@ release-triggered suite unless it says otherwise.
 
 ```
 push to main
-  → Pipeline: Check (lint, unit, build) → Deploy (Deploy main = deploy.yml `vercel deploy --prod`, regions) → Verify (mocked suites)
+  → Pipeline: Check (lint, unit, build) → Deploy (Deploy main = deploy.yml `vercel deploy --prod`, regions)
   → Pipeline completes
   → E2E release verification (workflow_run on Pipeline, branch main)
        1. reads that Pipeline run's jobs: continues only if the "Deploy main" job
@@ -40,8 +40,8 @@ run whose deploy failed, was skipped (no Vercel secrets) or was cancelled by a n
 
 It cannot affect a release. Pipeline has already finished when it starts, nothing in
 Pipeline `needs:` it, and it never calls or re-runs a deploy, so a failure can only fail
-_this_ workflow. Pipeline's own conclusion is deliberately not used as the signal: its last
-stage (mocked suites) runs after the deploy, so it can go red while the release is live.
+_this_ workflow. Pipeline's own conclusion is deliberately not used as the signal: a job that
+fails after the deploy step (a region, say) can turn it red while the release is live.
 
 Concurrency is one run per released commit (`e2e-release-<sha>`, queued, not cancelled), so
 a re-run never races the first on the shared test account.
