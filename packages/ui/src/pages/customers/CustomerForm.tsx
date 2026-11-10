@@ -94,10 +94,12 @@ export function CustomerForm({
     resolver: standardSchemaResolver(createCustomerSchema) as Resolver<CreateCustomer>,
     defaultValues: defaultValue ?? emptyCustomer(),
   })
-  // The id follows the name only while creating. A saved customer's external ID is
-  // the key its usage events carry, so renaming must never rewrite it: events still
-  // sent with the old ID would stop matching. Changing it is a deliberate edit.
-  const followsName = !isEdit
+  // A generated id follows the name, on edit too. A custom one (not the suggestion
+  // for the saved name) stays. Usage events match on this ID, so a renamed customer's
+  // events must be sent with the new one.
+  const followsName =
+    !isEdit ||
+    (defaultValue?.externalId ?? '') === suggestKey(KEY_PREFIX.customer, defaultValue?.name ?? '')
 
   const nameField = form.register('name', {
     onChange: (event: { target: { value: string } }) => {

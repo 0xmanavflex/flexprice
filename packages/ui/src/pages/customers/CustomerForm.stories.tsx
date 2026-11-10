@@ -132,7 +132,7 @@ export const Edit: Story = {
     await expect(canvas.getByRole('textbox', { name: /^name/i })).toHaveValue('Acme Corp')
     await expect(canvas.queryByRole('complementary')).toBeNull()
     await expect(canvas.getByRole('textbox', { name: /city/i })).toBeInTheDocument()
-    // Renaming a saved customer never rewrites its external ID: events carry it.
+    // A custom external ID stays when the name changes.
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
     await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue('acme')
     await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
@@ -140,23 +140,22 @@ export const Edit: Story = {
   },
 }
 
-/**
- * An ID generated from the old name stays too: usage events already carry it,
- * and a rename that rewrote it would leave them matching no customer.
- */
-export const EditKeepsAGeneratedId: Story = {
+/** An ID generated from the saved name follows a rename, as it does while creating. */
+export const EditGeneratedIdFollowsName: Story = {
   args: {
     mode: 'edit',
-    customerName: 'Acme',
+    customerName: 'Test2',
     trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
-    defaultValue: { externalId: suggestKey(KEY_PREFIX.customer, 'Acme'), name: 'Acme' },
+    defaultValue: { externalId: suggestKey(KEY_PREFIX.customer, 'Test2'), name: 'Test2' },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const id = canvas.getByRole('textbox', { name: /external id/i })
-    const before = (id as HTMLInputElement).value
-    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
-    await expect(id).toHaveValue(before)
+    const name = canvas.getByRole('textbox', { name: /^name/i })
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Acme Ltd')
+    await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue(
+      suggestKey(KEY_PREFIX.customer, 'Acme Ltd'),
+    )
   },
 }
 
