@@ -130,13 +130,22 @@ export function CustomerForm({
   })
 
   const entityPicker = !isEdit && billingEntities ? billingEntities : undefined
-  const submitAll = form.handleSubmit((values) =>
+  const savedCountry = defaultValue?.addressCountry?.trim() ?? ''
+  const submitAll = form.handleSubmit((values) => {
+    // A blank country is not a clear: the API rejects '' (`len=2`), and leaving
+    // the key out would keep the saved country while reporting success.
+    if (isEdit && savedCountry && !values.addressCountry?.trim()) {
+      form.setError('addressCountry', {
+        message: "The API can't remove a country; replace it instead.",
+      })
+      return
+    }
     onSubmit(
       entityPicker
         ? { ...values, billingEntityId: effectiveEntityId(values, entityPicker) }
         : values,
-    ),
-  )
+    )
+  })
 
   const detailsRows = (
     <>

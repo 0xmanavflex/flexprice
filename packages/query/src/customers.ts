@@ -505,12 +505,12 @@ export function toCreateCustomerRequest(draft: CreateCustomer): Record<string, u
  * stores `''`. A field the draft carries is sent as it stands, blanks included
  * (the edit form carries every field; an inline edit only the one it changed); omitting a blank would make clearing a field
  * (address line 2, the billing currency) report success and change nothing.
- * The API takes `''` on the address lines and the billing currency (a blank
- * currency means "bill in the contract's currency"). A blank email fails the
- * email check, and a blank country fails `len=2`, so those are left out rather
- * than sent as `''`. The timezone is the same: the API has no "no timezone".
+ * The API takes `''` for an email, the address lines and the billing currency (a
+ * blank currency means "bill in the contract's currency"). A blank country
+ * fails `len=2`, so it is left out rather than sent as `''`. The timezone is
+ * the same: the API has no "no timezone".
  */
-const OMIT_WHEN_BLANK = new Set(['email', 'addressCountry', 'timezone'])
+const OMIT_WHEN_BLANK = new Set(['addressCountry', 'timezone'])
 
 export function toUpdateCustomerRequest(draft: EditCustomer): Record<string, unknown> {
   const request: Record<string, unknown> = { externalId: draft.externalId, name: draft.name }

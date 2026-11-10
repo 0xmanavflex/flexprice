@@ -1597,8 +1597,6 @@ function InformationTab({
               label: 'Email',
               value: customer.email,
               placeholder: 'No email',
-              // A blank clears the stored email: the update sends it as ''. The
-              // same check as the create/edit form, so neither takes what the other refuses.
               validate: (next) =>
                 customerEmailSchema.safeParse(next).error?.issues[0]?.message ?? null,
             },
