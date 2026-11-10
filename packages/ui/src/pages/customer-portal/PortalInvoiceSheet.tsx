@@ -20,7 +20,7 @@ import { TotalRow, TotalsList } from '@ui/compositions/detail/DetailKit'
 import { provenance } from '@ui/provenance'
 import { Money } from '../shared/Money'
 import { toneColor } from '../shared/charts'
-import { formatDate, formatNumber, formatPeriod } from './format'
+import { formatInvoiceDay, formatNumber, formatPeriod } from './format'
 import { InvoiceStatusPill } from './parts'
 import type { Load } from './types'
 
@@ -127,8 +127,8 @@ function Details({
           </div>
           <SheetDescription>
             {[
-              i.issuedAt ? `Issued ${formatDate(i.issuedAt, locale)}` : null,
-              i.dueAt ? `due ${formatDate(i.dueAt, locale)}` : null,
+              i.issuedAt ? `Issued ${formatInvoiceDay(i.issuedAt, locale)}` : null,
+              i.dueAt ? `due ${formatInvoiceDay(i.dueAt, locale)}` : null,
             ]
               .filter(Boolean)
               .join(' · ')}

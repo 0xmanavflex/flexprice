@@ -1481,13 +1481,15 @@ const workflowRuns: Record<string, unknown>[] = Array.from({ length: 30 }, (_, i
 })
 
 /** A price sync as the mock runs it: done at once, recorded where the search finds it. */
-function startPriceSync(workflowId: string) {
+function startPriceSync(workflowId: string, entity?: { type: 'plan' | 'addon'; id: string }) {
   const runId = `run_${Date.now()}`
   const now = new Date().toISOString()
   workflowRuns.unshift({
     workflow_id: workflowId,
     run_id: runId,
-    workflow_type: 'PriceSyncV2Workflow',
+    workflow_type: entity?.type === 'addon' ? 'AddonPriceSyncWorkflow' : 'PriceSyncV2Workflow',
+    // Recorded against the record its input carries, as the worker does.
+    ...(entity ? { entity: entity.type, entity_id: entity.id } : {}),
     status: 'Completed',
     task_queue: 'billing',
     start_time: now,
@@ -2912,10 +2914,20 @@ export const handlers = [
   // run lands in the workflow search already finished, so the console's watch
   // sees it complete on its first read.
   http.post(`${BASE}/plans/:id/sync/subscriptions`, ({ params }) =>
-    HttpResponse.json(startPriceSync(`sync-plan-${String(params['id'])}`)),
+    HttpResponse.json(
+      startPriceSync(`sync-plan-${String(params['id'])}`, {
+        type: 'plan',
+        id: String(params['id']),
+      }),
+    ),
   ),
   http.post(`${BASE}/addons/:id/sync/subscriptions`, ({ params }) =>
-    HttpResponse.json(startPriceSync(`sync-addon-${String(params['id'])}`)),
+    HttpResponse.json(
+      startPriceSync(`sync-addon-${String(params['id'])}`, {
+        type: 'addon',
+        id: String(params['id']),
+      }),
+    ),
   ),
   // The Svix API behind the webhook portal: see `svixHandlers.ts`.
   ...svixHandlers,
@@ -4657,8 +4669,9 @@ export const handlers = [
 
   /*
    * `POST /workflows/search`: the Workflows list. The body is snake_case;
-   * `workflow_id` and `workflow_status` are the server-side filters this
-   * console sends, and `order` sorts by start time.
+   * `workflow_id`, `workflow_status`, `workflow_type`, `entity` and
+   * `entity_id` are the server-side filters this console sends, and `order`
+   * sorts by start time.
    */
   http.post(`${BASE}/workflows/search`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
@@ -4666,10 +4679,16 @@ export const handlers = [
     const offset = Number(body['offset'] ?? 0)
     const id = typeof body['workflow_id'] === 'string' ? body['workflow_id'] : ''
     const status = typeof body['workflow_status'] === 'string' ? body['workflow_status'] : ''
+    const type = typeof body['workflow_type'] === 'string' ? body['workflow_type'] : ''
+    const entity = typeof body['entity'] === 'string' ? body['entity'] : ''
+    const entityId = typeof body['entity_id'] === 'string' ? body['entity_id'] : ''
 
     const matches = workflowRuns
       .filter((run) => !id || String(run['workflow_id']).includes(id))
       .filter((run) => !status || run['status'] === status)
+      .filter((run) => !type || run['workflow_type'] === type)
+      .filter((run) => !entity || run['entity'] === entity)
+      .filter((run) => !entityId || run['entity_id'] === entityId)
       .sort((a, b) =>
         body['order'] === 'asc'
           ? String(a['start_time']).localeCompare(String(b['start_time']))

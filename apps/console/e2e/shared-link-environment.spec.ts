@@ -59,59 +59,60 @@ test('a record no environment has is still "not found"', async ({ page }) => {
   await expect(page.getByText('Invoice not found')).toBeVisible()
 })
 
-/** The environment a page's address names (`?env=`), once it has one. */
-async function environmentInUrl(page: Page): Promise<string> {
-  await expect.poll(() => new URL(page.url()).searchParams.get('env') ?? '').not.toBe('')
-  return new URL(page.url()).searchParams.get('env') ?? ''
-}
+/** The `?env=` a page's address carries right now: empty once it is gone. */
+const environmentInUrl = (page: Page): string => new URL(page.url()).searchParams.get('env') ?? ''
 
-test('every page names its environment in the address', async ({ page }) => {
+test('the address does not carry the environment', async ({ page }) => {
   await page.goto('/customers')
   const shell = new ShellPage(page)
   await expect(shell.environment).toBeVisible({ timeout: 20_000 })
-  const current = await environmentInUrl(page)
+  expect(environmentInUrl(page)).toBe('')
 
-  // In-app navigation keeps it.
   await page.getByRole('button', { name: 'Contracts' }).first().click()
   await expect(page).toHaveURL(/\/contracts/)
-  expect(await environmentInUrl(page)).toBe(current)
+  expect(environmentInUrl(page)).toBe('')
 })
 
-test('a shared link opens in the environment it names', async ({ page }) => {
+test('a shared link opens in the environment it names, then drops it from the address', async ({
+  page,
+}) => {
   await page.goto('/customers')
   const shell = new ShellPage(page)
   await expect(shell.environment).toBeVisible({ timeout: 20_000 })
-  const home = await environmentInUrl(page)
   const homeName = await shell.currentEnvironment()
 
-  // Learn another environment's id and name from the switcher, not a fixture.
+  // Learn another environment's id and name from the switcher, not a fixture:
+  // switching there stores its id, then switch home again.
   await shell.environment.click()
-  const other = page
+  const item = page
     .getByRole('menuitem')
     .filter({ hasNot: page.locator('[aria-current]') })
     .first()
-  const otherName = ((await other.textContent()) ?? '').trim()
-  await other.click()
-  await expect.poll(() => environmentInUrl(page)).not.toBe(home)
-  const shared = await environmentInUrl(page)
+  const otherName = ((await item.textContent()) ?? '').trim()
+  await item.click()
+  await expect.poll(() => shell.currentEnvironment()).toBe(otherName)
+  const otherId = await page.evaluate(() => window.localStorage.getItem('flexprice.environment'))
   await shell.switchEnvironment(homeName)
-  await expect.poll(() => environmentInUrl(page)).toBe(home)
+  await expect.poll(() => shell.currentEnvironment()).toBe(homeName)
+  const other = { id: otherId ?? '', name: otherName }
+  expect(other.id).not.toBe('')
 
-  // A link copied in that other environment opens there.
-  await page.goto(`/contracts?env=${shared}`)
-  await expect(page.getByText(`Switched to ${otherName}`)).toBeVisible({ timeout: 20_000 })
+  await page.goto(`/contracts?env=${other.id}`)
+  await expect(page.getByText(`Switched to ${other.name}`)).toBeVisible({ timeout: 20_000 })
   await expect(page).toHaveURL(/\/contracts/)
-  expect(await environmentInUrl(page)).toBe(shared)
+  await expect.poll(() => environmentInUrl(page)).toBe('')
+  await expect.poll(() => shell.currentEnvironment()).toBe(other.name)
 })
 
 test('a link to an environment you cannot reach opens in your own', async ({ page }) => {
   await page.goto('/customers')
   const shell = new ShellPage(page)
   await expect(shell.environment).toBeVisible({ timeout: 20_000 })
-  const own = await environmentInUrl(page)
+  const ownName = await shell.currentEnvironment()
 
   await page.goto('/customers?env=env_NOTONEOFYOURS')
   await expect(shell.environment).toBeVisible({ timeout: 20_000 })
-  await expect.poll(() => environmentInUrl(page)).toBe(own)
+  await expect.poll(() => environmentInUrl(page)).toBe('')
+  expect(await shell.currentEnvironment()).toBe(ownName)
   await expect(page.getByText(/^Switched to/)).toHaveCount(0)
 })

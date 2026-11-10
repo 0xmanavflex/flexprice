@@ -42,7 +42,7 @@ import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { Money } from '../shared/Money'
 import { CardLogo } from './CardLogo'
-import { formatDate, formatNumber, relativeDays } from './format'
+import { formatDate, formatInvoiceDay, formatNumber, relativeDays } from './format'
 import { Loaded, PortalEmpty, SubscriptionStatusPill, SummaryCell } from './parts'
 import type { CustomerPortalData } from './types'
 
@@ -98,8 +98,8 @@ export function PortalOverview(props: PortalOverviewProps) {
     <div className="flex flex-col gap-6">
       {attention ? <PaymentAlert invoice={attention} {...props} /> : null}
       <AccountSummary {...props} />
-      {props.parts.paymentMethods ? <PaymentMethods {...props} /> : null}
       {props.parts.subscriptions ? <Subscriptions {...props} /> : null}
+      {props.parts.paymentMethods ? <PaymentMethods {...props} /> : null}
     </div>
   )
 }
@@ -133,8 +133,8 @@ function PaymentAlert({
         </p>
         <p className="text-muted-foreground text-[13px]">
           {invoice.number} for {amount}
-          {invoice.dueAt ? <> was due {formatDate(invoice.dueAt, locale)}</> : null}. Pay it now to
-          keep your service running.
+          {invoice.dueAt ? <> was due {formatInvoiceDay(invoice.dueAt, locale)}</> : null}. Pay it
+          now to keep your service running.
         </p>
       </div>
       <div className="flex gap-2">
@@ -236,7 +236,7 @@ function AccountSummary({
               overdue
                 ? 'Overdue'
                 : firstPayable?.dueAt
-                  ? `Due ${formatDate(firstPayable.dueAt, locale)}`
+                  ? `Due ${formatInvoiceDay(firstPayable.dueAt, locale)}`
                   : 'Unpaid'
             }
             tone={overdue ? 'danger' : 'muted'}

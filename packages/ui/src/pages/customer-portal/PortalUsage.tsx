@@ -406,7 +406,9 @@ function SpendSummary({
         : null
     const subscription =
       data.subscriptions.status === 'ready'
-        ? data.subscriptions.data.find((s) => s.status === 'active' && s.periodEnd)
+        ? data.subscriptions.data.find(
+            (s) => (s.status === 'active' || s.status === 'trialing') && s.periodEnd,
+          )
         : undefined
     const periodEnd = subscription?.periodEnd ?? null
     const soFar = data.periodSpend?.status === 'ready' ? data.periodSpend.data.total : null

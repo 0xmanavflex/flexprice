@@ -78,9 +78,33 @@ export function toWorkflowRun(wire: WorkflowRunWire): WorkflowRun {
   }
 }
 
-export function toWorkflowFilter(query: WorkflowQuery): Record<string, unknown> {
+/**
+ * Narrows a run search to one record's runs of one kind: a plan's price syncs
+ * are `{ entity: 'plan', entityId, workflowType: 'PriceSyncV2Workflow' }`. The
+ * worker records every run against the id its input carries.
+ */
+export interface WorkflowScope {
+  entity: string
+  entityId: string
+  workflowType?: string
+}
+
+/** The workflow a plan's "Sync to contracts" starts. */
+export const PLAN_PRICE_SYNC_WORKFLOW = 'PriceSyncV2Workflow'
+
+export function toWorkflowFilter(
+  query: WorkflowQuery,
+  scope?: WorkflowScope,
+): Record<string, unknown> {
   const [only, ...rest] = query.statuses
   return {
+    ...(scope
+      ? {
+          entity: scope.entity,
+          entityId: scope.entityId,
+          ...(scope.workflowType ? { workflowType: scope.workflowType } : {}),
+        }
+      : {}),
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     order: query.sortDirection,
@@ -112,20 +136,25 @@ export interface WorkflowRunPage {
 export async function fetchWorkflowRuns(
   client: Flexprice,
   query: WorkflowQuery,
+  scope?: WorkflowScope,
 ): Promise<WorkflowRunPage> {
   const response = await call(() =>
-    client.workflows.queryWorkflow(toWorkflowFilter(query) as never),
+    client.workflows.queryWorkflow(toWorkflowFilter(query, scope) as never),
   )
   const runs = (response.items ?? []).map((item) => toWorkflowRun(item as WorkflowRunWire))
   return { runs, total: response.pagination?.total ?? runs.length }
 }
 
-export function useWorkflowRuns(query: WorkflowQuery) {
+export function useWorkflowRuns(query: WorkflowQuery, scope?: WorkflowScope) {
   const client = useFlexprice()
 
   return useQuery({
-    queryKey: queryKeys.workflowRuns.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchWorkflowRuns(client, query),
+    queryKey: queryKeys.workflowRuns.list({
+      ...query,
+      statuses: [...query.statuses].sort(),
+      ...(scope ? { scope } : {}),
+    }),
+    queryFn: () => fetchWorkflowRuns(client, query, scope),
     placeholderData: (previous) => previous,
   })
 }

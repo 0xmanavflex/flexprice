@@ -304,6 +304,9 @@ export const INVOICE_FILTERS: readonly ListFilterSpec[] = [
       { value: 'CREDIT', label: 'Credit' },
     ],
   },
+  // Amounts in the invoice's own currency, as the API stores them (major units).
+  { field: 'total', label: 'Amount', kind: 'number' },
+  { field: 'amount_due', label: 'Amount due', kind: 'number' },
   { field: 'created_at', label: 'Created', kind: 'date' },
   { field: 'due_date', label: 'Due date', kind: 'date' },
 ]

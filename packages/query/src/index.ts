@@ -607,9 +607,10 @@ export {
   toWorkflowRun,
   useWorkflowRun,
   useWorkflowRuns,
+  PLAN_PRICE_SYNC_WORKFLOW,
 } from './workflowRuns'
 export type { WorkflowHandle } from './workflowRuns'
-export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
+export type { WorkflowRunPage, WorkflowRunWire, WorkflowScope } from './workflowRuns'
 export { toWorkflowActivity, toWorkflowRunDetail, useWorkflowRunDetail } from './workflowRunDetail'
 export type { WorkflowActivityWire, WorkflowRunDetailWire } from './workflowRunDetail'
 export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
