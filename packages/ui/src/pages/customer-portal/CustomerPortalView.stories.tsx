@@ -9,6 +9,7 @@ import {
   money,
 } from '@fp/domain'
 import { CustomerPortalView } from './CustomerPortalView'
+import { CreditCardIcon } from '@ui/icons'
 import { PortalNotice } from './PortalNotice'
 import {
   PORTAL_NOW,
@@ -838,6 +839,22 @@ export const CheckoutReturnNoSession: Story = {
     await expect(canvas.getByRole('heading', { name: 'You’re all set!' })).toBeVisible()
     await expect(canvas.getByTestId('return-illustration')).toBeInTheDocument()
     await expect(canvas.getByText(/view your latest billing details/)).toBeVisible()
+  },
+}
+
+/** Back from a checkout the gateway says failed: a neutral card, never the success tick. */
+export const CheckoutReturnFailed: Story = {
+  render: () => (
+    <PortalNotice
+      icon={<CreditCardIcon />}
+      title="Back to billing"
+      body="Your checkout session has ended. Head back to your billing portal to view your latest billing details."
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'Back to billing' })).toBeVisible()
+    await expect(canvas.queryByText('You’re all set!')).toBeNull()
   },
 }
 

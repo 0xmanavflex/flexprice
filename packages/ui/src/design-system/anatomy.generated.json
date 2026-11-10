@@ -10337,6 +10337,7 @@
       "title": "App/Billing/Customer portal/Page",
       "component": null,
       "uses": [
+        "CreditCardIcon",
         "CustomerPortalView",
         "PortalNotice"
       ]
