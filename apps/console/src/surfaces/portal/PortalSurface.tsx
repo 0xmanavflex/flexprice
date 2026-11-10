@@ -49,6 +49,7 @@ import { isSafeNavigationUrl } from '../safeUrl'
 import type { ApiUrls } from '../publicApi'
 import {
   RETURNED_PARAM,
+  isGatewayReturn,
   type PortalLocation,
   parsePortalLocation,
   portalHref,
@@ -129,12 +130,14 @@ export function PortalSurface({
     )
   }
   if (!token) {
-    // Back from a payment page in its own tab: the portal is still open in the
-    // tab the customer came from, and refreshes there.
-    return new URLSearchParams(window.location.search).has(RETURNED_PARAM) ? (
+    // Back from a gateway with no session kept in this browser: the payment page
+    // opened in another browser (on a phone, a link tapped in an app pays in
+    // Safari), or the kept session expired. The gateway's webhook settles the
+    // payment, not this page, so it must not read as a broken link.
+    return isGatewayReturn(window.location.search) ? (
       <PortalNotice
-        title="You can close this tab"
-        body="Go back to the billing tab you came from. It updates on its own."
+        title="You’re back from checkout"
+        body="If you paid, it’s being added to your account. Go back to the billing tab you came from, or open your billing link again to see it."
       />
     ) : (
       <Expired />

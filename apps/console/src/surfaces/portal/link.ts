@@ -123,6 +123,26 @@ export function returnUrl(href: string): string {
   return url.toString()
 }
 
+/**
+ * Parameters gateways add on the way back. A gateway that redirects to an address
+ * saved on its connection (Moyasar's `success_url`, Paddle's `redirect_url`)
+ * drops our marker, and these are then the only sign the visit is a return.
+ */
+const GATEWAY_RETURN_PARAMS: readonly (readonly string[])[] = [
+  ['razorpay_payment_id'],
+  ['razorpay_payment_link_id'],
+  ['session_id'],
+  ['_ptxn'],
+  ['id', 'status'],
+]
+
+/** True when this visit is a gateway sending the customer back. */
+export function isGatewayReturn(search: string): boolean {
+  const params = new URLSearchParams(search)
+  if (params.has(RETURNED_PARAM)) return true
+  return GATEWAY_RETURN_PARAMS.some((names) => names.every((name) => params.has(name)))
+}
+
 /** The query parameters the portal itself reads; anything else a gateway added. */
 const PORTAL_PARAMS = new Set(['invoice', 'range', 'from', 'to'])
 

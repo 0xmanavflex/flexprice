@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  isGatewayReturn,
   parsePortalLocation,
   portalHref,
   rememberForReturn,
@@ -150,6 +151,24 @@ describe('returnUrl', () => {
     expect(returnUrl('https://portal.flexprice.io/us/invoices?token=secret&invoice=inv_1')).toBe(
       'https://portal.flexprice.io/us/invoices?invoice=inv_1&returned=1',
     )
+  })
+})
+
+describe('isGatewayReturn', () => {
+  it.each([
+    '?returned=1',
+    '?razorpay_payment_id=pay_1&razorpay_signature=x',
+    '?razorpay_payment_link_id=plink_1',
+    '?session_id=cs_test_1',
+    '?_ptxn=txn_1',
+    // A connection-level redirect drops our marker; Moyasar's own parameters remain.
+    '?id=pay_1&status=paid',
+  ])('recognises %s', (search) => {
+    expect(isGatewayReturn(search)).toBe(true)
+  })
+
+  it.each(['', '?invoice=inv_1', '?id=only_an_id'])('treats %s as an ordinary visit', (search) => {
+    expect(isGatewayReturn(search)).toBe(false)
   })
 })
 
