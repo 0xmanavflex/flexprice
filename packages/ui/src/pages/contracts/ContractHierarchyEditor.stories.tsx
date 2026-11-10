@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { ContractHierarchyEditor } from './ContractHierarchyEditor'
 import { SubscriptionStatus, money, type SubscriptionDetail } from '@fp/domain'
 const date = (value: string) => new Date(`${value}T00:00:00Z`)
@@ -192,7 +192,8 @@ export const IndependentChildActions: Story = {
     await userEvent.click(trigger)
     await expect(await screen.findByRole('menu')).toBeVisible()
     await userEvent.keyboard('{Escape}')
-    await expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    // The menu animates out: wait for it to leave rather than assert mid-exit.
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
     await userEvent.click(trigger)
     await userEvent.click(await screen.findByRole('menuitem', { name: 'View customer' }))
     await expect(args.onOpenCustomer).toHaveBeenCalledTimes(2)
