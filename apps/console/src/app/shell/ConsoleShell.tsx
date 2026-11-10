@@ -122,6 +122,8 @@ export interface ConsoleShellProps {
   environments: ShellEnvironment[]
   onEnvironmentChange: (id: string) => void
   user: ShellUser
+  /** Change your own password, from the account menu. Omitted, the item is not drawn. */
+  onChangePassword?: () => void
   onSignOut?: () => void
   /** Sits in the header, to the left of search. */
   headerLeading?: ReactNode
@@ -149,6 +151,7 @@ export function ConsoleShell({
   environments,
   onEnvironmentChange,
   user,
+  onChangePassword,
   onSignOut,
   headerLeading,
   headerActions,
@@ -222,6 +225,7 @@ export function ConsoleShell({
         onNavigate={goTo}
         user={user}
         onSettings={() => goTo('settings')}
+        {...(onChangePassword ? { onChangePassword } : {})}
         {...(onSignOut ? { onSignOut } : {})}
         {...(headerLeading ? { headerLeading } : {})}
         // What changed from V1, as the dismissible stack above the account menu.

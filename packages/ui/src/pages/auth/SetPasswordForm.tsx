@@ -44,6 +44,19 @@ export interface SetPasswordFormProps {
   onSignIn?: () => void
   /** Offered on the expired screen, to start again. */
   onRequestAnother?: () => void
+  /** Overrides the heading: "Set your password" for an invitation link. */
+  title?: string
+  /** Overrides the line under the heading. */
+  description?: string
+  /** Whose password this sets, shown and never editable. */
+  email?: string
+  /** The link is still being checked: nothing to fill in yet. */
+  checking?: boolean
+  /**
+   * Overrides the expired screen's text, e.g. "Ask your admin for a new one"
+   * when links come from an admin rather than an email request.
+   */
+  expiredDescription?: string
 }
 
 export function SetPasswordForm({
@@ -54,6 +67,11 @@ export function SetPasswordForm({
   done = false,
   onSignIn,
   onRequestAnother,
+  title = 'Choose a new password',
+  description = 'This replaces the old one everywhere you sign in.',
+  email,
+  checking = false,
+  expiredDescription = 'Reset links are good for one use and a short while. Request a new one and it will arrive in a moment.',
 }: SetPasswordFormProps) {
   const [revealed, setRevealed] = useState(false)
   const form = useCalmForm<SetPassword>({
@@ -82,10 +100,7 @@ export function SetPasswordForm({
     return (
       <div className="flex w-full max-w-sm flex-col gap-4" role="status">
         <h1 className="text-2xl font-medium tracking-tight">That link has expired</h1>
-        <p className="text-muted-foreground text-sm">
-          Reset links are good for one use and a short while. Request a new one and it will arrive
-          in a moment.
-        </p>
+        <p className="text-muted-foreground text-sm">{expiredDescription}</p>
         <div className="flex items-center gap-2">
           {onRequestAnother ? (
             <Button type="button" onClick={onRequestAnother} className="w-fit">
@@ -102,6 +117,15 @@ export function SetPasswordForm({
     )
   }
 
+  if (checking) {
+    return (
+      <div className="flex w-full max-w-sm flex-col gap-4" role="status">
+        <h1 className="text-2xl font-medium tracking-tight">{title}</h1>
+        <p className="text-muted-foreground text-sm">Checking your link…</p>
+      </div>
+    )
+  }
+
   return (
     <form
       onSubmit={form.handleSubmit((values) => onSubmit(values))}
@@ -111,11 +135,9 @@ export function SetPasswordForm({
     >
       <div className="flex flex-col gap-1">
         <h1 id="set-password-heading" className="text-2xl font-medium tracking-tight">
-          Choose a new password
+          {title}
         </h1>
-        <p className="text-muted-foreground text-sm">
-          This replaces the old one everywhere you sign in.
-        </p>
+        <p className="text-muted-foreground text-sm">{description}</p>
       </div>
 
       {error ? (
@@ -125,6 +147,12 @@ export function SetPasswordForm({
         >
           {error}
         </p>
+      ) : null}
+
+      {email ? (
+        <Field label="Email">
+          {({ id, ...field }) => <Input id={id} value={email} readOnly disabled {...field} />}
+        </Field>
       ) : null}
 
       <Field label="New password" error={form.formState.errors.password?.message}>

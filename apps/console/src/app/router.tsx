@@ -16,7 +16,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { Navigate, Outlet } from '@tanstack/react-router'
-import { lazy, Suspense, useEffect, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { AccessProvider, AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { useAccessControl, useCurrentUser, useSelfBillingStatus } from '@fp/query'
 import { toListFailure } from '@/pages/shared/listFailure'
@@ -367,6 +367,10 @@ import { AuthCallbackPage } from '@/pages/auth/AuthCallbackPage'
 import { SignUpConfirmPage } from '@/pages/auth/SignUpConfirmPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
+import { SetPasswordPage } from '@/pages/auth/SetPasswordPage'
+import { passwordLinksAvailableFor } from '@/app/auth/passwordLink'
+import { ChangePasswordDialog } from '@/app/shell/ChangePasswordDialog'
+import { useRegion } from '@/app/region'
 import { OnboardingPage } from '@/pages/auth/OnboardingPage'
 
 /**
@@ -412,6 +416,8 @@ function ShellLayout() {
 
   // Each list's filters, kept across a trip into a detail page and back.
   useListMemory()
+  const { region } = useRegion()
+  const [changingPassword, setChangingPassword] = useState(false)
 
   return (
     <AccountLockProvider enabled={signedIn}>
@@ -446,6 +452,14 @@ function ShellLayout() {
             email: user?.email ?? '',
             ...(user?.tenantName ? { organization: user.tenantName } : {}),
           }}
+          // Self-hosted only, and only for a person signed in with a password:
+          // hosted accounts change theirs through Supabase, and an API key has
+          // no password to change (the API refuses it).
+          {...(passwordLinksAvailableFor(region) &&
+          session?.token &&
+          user?.type !== 'service_account'
+            ? { onChangePassword: () => setChangingPassword(true) }
+            : {})}
           onSignOut={() => {
             signOut()
             void navigate({ to: '/sign-in', search: {} as never })
@@ -475,6 +489,7 @@ function ShellLayout() {
             </RouteAccessGate>
           </Suspense>
         </ConsoleShell>
+        <ChangePasswordDialog open={changingPassword} onOpenChange={setChangingPassword} />
         {/* Toasters render a <section> each; inside the header cluster every one
           added a flex gap between search and Create. */}
         <VersionCheck />
@@ -700,6 +715,35 @@ const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/reset-password',
   component: ResetPasswordPage,
+})
+
+/**
+ * The far end of a one-time password link (self-hosted). Like
+ * `/reset-password`, it does not step aside for an existing session: the link
+ * has to be usable wherever it is opened. The token is in the fragment, which
+ * the page reads itself.
+ */
+const setPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/set-password',
+  component: SetPasswordPage,
+})
+
+/**
+ * V1's address for the same page, `/auth?tab=set-password#token=…`, which links
+ * already handed out still carry. Sent on with the fragment; any other `/auth`
+ * visit goes to sign-in, as V1's `/auth` was its sign-in page.
+ */
+const legacyAuthRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth',
+  beforeLoad: ({ location }) => {
+    const tab = new URLSearchParams(location.searchStr).get('tab')
+    if (tab === 'set-password') {
+      throw redirect({ to: '/set-password', hash: location.hash })
+    }
+    throw redirect({ to: '/sign-in', search: { redirect: undefined, sso: undefined } })
+  },
 })
 
 /**
@@ -2989,6 +3033,8 @@ export const routeTree = rootRoute.addChildren([
   authCallbackRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
+  setPasswordRoute,
+  legacyAuthRoute,
   onboardingRoute,
   shellRoute.addChildren([
     ...legacyRoutes,

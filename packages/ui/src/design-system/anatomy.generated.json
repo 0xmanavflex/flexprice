@@ -11481,6 +11481,15 @@
         "SetPasswordForm"
       ]
     },
+    "SetPasswordPage": {
+      "file": "apps/console/src/pages/auth/SetPasswordPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "AuthFrame",
+        "SetPasswordForm"
+      ]
+    },
     "SignInPage": {
       "file": "apps/console/src/pages/auth/SignInPage.tsx",
       "pattern": "Other",

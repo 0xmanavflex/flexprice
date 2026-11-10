@@ -82,6 +82,27 @@ export const SignsOut: Story = {
   },
 }
 
+/** On a self-hosted deployment the menu offers changing your own password. */
+export const ChangesPassword: Story = {
+  args: { onChangePassword: fn() },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /account: dinesh k/i }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Change password' }))
+    await expect(args.onChangePassword).toHaveBeenCalledOnce()
+  },
+}
+
+/** Where the deployment has no such action, the item is not drawn. */
+export const NoChangePasswordByDefault: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /account: dinesh k/i }))
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeVisible())
+    await expect(
+      screen.queryByRole('menuitem', { name: 'Change password' }),
+    ).not.toBeInTheDocument()
+  },
+}
+
 /**
  * Documentation is not in the account menu: it lives only in the sidebar's
  * pinned footer, so there is one place to find it.

@@ -10,6 +10,7 @@ import {
 import { RegionField, SignInScreen } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
 import { useRegion } from '@/app/region'
+import { passwordLinksAvailableFor } from '@/app/auth/passwordLink'
 import { resetAvailableFor } from '@/app/auth/passwordReset'
 import { env } from '@/env'
 import { resolveSsoTenant, startSamlLogin } from './samlLogin'
@@ -182,7 +183,10 @@ export function SignInPage({ redirect, ssoTenantId }: SignInPageProps) {
               onForgotPassword: () =>
                 void navigate({ to: '/forgot-password', search: {} as never }),
             }
-          : {})}
+          : passwordLinksAvailableFor(region)
+            ? // Self-hosted: an admin makes reset links from the Team table.
+              { forgotPasswordNote: 'Forgot your password? Ask an admin for a reset link.' }
+            : {})}
         {...(googleAvailable && !providerPending ? { onProvider: () => void beginGoogle() } : {})}
         {...(tenantForSso ? { onSso: () => void beginSso(tenantForSso), ssoPending } : {})}
         isSubmitting={signIn.isPending || supabasePending}

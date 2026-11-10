@@ -52,6 +52,7 @@ export interface AppShellProps {
   user: ShellUser
   onProfile?: () => void
   onSettings?: () => void
+  onChangePassword?: () => void
   onSignOut?: () => void
 
   productName?: string
@@ -97,6 +98,7 @@ export function AppShell({
   user,
   onProfile,
   onSettings,
+  onChangePassword,
   onSignOut,
   productName = 'Flexprice',
   logo,
@@ -154,6 +156,7 @@ export function AppShell({
               user={user}
               {...(onProfile ? { onProfile } : {})}
               {...(onSettings ? { onSettings } : {})}
+              {...(onChangePassword ? { onChangePassword } : {})}
               {...(onSignOut ? { onSignOut } : {})}
             />
           </SidebarFooter>

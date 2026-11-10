@@ -71,7 +71,7 @@ function str(source: Record<string, unknown>, key: string): string {
  * network failure, an HTML 502 from a load balancer and a JSON 401 all leave
  * this module as the same `ApiError` shape the SDK path produces.
  */
-async function request(
+export async function request(
   serverURL: string,
   path: string,
   init: {
