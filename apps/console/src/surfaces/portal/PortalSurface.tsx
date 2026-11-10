@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CreditCardIcon } from '@fp/ui/icons'
+import successConfetti from './success-confetti.svg'
 import {
   NO_USAGE_FILTER,
   isUsageFiltered,
@@ -50,6 +52,7 @@ import type { ApiUrls } from '../publicApi'
 import {
   RETURNED_PARAM,
   consumeLeftForGateway,
+  gatewayReturnFailed,
   isGatewayReturn,
   markLeavingForGateway,
   type PortalLocation,
@@ -139,13 +142,21 @@ export function PortalSurface({
     // opened in another browser (on a phone, a link tapped in an app pays in
     // Safari), or the kept session expired. The gateway's webhook settles the
     // payment, not this page, so it must not read as a broken link.
-    return isGatewayReturn(window.location.search) ? (
+    // A gateway that says the payment failed gets a neutral page, never the tick.
+    return !isGatewayReturn(window.location.search) ? (
+      <Expired />
+    ) : gatewayReturnFailed(window.location.search) ? (
       <PortalNotice
-        title="You’re back from checkout"
-        body="If you paid, it’s being added to your account. Go back to the billing tab you came from, or open your billing link again to see it."
+        icon={<CreditCardIcon />}
+        title="Back to billing"
+        body="Your checkout session has ended. Head back to your billing portal to view your latest billing details."
       />
     ) : (
-      <Expired />
+      <PortalNotice
+        illustration={<img src={successConfetti} alt="" aria-hidden="true" className="size-28" />}
+        title="You’re all set!"
+        body="Head back to your billing portal to view your latest billing details."
+      />
     )
   }
   return (
