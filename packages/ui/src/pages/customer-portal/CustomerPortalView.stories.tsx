@@ -395,7 +395,7 @@ export const AddCard: Story = {
     await waitFor(() => expect(addCard).toHaveBeenCalledWith('stripe'))
     const handoff = within(await screen.findByRole('dialog', { name: 'Add your card' }))
     // Saving a card charges nothing: the words are about the card, not a payment.
-    await expect(handoff.getByText('Enter your card details on the secure card form')).toBeVisible()
+    await expect(handoff.getByText('Taking you to the secure card form')).toBeVisible()
     await expect(handoff.queryByText(/paying/)).toBeNull()
     await expect(handoff.getByRole('link', { name: /Open card form/ })).toHaveAttribute(
       'href',

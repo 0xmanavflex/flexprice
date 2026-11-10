@@ -65,7 +65,7 @@ export interface CustomerPortalData {
 
 /**
  * What the portal can do. Each write resolves when it is done: with the
- * gateway page it opened in a new tab, if it opened one (the dialog then keeps
+ * gateway page it sent the customer to, if any (the dialog then keeps
  * that link on screen): and rejects with a message the customer can read.
  */
 export interface CustomerPortalActions {

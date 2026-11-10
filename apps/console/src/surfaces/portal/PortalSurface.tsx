@@ -312,7 +312,7 @@ function Portal({
       }),
     onOpenInvoice: (invoiceId) => navigate({ ...location, invoiceId }),
     payInvoice: (invoice, provider) =>
-      inNewTab(() =>
+      toGateway(() =>
         pay.run({
           invoiceId: invoice.id,
           provider,
@@ -341,9 +341,9 @@ function Portal({
         if (!isSafeNavigationUrl(next)) throw new Error(GENERIC_ERROR)
         return next
       }
-      // Another checkout already open: no new tab, the dialog asks what to do.
+      // Another checkout already open: the customer stays here, and the dialog asks what to do.
       let alreadyOpen: PortalOpenCheckout | null = null
-      const url = await inNewTab(async () => {
+      const url = await toGateway(async () => {
         const outcome = await topUp.run({
           ...request,
           provider: via.provider,
@@ -355,7 +355,7 @@ function Portal({
       return alreadyOpen ? { alreadyOpen } : url
     },
     addCard: (provider) =>
-      inNewTab(() => addCard.run({ provider, returnUrl: returnHere() }), {
+      toGateway(() => addCard.run({ provider, returnUrl: returnHere() }), {
         required: true,
       }),
     removeCard: async (card) => {
@@ -450,6 +450,44 @@ async function settle(run: () => Promise<unknown>): Promise<null> {
     return null
   } catch (cause) {
     throw new Error(messageOf(cause), { cause })
+  }
+}
+
+/**
+ * Runs a write that may answer with a gateway page, and sends this tab there.
+ * The gateway sends the customer back to this same tab (`returnHere`), which
+ * picks the session up again and follows the checkout, so they never end up
+ * with a second copy of the portal. Framed in another site's page, where a
+ * gateway refuses to load, the page opens in a new tab instead (`inNewTab`).
+ * The URL is handed back so the dialog keeps the link on screen until the page
+ * has gone. `required`: no page in the answer is an error.
+ */
+async function toGateway(
+  run: () => Promise<string | null>,
+  options: { required?: boolean } = {},
+): Promise<string | null> {
+  if (isFramed()) return inNewTab(run, options)
+  let url: string | null
+  try {
+    url = await run()
+  } catch (cause) {
+    throw new Error(messageOf(cause), { cause })
+  }
+  if (url === null) {
+    if (options.required) throw new Error(GENERIC_ERROR)
+    return null
+  }
+  if (!isSafeNavigationUrl(url)) throw new Error(GENERIC_ERROR)
+  window.location.assign(url)
+  return url
+}
+
+function isFramed(): boolean {
+  try {
+    return window.top !== window.self
+  } catch {
+    // A cross-origin parent cannot be read, which itself means framed.
+    return true
   }
 }
 
