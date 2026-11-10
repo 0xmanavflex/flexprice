@@ -87,6 +87,21 @@ describe('fetchWorkflowRuns', () => {
     expect(page.total).toBe(9)
     expect(page.runs[0]?.status).toBe(WorkflowStatus.Running)
   })
+
+  it("sends a scope as the SDK filter's entity, entityId and workflowType", async () => {
+    const queryWorkflow = vi.fn(async (_filter: Record<string, unknown>) => ({ items: [] }))
+    const client = { workflows: { queryWorkflow } } as unknown as Flexprice
+    await fetchWorkflowRuns(client, DEFAULT_WORKFLOW_QUERY, {
+      entity: 'plan',
+      entityId: 'plan_1',
+      workflowType: 'PriceSyncV2Workflow',
+    })
+    expect(queryWorkflow.mock.calls[0]?.[0]).toMatchObject({
+      entity: 'plan',
+      entityId: 'plan_1',
+      workflowType: 'PriceSyncV2Workflow',
+    })
+  })
 })
 
 describe('fetchWorkflowRun', () => {

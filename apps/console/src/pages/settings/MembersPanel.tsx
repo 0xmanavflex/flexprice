@@ -31,7 +31,7 @@ import {
   useAccess,
 } from '@fp/ui/compositions'
 import { KeyRoundIcon, PencilIcon } from '@fp/ui/icons'
-import { RowActionsMenu } from '@fp/ui/pages'
+import { PasswordLinkDialog, RowActionsMenu } from '@fp/ui/pages'
 import {
   Badge,
   Button,
@@ -249,7 +249,18 @@ export function MembersPanel() {
       <CredentialsDialog credentials={credentials} onClose={() => setCredentials(null)} />
 
       <PasswordLinkDialog
-        shared={shared}
+        member={
+          shared ? { name: memberDisplayName(shared.member), email: shared.member.email } : null
+        }
+        link={
+          shared?.link
+            ? {
+                url: passwordLinkUrl(shared.link.token),
+                purpose: shared.link.purpose,
+                expiry: formatExpiry(shared.link.expiresAt),
+              }
+            : null
+        }
         isPending={createLink.isPending}
         error={mutationMessage(createLink.error, 'The link could not be created.')}
         onClose={() => {
@@ -544,86 +555,6 @@ function formatExpiry(iso: string): string | null {
   const at = new Date(iso)
   if (!iso || Number.isNaN(at.getTime())) return null
   return at.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-}
-
-/**
- * A one-time link for a member to set their own password (self-hosted).
- *
- * From an invitation, or from "Reset password" on their row. The admin never
- * sees a password: they share the link, and the member chooses one there.
- * Setting it spends this link and every older one. Closing the dialog loses
- * the link, but nothing is lost with it: "Reset password" makes another.
- */
-function PasswordLinkDialog({
-  shared,
-  isPending,
-  error,
-  onClose,
-}: {
-  shared: SharedLink | null
-  isPending: boolean
-  error: string | null
-  onClose: () => void
-}) {
-  const [copied, setCopied] = useState(false)
-  const linkToken = shared?.link?.token
-  useEffect(() => setCopied(false), [linkToken])
-  if (!shared) return null
-
-  const name = memberDisplayName(shared.member)
-  const link = shared.link
-  const url = link ? passwordLinkUrl(link.token) : ''
-  const expiry = link ? formatExpiry(link.expiresAt) : null
-  const invite = link?.purpose === 'invite'
-
-  return (
-    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {invite ? `Invitation link for ${name}` : `Password link for ${name}`}
-          </DialogTitle>
-          <DialogDescription>
-            {invite
-              ? `Send this to ${shared.member.email || name}. They open it to set their password and sign in.`
-              : `Send this to ${shared.member.email || name}. They open it to choose a new password; their current one keeps working until they do.`}{' '}
-            It works once{expiry ? ` and expires ${expiry}` : ''}. Anyone with it can set the
-            password, so send it privately.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          {link ? (
-            <Field label={invite ? 'Invitation link' : 'Password link'}>
-              {({ id, ...field }) => (
-                <span className="flex gap-2">
-                  <Input id={id} readOnly value={url} className="font-mono" {...field} />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(url).then(() => setCopied(true))
-                    }}
-                  >
-                    {copied ? 'Copied' : 'Copy'}
-                  </Button>
-                </span>
-              )}
-            </Field>
-          ) : isPending ? (
-            <p className="text-muted-foreground text-sm" role="status">
-              Creating the link…
-            </p>
-          ) : null}
-          <ActionError message={error} />
-        </div>
-        <DialogFooter>
-          <Button type="button" onClick={onClose}>
-            Done
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
 }
 
 /**

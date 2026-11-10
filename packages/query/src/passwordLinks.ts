@@ -72,6 +72,9 @@ export function usePasswordLinkDetails(linkToken: string | null) {
     enabled: Boolean(linkToken),
     retry: false,
     staleTime: Infinity,
+    // Dropped as soon as the page leaves: a link opened again (spent by then,
+    // perhaps) is checked afresh rather than shown from a stale success.
+    gcTime: 0,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   })

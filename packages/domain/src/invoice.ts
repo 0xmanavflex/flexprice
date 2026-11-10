@@ -306,7 +306,8 @@ export const INVOICE_FILTERS: readonly ListFilterSpec[] = [
   },
   // Amounts in the invoice's own currency, as the API stores them (major units).
   { field: 'total', label: 'Amount', kind: 'number' },
-  { field: 'amount_due', label: 'Amount due', kind: 'number' },
+  // What is still owed, as the Amount due column shows it (`amount_remaining`), not the original charge.
+  { field: 'amount_remaining', label: 'Amount due', kind: 'number' },
   { field: 'created_at', label: 'Created', kind: 'date' },
   { field: 'due_date', label: 'Due date', kind: 'date' },
 ]
