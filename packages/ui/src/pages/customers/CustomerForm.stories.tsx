@@ -131,7 +131,7 @@ export const Edit: Story = {
     await expect(canvas.getByRole('textbox', { name: /^name/i })).toHaveValue('Acme Corp')
     await expect(canvas.queryByRole('complementary')).toBeNull()
     await expect(canvas.getByRole('textbox', { name: /city/i })).toBeInTheDocument()
-    // Renaming a saved customer never rewrites its external ID.
+    // A custom external ID stays when the name changes.
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
     await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue('acme')
     await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))

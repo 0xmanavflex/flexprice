@@ -94,11 +94,16 @@ export function CustomerForm({
     resolver: standardSchemaResolver(createCustomerSchema) as Resolver<CreateCustomer>,
     defaultValues: defaultValue ?? emptyCustomer(),
   })
+  // A generated id follows the name. A custom one (not the suggestion for the saved name) stays.
+  const followsName =
+    !isEdit ||
+    (defaultValue?.externalId ?? '') ===
+      suggestKey(KEY_PREFIX.customer, defaultValue?.name ?? '')
 
   const nameField = form.register('name', {
     onChange: (event: { target: { value: string } }) => {
       // The externalId follows the name until the person types one of their own.
-      if (!isEdit && !form.getFieldState('externalId').isDirty) {
+      if (followsName && !form.getFieldState('externalId').isDirty) {
         form.setValue('externalId', suggestKey(KEY_PREFIX.customer, event.target.value), {
           shouldValidate: form.formState.isSubmitted,
         })
