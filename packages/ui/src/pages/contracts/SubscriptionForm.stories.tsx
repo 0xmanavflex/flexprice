@@ -1499,12 +1499,18 @@ export const FxOverrideWhenCurrenciesDiffer: Story = {
   },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Currency conversion' })).toBeVisible()
+    const heading = await canvas.findByRole('heading', { name: 'Currency conversion' })
+    await expect(heading).toBeVisible()
+    // The card's description sits behind the (i) beside its title.
+    await userEvent.click(
+      within(heading.parentElement!).getByRole('button', { name: 'More information' }),
+    )
     await expect(
-      canvas.getByText(
+      await screen.findByText(
         "This contract bills in USD; its invoices go out in INR, the billing customer's currency.",
       ),
     ).toBeVisible()
+    await userEvent.keyboard('{Escape}')
     const rate = canvas.getByRole('textbox', { name: /^Exchange rate/ })
     await expect(rate).toHaveAttribute('placeholder', '83.00 (global rate)')
     // Blank is allowed: the global rate applies, and nothing is sent.

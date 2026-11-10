@@ -5573,11 +5573,24 @@ export const handlers = [
     const body = (await request.json().catch(() => ({}))) as {
       entity_type?: string
       entity_id?: string
+      connection_id?: string
     }
     if (!body.entity_type || !body.entity_id) {
       return HttpResponse.json(
         { code: 'validation_error', message: 'entity_type and entity_id are required' },
         { status: 400 },
+      )
+    }
+    // As the API: a named connection must exist and be published, and only it syncs.
+    if (
+      body.connection_id !== undefined &&
+      !connectionRows.some(
+        (row) => row['id'] === body.connection_id && row['connection_status'] === 'published',
+      )
+    ) {
+      return HttpResponse.json(
+        { code: 'not_found', message: 'connection not found' },
+        { status: 404 },
       )
     }
     return HttpResponse.json({ message: 'sync triggered' })

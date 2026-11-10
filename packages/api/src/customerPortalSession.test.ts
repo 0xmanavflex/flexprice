@@ -30,4 +30,18 @@ describe('createCustomerPortalSession', () => {
       createCustomerPortalSession('https://api.test', 'tok', 'env_1', 'cust-1'),
     ).resolves.toMatchObject({ url: null })
   })
+
+  it('drops a link that would send the token over plain http', async () => {
+    answer({ url: 'http://portal.flexprice.io/in?token=abc', token: 'abc' })
+    await expect(
+      createCustomerPortalSession('https://api.test', 'tok', 'env_1', 'cust-1'),
+    ).resolves.toMatchObject({ url: null })
+  })
+
+  it('keeps plain http for a local server', async () => {
+    answer({ url: 'http://localhost:4200/p?token=abc', token: 'abc' })
+    await expect(
+      createCustomerPortalSession('https://api.test', 'tok', 'env_1', 'cust-1'),
+    ).resolves.toMatchObject({ url: 'http://localhost:4200/p?token=abc' })
+  })
 })

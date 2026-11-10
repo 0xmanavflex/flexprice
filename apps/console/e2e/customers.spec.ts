@@ -231,7 +231,8 @@ test.describe('a customer detail page', () => {
     await page.getByRole('menuitem', { name: 'Push to Stripe' }).click()
     const body = (await sync).postDataJSON() as Record<string, unknown>
     expect(body).toMatchObject({ entity_type: 'customer', method: 'push' })
-    expect(body['connection_id']).toEqual(expect.any(String))
+    // Stripe's own connection, not any connection: a push routed elsewhere fails here.
+    expect(body['connection_id']).toBe('conn_stripe')
     await expect(page.getByText('Pushing customer to Stripe')).toBeVisible()
   })
 

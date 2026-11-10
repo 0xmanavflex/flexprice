@@ -28,12 +28,19 @@ export async function createCustomerPortalSession(
   }
 }
 
-/** An http(s) address, or null: a link the console hands to a customer must be a web page. */
+/** Hosts where plain http is a local server, not a customer's token on the open network. */
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
+
+/**
+ * An https address, or null: the link carries the customer's session token, so
+ * it is never sent in the clear. Plain http is kept only for a local server.
+ */
 function webUrl(value: unknown): string | null {
   if (typeof value !== 'string' || !value.trim()) return null
   try {
     const url = new URL(value.trim())
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null
+    if (url.protocol === 'https:') return url.toString()
+    return url.protocol === 'http:' && LOCAL_HOSTS.has(url.hostname) ? url.toString() : null
   } catch {
     return null
   }
