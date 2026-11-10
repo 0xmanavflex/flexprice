@@ -62,6 +62,12 @@ test('a record no environment has is still "not found"', async ({ page }) => {
 /** The `?env=` a page's address carries right now: empty once it is gone. */
 const environmentInUrl = (page: Page): string => new URL(page.url()).searchParams.get('env') ?? ''
 
+/** The switcher's environment name once the list has loaded (not "Loading environments"). */
+async function loadedEnvironment(shell: ShellPage): Promise<string> {
+  await expect.poll(() => shell.currentEnvironment()).not.toMatch(/^Loading/)
+  return shell.currentEnvironment()
+}
+
 test('the address does not carry the environment', async ({ page }) => {
   await page.goto('/customers')
   const shell = new ShellPage(page)
@@ -79,7 +85,7 @@ test('a shared link opens in the environment it names, then drops it from the ad
   await page.goto('/customers')
   const shell = new ShellPage(page)
   await expect(shell.environment).toBeVisible({ timeout: 20_000 })
-  const homeName = await shell.currentEnvironment()
+  const homeName = await loadedEnvironment(shell)
 
   // Learn another environment's id and name from the switcher, not a fixture:
   // switching there stores its id, then switch home again.
@@ -108,11 +114,11 @@ test('a link to an environment you cannot reach opens in your own', async ({ pag
   await page.goto('/customers')
   const shell = new ShellPage(page)
   await expect(shell.environment).toBeVisible({ timeout: 20_000 })
-  const ownName = await shell.currentEnvironment()
+  const ownName = await loadedEnvironment(shell)
 
   await page.goto('/customers?env=env_NOTONEOFYOURS')
   await expect(shell.environment).toBeVisible({ timeout: 20_000 })
   await expect.poll(() => environmentInUrl(page)).toBe('')
-  expect(await shell.currentEnvironment()).toBe(ownName)
+  await expect.poll(() => shell.currentEnvironment()).toBe(ownName)
   await expect(page.getByText(/^Switched to/)).toHaveCount(0)
 })
