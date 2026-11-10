@@ -4,19 +4,16 @@ name: Pipeline
 #
 #   1. Check    lint, unit tests, production bundle        (in parallel)
 #   2. Deploy   the main project and the regions           (in parallel)
-#   3. Verify   storybook, e2e, screenshots                (in parallel)
 #
-# Every workflow here also runs on its own for pull requests and the other
-# branches — see each file's own `on:`. What this adds is **order on main**,
-# which the previous arrangement had none of: all nine workflows started at
-# once, so a region could finish deploying a commit whose unit tests were
-# still running, and sometimes failing.
+# Every workflow here also runs on its own for pull requests — see each file's
+# own `on:`. What this adds is **order on main**: a region deploys only a
+# commit whose checks passed, never one whose unit tests are still running.
 #
 # ## 1. Check — what holds up a release
 #
 # Only the fast things that can call a commit wrong: lint and types, the unit
-# and story suites, and whether it builds at all. Two to three minutes, and a
-# region deploys only if all three pass.
+# suite, and whether it builds at all. Two to three minutes, and a region
+# deploys only if all three pass.
 #
 # ## 2. Deploy — every region at once
 #
@@ -25,17 +22,14 @@ name: Pipeline
 # separate secrets, not because they need separate timing. A region failing
 # does not stop the others; that is `fail-fast: false` inside the matrix.
 #
-# ## 3. Verify — reported, not gating
+# ## No mocked suites after the deploy
 #
-# Storybook, E2E and the visual screenshots. All three build the app with
-# `VITE_USE_MOCKS=true`, so none of them touches a deployment or describes the
-# thing being shipped — holding a release ten minutes for them buys nothing.
-#
-# The consequence is worth being plain about: a failure here arrives after the
-# regions are live. Nothing downstream is blocked, because nothing depends on
-# them, but the run goes red — which is the honest outcome for a test that
-# failed. If one of these ever becomes a release you would have wanted to
-# stop, move it back into the Check stage: it is one `needs:` line.
+# Storybook, E2E and the visual screenshots used to run here a third time,
+# after the regions were live. They build the app with `VITE_USE_MOCKS=true`,
+# so they describe neither the deployment nor anything the pull request into
+# `main` had not already tested, and they could not stop a release they ran
+# after. They run on pull requests and nightly on `develop` instead. The live
+# release is checked by `e2e-release.yml`, against production.
 on:
   push:
     branches:
@@ -79,23 +73,4 @@ jobs:
     name: Deploy regions
     needs: [check-lint, check-unit, check-build]
     uses: ./.github/workflows/deploy-regions.yml
-    secrets: inherit
-
-  # ── 3. Verify ─────────────────────────────────────────────────────────────
-  verify-storybook:
-    name: Verify storybook
-    needs: [deploy-main, deploy-regions]
-    uses: ./.github/workflows/storybook.yml
-    secrets: inherit
-
-  verify-e2e:
-    name: Verify e2e
-    needs: [deploy-main, deploy-regions]
-    uses: ./.github/workflows/e2e.yml
-    secrets: inherit
-
-  verify-screenshots:
-    name: Verify screenshots
-    needs: [deploy-main, deploy-regions]
-    uses: ./.github/workflows/visual.yml
     secrets: inherit

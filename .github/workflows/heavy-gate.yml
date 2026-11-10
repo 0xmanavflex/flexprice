@@ -1,0 +1,72 @@
+name: Heavy suite gate
+
+# Decides whether one of the slow mocked suites (E2E, Storybook, Visual) is
+# worth running for this event. Called by those workflows; it does nothing on
+# its own.
+#
+#   pull request, draft            → skip (runs again on "Ready for review")
+#   pull request, docs only        → skip (`docs/**` and Markdown files)
+#   nightly, develop unchanged     → skip (no commit on develop in 25 hours)
+#   anything else                  → run
+#
+# Why a job and not `paths-ignore`: the suites are required checks. A workflow
+# filtered out by `paths-ignore` never reports, and the pull request waits for
+# it forever. A job skipped by `if:` reports "skipped", which branch protection
+# accepts. The gate reads the API rather than checking out the repository, so
+# it costs seconds.
+on:
+  workflow_call:
+    outputs:
+      run:
+        description: "'true' when the suite should run"
+        value: ${{ jobs.decide.outputs.run }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  decide:
+    name: Decide
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - name: Decide whether to run
+        id: decide
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const skip = async (reason) => {
+              core.setOutput('run', 'false')
+              core.notice(`Skipped: ${reason}`)
+              await core.summary.addRaw(`Skipped: ${reason}\n`).write()
+            }
+
+            if (context.eventName === 'pull_request') {
+              const pr = context.payload.pull_request
+              if (pr.draft) return skip('draft pull request. It runs once marked ready for review.')
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                ...context.repo,
+                pull_number: pr.number,
+                per_page: 100,
+              })
+              const docsOnly =
+                files.length > 0 &&
+                files.every((f) => f.filename.startsWith('docs/') || f.filename.endsWith('.md'))
+              if (docsOnly) return skip('only documentation changed.')
+            }
+
+            if (context.eventName === 'schedule') {
+              const since = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString()
+              const { data } = await github.rest.repos.listCommits({
+                ...context.repo,
+                sha: 'develop',
+                since,
+                per_page: 1,
+              })
+              if (data.length === 0) return skip('no commit on develop in the last 25 hours.')
+            }
+
+            core.setOutput('run', 'true')

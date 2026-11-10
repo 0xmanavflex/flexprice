@@ -10,10 +10,10 @@ The journey inventory: every journey, what it does and its last recorded result:
 | Specs             | `apps/console/e2e/*.spec.ts` except `live-*`                                                               | `apps/console/e2e/live-*.spec.ts`                         |
 | System under test | the console built with `VITE_USE_MOCKS=true` (MSW fixtures), served by the runner                          | the **deployed production frontend** and its API          |
 | Workflow          | `.github/workflows/e2e.yml`                                                                                | `.github/workflows/e2e-release.yml`                       |
-| Runs on           | pull requests, pushes to `develop` / `feat/v2-foundation` / `ci/**`, and Pipeline's Verify stage on `main` | **only** after Pipeline has deployed `main` to production |
+| Runs on           | pull requests (not drafts or docs-only), pushes to `ci/**`, and nightly on `develop` | **only** after Pipeline has deployed `main` to production |
 | Slack             | never                                                                                                      | one report per release                                    |
 
-The mocked suite is the existing CI check and is unchanged in when it runs; it tests the
+The mocked suite is the existing CI check; it tests the
 application, not a deployment, and posts nothing. Everything below is about the live,
 release-triggered suite unless it says otherwise.
 

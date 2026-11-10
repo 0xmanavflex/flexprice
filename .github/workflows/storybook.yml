@@ -7,30 +7,40 @@ name: Storybook
 # That makes this workflow the accessibility gate as well as the rendering one.
 # It is the reason a contrast regression on a 12px delta is caught here and not
 # in review.
+#
+# Runs on pull requests and once a night against `develop`, not on every push
+# to `develop`; `heavy-gate.yml` skips drafts, documentation-only changes and a
+# night with no new commit. See `e2e.yml` for why.
 on:
-  # Called by `pipeline.yml` on a push to main, so main runs these in order
-  # rather than all at once. The triggers below still fire on their own for
-  # every other branch and every pull request.
   workflow_call:
   push:
     branches:
-      - develop
-      - feat/v2-foundation
-      # A change to CI should prove itself on its own branch, before it reaches
-      # one where a mistake blocks everyone.
+      # A change to CI should prove itself on its own branch first.
       - 'ci/**'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    # 02:00 IST.
+    - cron: '30 20 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: storybook-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  gate:
+    name: Gate
+    uses: ./.github/workflows/heavy-gate.yml
+
   stories:
     name: Stories (browser + a11y)
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -38,6 +48,9 @@ jobs:
         with:
           filter: tree:0
           fetch-depth: 0
+          # The nightly run tests develop; a schedule otherwise checks out the
+          # default branch.
+          ref: ${{ github.event_name == 'schedule' && 'develop' || '' }}
 
       - uses: pnpm/action-setup@v4
 
@@ -53,14 +66,34 @@ jobs:
       # Separate from the run below on purpose: without the browser, Vitest
       # fails with "Executable doesn't exist", which reads like a broken test
       # and is a missing binary.
+      - name: Read the Playwright version
+        id: playwright
+        run: echo "version=$(pnpm --filter @fp/ui exec playwright --version | sed -n 's/^Version //p' | tail -1)" >> "$GITHUB_OUTPUT"
+
+      # The browser download is the same for every run of one Playwright
+      # version, so it is cached; the system libraries are installed each time.
+      - name: Restore the Playwright browser
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+
       - name: Install the browser the stories run in
+        if: steps.browser-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @fp/ui exec playwright install --with-deps chromium
+
+      - name: Install the browser's system libraries
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @fp/ui exec playwright install-deps chromium
 
       - name: Run every story as a browser and accessibility test
         run: pnpm --filter @fp/ui test:stories
 
   build:
     name: Build the workbench
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -68,6 +101,9 @@ jobs:
         with:
           filter: tree:0
           fetch-depth: 0
+          # The nightly run tests develop; a schedule otherwise checks out the
+          # default branch.
+          ref: ${{ github.event_name == 'schedule' && 'develop' || '' }}
 
       - uses: pnpm/action-setup@v4
 
