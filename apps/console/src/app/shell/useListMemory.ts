@@ -70,9 +70,9 @@ export function useListMemory(): void {
   const { environmentId } = useSession()
   const pathname = useLocation({ select: (location) => location.pathname })
   const location = useLocation({ select: (location) => location.search }) as Record<string, unknown>
-  // The list's own query, without `?env=`: every console page carries the
-  // environment, so with it no list would ever read as bare. The shell route
-  // keeps `env` on the restore navigation by itself.
+  // The list's own query, without `?env=`: a shared link's environment is not
+  // part of the list's query, and the shell takes it out of the address once
+  // the console is in that environment.
   const search = useMemo(() => {
     const { [ENVIRONMENT_PARAM]: _environment, ...query } = location
     return query

@@ -45,6 +45,7 @@ import {
   PlanCreditGrantsView,
   PlanEntitlementsView,
   pricingSummary,
+  toast,
 } from '@fp/ui/pages'
 import { ConfirmDialog, FormDialog } from '@fp/ui/compositions'
 import { usePlanFormOptions } from '../plans/planFormOptions'
@@ -134,7 +135,15 @@ export function CatalogChargesSection({
       )
       return
     }
-    create.mutate({ entityType, entityId, charges: [draft] }, { onSuccess: close })
+    create.mutate(
+      { entityType, entityId, charges: [draft] },
+      {
+        onSuccess: () => {
+          close()
+          toast.success(`Charge added to this ${noun}`)
+        },
+      },
+    )
   }
 
   return (
@@ -164,7 +173,12 @@ export function CatalogChargesSection({
         meters={meters}
         priceUnits={units}
         priceGroups={priceGroups}
-        onCreateFeature={() => void navigate({ to: '/features/new' })}
+        onCreateFeature={() =>
+          void navigate({
+            to: '/features/new',
+            search: { returnTo: `${globalThis.location.pathname}${globalThis.location.search}` },
+          })
+        }
         onSubmit={submit}
         isSubmitting={create.isPending || updatePrice.isPending}
         submitError={
@@ -275,9 +289,24 @@ export function CatalogEntitlementsSection({ entity, entityId }: CatalogSectionP
           <EntitlementCreateForm
             features={options}
             grantModel
-            onCreateFeature={() => void navigate({ to: '/features/new' })}
+            onCreateFeature={() =>
+              void navigate({
+                to: '/features/new',
+                search: {
+                  returnTo: `${globalThis.location.pathname}${globalThis.location.search}`,
+                },
+              })
+            }
             onSubmit={(draft: CreateEntitlement) =>
-              create.mutate({ entityType, entityId, entitlements: [draft] }, { onSuccess: close })
+              create.mutate(
+                { entityType, entityId, entitlements: [draft] },
+                {
+                  onSuccess: () => {
+                    close()
+                    toast.success(`Entitlement added to this ${noun}`)
+                  },
+                },
+              )
             }
             onCancel={close}
             isSubmitting={create.isPending}

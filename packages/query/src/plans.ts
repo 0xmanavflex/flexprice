@@ -307,9 +307,14 @@ export function useClonePlan() {
  */
 export function useSyncPlanPrices() {
   const client = useFlexprice()
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (id: string) => call(() => client.plans.syncPlanPrices(id)),
+    // The plan's Price sync tab lists runs: the new one should show there.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.workflowRuns.all() })
+    },
     // A failure is told through the shared toasts; the page announces a start.
     meta: { notify: { error: 'Could not start the sync.' } },
   })

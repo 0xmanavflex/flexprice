@@ -80,8 +80,9 @@ export function CustomerPortalView(props: CustomerPortalViewProps) {
   const customer = data.customer.status === 'ready' ? data.customer.data : null
   const periodStart =
     data.subscriptions.status === 'ready'
-      ? (data.subscriptions.data.find((s) => s.status === 'active' && s.periodStart)?.periodStart ??
-        null)
+      ? (data.subscriptions.data.find(
+          (s) => (s.status === 'active' || s.status === 'trialing') && s.periodStart,
+        )?.periodStart ?? null)
       : null
 
   const openInvoice = (invoice: PortalInvoice) => actions.onOpenInvoice(invoice.id)

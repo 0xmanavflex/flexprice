@@ -1,6 +1,6 @@
 import { PaymentStatus } from '@fp/domain'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_INVOICE_QUERY, InvoiceSortField, InvoiceStatus } from '@fp/domain'
+import { DEFAULT_INVOICE_QUERY, FilterOp, InvoiceSortField, InvoiceStatus } from '@fp/domain'
 import {
   applyLineChanges,
   runInvoiceEdit,
@@ -77,6 +77,17 @@ describe('toInvoiceFilter: domain vocabulary out, transport in', () => {
     expect(filter).toMatchObject({ invoiceStatus: ['DRAFT', 'FINALIZED'] })
     expect(isServerFilterable(InvoiceStatus.Overdue)).toBe(false)
     expect(isServerFilterable(InvoiceStatus.Draft)).toBe(true)
+  })
+
+  it('filters on the amount as a number condition on `total`', () => {
+    const filter = toInvoiceFilter({
+      ...DEFAULT_INVOICE_QUERY,
+      filters: [{ field: 'total', op: FilterOp.Gt, value: '2000' }],
+    })
+
+    expect(filter).toMatchObject({
+      filters: [{ field: 'total', operator: 'gt', dataType: 'number', value: { number: 2000 } }],
+    })
   })
 })
 

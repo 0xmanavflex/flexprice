@@ -10,6 +10,19 @@ export function formatDate(value: Date, locale?: string): string {
   }).format(value)
 }
 
+/**
+ * An invoice's issue or due day, named in UTC as the hosted invoice and the PDF
+ * name it, so the portal never says a different day from the document.
+ */
+export function formatInvoiceDay(value: Date, locale?: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(value)
+}
+
 export function formatDay(value: Date, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(value)
 }

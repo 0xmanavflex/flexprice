@@ -6,7 +6,6 @@ import {
   createRoute,
   createRouter,
   redirect,
-  retainSearchParams,
   stripSearchParams,
   useCanGoBack,
   useNavigate,
@@ -16,7 +15,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { Navigate, Outlet } from '@tanstack/react-router'
-import { lazy, Suspense, useEffect, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { AccessProvider, AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { useAccessControl, useCurrentUser, useSelfBillingStatus } from '@fp/query'
 import { toListFailure } from '@/pages/shared/listFailure'
@@ -26,11 +25,7 @@ import { hasSession, needsSignIn, useSession } from './session'
 import { AnalyticsIdentity, captureError } from './analytics'
 import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
 import { useEnvironments } from './shell/useEnvironments'
-import {
-  ENVIRONMENT_PARAM,
-  parseEnvironmentParam,
-  useEnvironmentInUrl,
-} from './shell/environmentInUrl'
+import { parseEnvironmentParam, useEnvironmentInUrl } from './shell/environmentInUrl'
 import { DOCS_URL } from './shell/navigation'
 import type { InvoiceQuery, RollforwardAccount } from '@fp/domain'
 const InvoiceFormPage = lazy(() =>
@@ -367,6 +362,10 @@ import { AuthCallbackPage } from '@/pages/auth/AuthCallbackPage'
 import { SignUpConfirmPage } from '@/pages/auth/SignUpConfirmPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
+import { SetPasswordPage } from '@/pages/auth/SetPasswordPage'
+import { passwordLinksAvailableFor } from '@/app/auth/passwordLink'
+import { ChangePasswordDialog } from '@/app/shell/ChangePasswordDialog'
+import { useRegion } from '@/app/region'
 import { OnboardingPage } from '@/pages/auth/OnboardingPage'
 
 /**
@@ -412,6 +411,8 @@ function ShellLayout() {
 
   // Each list's filters, kept across a trip into a detail page and back.
   useListMemory()
+  const { region } = useRegion()
+  const [changingPassword, setChangingPassword] = useState(false)
 
   return (
     <AccountLockProvider enabled={signedIn}>
@@ -446,6 +447,14 @@ function ShellLayout() {
             email: user?.email ?? '',
             ...(user?.tenantName ? { organization: user.tenantName } : {}),
           }}
+          // Self-hosted only, and only for a person signed in with a password:
+          // hosted accounts change theirs through Supabase, and an API key has
+          // no password to change (the API refuses it).
+          {...(passwordLinksAvailableFor(region) &&
+          session?.token &&
+          user?.type !== 'service_account'
+            ? { onChangePassword: () => setChangingPassword(true) }
+            : {})}
           onSignOut={() => {
             signOut()
             void navigate({ to: '/sign-in', search: {} as never })
@@ -475,6 +484,7 @@ function ShellLayout() {
             </RouteAccessGate>
           </Suspense>
         </ConsoleShell>
+        <ChangePasswordDialog open={changingPassword} onOpenChange={setChangingPassword} />
         {/* Toasters render a <section> each; inside the header cluster every one
           added a flex gap between search and Create. */}
         <VersionCheck />
@@ -576,10 +586,9 @@ const rootRoute = createRootRoute({
 const shellRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: '_shell',
-  // `?env=<environment id>` on every console page, kept across navigation so
-  // in-app links need not repeat it. See `shell/environmentInUrl.ts`.
+  // `?env=<environment id>` on a shared link: honoured on arrival, then taken
+  // out of the address. See `shell/environmentInUrl.ts`.
   validateSearch: (search: Record<string, unknown>) => parseEnvironmentParam(search),
-  search: { middlewares: [retainSearchParams([ENVIRONMENT_PARAM])] },
   /**
    * The guard, in `beforeLoad` rather than in a component.
    *
@@ -700,6 +709,35 @@ const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/reset-password',
   component: ResetPasswordPage,
+})
+
+/**
+ * The far end of a one-time password link (self-hosted). Like
+ * `/reset-password`, it does not step aside for an existing session: the link
+ * has to be usable wherever it is opened. The token is in the fragment, which
+ * the page reads itself.
+ */
+const setPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/set-password',
+  component: SetPasswordPage,
+})
+
+/**
+ * V1's address for the same page, `/auth?tab=set-password#token=…`, which links
+ * already handed out still carry. Sent on with the fragment; any other `/auth`
+ * visit goes to sign-in, as V1's `/auth` was its sign-in page.
+ */
+const legacyAuthRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth',
+  beforeLoad: ({ location }) => {
+    const tab = new URLSearchParams(location.searchStr).get('tab')
+    if (tab === 'set-password') {
+      throw redirect({ to: '/set-password', hash: location.hash })
+    }
+    throw redirect({ to: '/sign-in', search: { redirect: undefined, sso: undefined } })
+  },
 })
 
 /**
@@ -945,17 +983,38 @@ function FeaturesRouteComponent() {
 const featureCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/features/new',
+  // `?returnTo=` when the create was started from a plan or add-on: finishing
+  // (or cancelling) goes back there, so the charge or entitlement can be added.
+  validateSearch: (search: Record<string, unknown>): { returnTo?: string } =>
+    typeof search.returnTo === 'string' && isInAppPath(search.returnTo)
+      ? { returnTo: search.returnTo }
+      : {},
   component: FeatureCreateRouteComponent,
 })
 
+/** A path inside the console, never another origin (`//host`) or a scheme. */
+function isInAppPath(value: string): boolean {
+  return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')
+}
+
 function FeatureCreateRouteComponent() {
   const navigate = useNavigate()
+  const { returnTo } = useSearch({ from: featureCreateRoute.id })
 
   return (
     <FeatureFormPage
       mode="create"
-      onCancel={() => void navigate({ to: '/features', search: {} as never })}
-      onDone={(featureId) => void navigate({ to: '/features/$featureId', params: { featureId } })}
+      onCancel={() =>
+        returnTo
+          ? void navigate({ href: returnTo })
+          : void navigate({ to: '/features', search: {} as never })
+      }
+      // The create itself says "Feature created"; back on the plan it is ready to pick.
+      onDone={(featureId) =>
+        returnTo
+          ? void navigate({ href: returnTo })
+          : void navigate({ to: '/features/$featureId', params: { featureId } })
+      }
     />
   )
 }
@@ -2652,6 +2711,9 @@ function EventsRouteComponent() {
       onOpenFeature={(featureId) =>
         void navigate({ to: '/features/$featureId', params: { featureId } })
       }
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
       onOpenImports={() => void navigate({ to: '/imports', search: {} as never })}
     />
   )
@@ -2989,6 +3051,8 @@ export const routeTree = rootRoute.addChildren([
   authCallbackRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
+  setPasswordRoute,
+  legacyAuthRoute,
   onboardingRoute,
   shellRoute.addChildren([
     ...legacyRoutes,

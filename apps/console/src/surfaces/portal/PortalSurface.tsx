@@ -267,7 +267,7 @@ function Portal({
   const previousSpend = usePortalSpend(auth, previousStart, span.start, true, null, filter)
   // The current billing period so far, for "About $407 by Oct 12 at this pace".
   const period = subscriptions.data?.find(
-    (s) => s.status === 'active' && s.periodStart && s.periodEnd,
+    (s) => (s.status === 'active' || s.status === 'trialing') && s.periodStart && s.periodEnd,
   )
   const periodStart = period?.periodStart ?? null
   const periodNow = useMemo(() => portalRangeWindow('today', new Date(today)).end, [today])

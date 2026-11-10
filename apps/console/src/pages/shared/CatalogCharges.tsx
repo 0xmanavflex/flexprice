@@ -96,7 +96,12 @@ export function CatalogCharges({
         meters={meters}
         priceUnits={units}
         priceGroups={priceGroups}
-        onCreateFeature={() => void navigate({ to: '/features/new' })}
+        onCreateFeature={() =>
+          void navigate({
+            to: '/features/new',
+            search: { returnTo: `${globalThis.location.pathname}${globalThis.location.search}` },
+          })
+        }
         onSubmit={submit}
         isSubmitting={create.isPending || updatePrice.isPending}
         submitError={

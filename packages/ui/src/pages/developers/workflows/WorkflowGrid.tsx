@@ -84,6 +84,13 @@ export interface WorkflowGridProps {
   /** Opens the run's details. Wired to a row click and the row's "View details" action. */
   onRunClick?: (run: WorkflowRun) => void
   locale?: string
+  /**
+   * The list's name and empty state, when it shows one record's runs rather
+   * than every workflow (a plan's price syncs). The workflow guides are left
+   * out then: they explain the Workflows page, not this record.
+   */
+  label?: string
+  empty?: { title: string; description: string }
 }
 
 export function WorkflowGrid({
@@ -98,6 +105,8 @@ export function WorkflowGrid({
   onClearFilters,
   onRunClick,
   locale,
+  label = 'Workflows',
+  empty,
 }: WorkflowGridProps) {
   const columns = useMemo<EntityColumn<WorkflowRun>[]>(
     () => [
@@ -162,7 +171,7 @@ export function WorkflowGrid({
   return (
     <EntityList<WorkflowRun>
       primaryActionReadOnly
-      label="Workflows"
+      label={label}
       noun="workflows"
       rows={runs}
       total={total}
@@ -205,13 +214,17 @@ export function WorkflowGrid({
       isFiltered={query.search.length > 0 || query.statuses.length > 0}
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No workflows match these filters"
-      empty={{
-        scene: 'developers',
-        title: 'No workflows have run yet',
-        description:
-          'Background work such as syncs, exports and billing runs is recorded here as it happens, so a stuck or failed job can be found.',
-        guides: GUIDES,
-      }}
+      empty={
+        empty
+          ? { scene: 'developers', ...empty }
+          : {
+              scene: 'developers',
+              title: 'No workflows have run yet',
+              description:
+                'Background work such as syncs, exports and billing runs is recorded here as it happens, so a stuck or failed job can be found.',
+              guides: GUIDES,
+            }
+      }
     />
   )
 }

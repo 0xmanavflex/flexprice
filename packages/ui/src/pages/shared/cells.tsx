@@ -564,6 +564,15 @@ export function idColumn<T>(
   }
 }
 
+/**
+ * A moment in full, for hovering a date that shows only its day: date, time
+ * and the zone it is read in ("Nov 10, 2026, 6:30:00 PM GMT+5:30"), so a day
+ * that looks wrong can be checked against the instant behind it.
+ */
+export function formatFullDateTime(value: Date, locale?: string): string {
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'long' }).format(value)
+}
+
 /** A date, as the reader's locale writes it. Muted: it is metadata, not the
  *  reason anyone opened the page. `storedDay` reads a day field (saved as a
  *  UTC day) on its own day, in every zone; see `formatStoredDay`. */
@@ -575,6 +584,8 @@ export function dateColumn<T>(
     locale?: string | undefined
     dateStyle?: 'short' | 'medium'
     storedDay?: boolean
+    /** Name the day in this zone (e.g. `'UTC'`) rather than the reader's. */
+    timeZone?: string
   },
 ): EntityColumn<T> {
   const format = (value: Date) =>
@@ -585,6 +596,7 @@ export function dateColumn<T>(
         })
       : new Intl.DateTimeFormat(options?.locale, {
           dateStyle: options?.dateStyle ?? 'medium',
+          ...(options?.timeZone ? { timeZone: options.timeZone } : {}),
         }).format(value)
   return {
     id,
@@ -594,7 +606,10 @@ export function dateColumn<T>(
       if (!value || Number.isNaN(value.getTime())) return <EmDash />
       const text = format(value)
       return (
-        <span title={text} className="text-muted-foreground block min-w-0 truncate tabular-nums">
+        <span
+          title={formatFullDateTime(value, options?.locale)}
+          className="text-muted-foreground block min-w-0 truncate tabular-nums"
+        >
           {text}
         </span>
       )

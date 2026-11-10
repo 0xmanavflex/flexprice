@@ -210,3 +210,18 @@ export const PasswordCanBeRevealed: Story = {
     )
   },
 }
+
+/** Self-hosted: no reset to start, so the form says who makes reset links. */
+export const SelfHostedForgotNote: Story = {
+  render: ({ onForgotPassword: _omitted, ...args }) => <SignInForm {...args} />,
+  args: {
+    forgotPasswordNote: 'Forgot your password? Ask an admin for a reset link.',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/Ask an admin for a reset link/)).toBeInTheDocument()
+    await expect(
+      canvas.queryByRole('button', { name: 'Forgot your password?' }),
+    ).not.toBeInTheDocument()
+  },
+}

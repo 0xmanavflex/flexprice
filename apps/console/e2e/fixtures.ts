@@ -100,11 +100,11 @@ function withoutEnvironment(url: URL): string {
 }
 
 /**
- * Every console page carries `?env=<environment id>` (see
- * `app/shell/environmentInUrl.ts`). The journeys assert where a page is, not
- * which environment it names, so `toHaveURL` compares the address with that
- * parameter removed; `shared-link-environment.spec.ts` checks `env` itself
- * by reading `page.url()`. Built on Playwright's own retrying `toHaveURL`.
+ * A shared link's `?env=<environment id>` stays in the address only until the
+ * console has switched (see `app/shell/environmentInUrl.ts`). The journeys
+ * assert where a page is, not which environment it names, so `toHaveURL`
+ * compares the address with that parameter removed;
+ * `shared-link-environment.spec.ts` checks `env` itself by reading `page.url()`. Built on Playwright's own retrying `toHaveURL`.
  */
 export const expect = baseExpect.extend({
   async toHaveURL(

@@ -26,6 +26,7 @@ export interface EventListPageProps {
   /** Opens a contract the opened event was matched to. */
   onOpenSubscription?: ((subscriptionId: string) => void) | undefined
   onOpenFeature?: ((featureId: string) => void) | undefined
+  onOpenCustomer?: ((customerId: string) => void) | undefined
   /** After Import CSV starts an import: where its progress is shown. */
   onOpenImports?: (() => void) | undefined
 }
@@ -65,6 +66,7 @@ export function EventListPage({
   onQueryChange,
   onOpenSubscription,
   onOpenFeature,
+  onOpenCustomer,
   onOpenImports,
 }: EventListPageProps) {
   const events = useRawEvents(query)
@@ -159,6 +161,7 @@ export function EventListPage({
         featureNames={featureNames.data}
         {...(onOpenSubscription ? { onOpenSubscription } : {})}
         {...(onOpenFeature ? { onOpenFeature } : {})}
+        {...(onOpenCustomer ? { onOpenCustomer } : {})}
       />
     </PageBody>
   )

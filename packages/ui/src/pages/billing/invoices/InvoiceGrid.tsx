@@ -186,12 +186,16 @@ export function InvoiceGrid({
         width: 120,
         sortable: true,
         sortValue: InvoiceSortField.IssuedAt,
+        // In UTC, as the invoice detail, hosted page and PDF name it.
+        timeZone: 'UTC',
         ...(locale ? { locale } : {}),
       }),
       dateColumn<Invoice>('dueDate', 'Due date', (row) => row.dueDate, {
         width: 120,
         sortable: true,
         sortValue: InvoiceSortField.DueDate,
+        // In UTC, as the invoice detail, hosted page and PDF name it.
+        timeZone: 'UTC',
         ...(locale ? { locale } : {}),
       }),
       moneyColumn<Invoice>('total', 'Amount', (row) => row.total, {

@@ -10,7 +10,7 @@ import {
   type Feature,
 } from '@fp/domain'
 import { useCreateBulkPrices, usePlans } from '@fp/query'
-import { ChargeForm, type MeterOption } from '@fp/ui/pages'
+import { ChargeForm, toast, type MeterOption } from '@fp/ui/pages'
 import { Field, FormDialog, OptionCombobox } from '@fp/ui/compositions'
 import { PlusIcon } from '@fp/ui/icons'
 import { usePlanFormOptions } from '../plans/planFormOptions'
@@ -113,8 +113,23 @@ export function AddFeatureChargeDialog({
                 { entityType: PriceEntityType.Plan, entityId: planId, charges: [draft] },
                 {
                   onSuccess: () => {
+                    const planName =
+                      planOptions.find((option) => option.value === planId)?.label ?? 'the plan'
+                    const addedTo = planId
                     close(false)
                     onAdded?.()
+                    toast.success(`Charge added to ${planName}`, {
+                      description: `${feature.name} is now billed on this plan.`,
+                      action: {
+                        label: 'Open plan',
+                        onClick: () =>
+                          void navigate({
+                            to: '/plans/$planId',
+                            params: { planId: addedTo },
+                            search: {} as never,
+                          }),
+                      },
+                    })
                   },
                 },
               )

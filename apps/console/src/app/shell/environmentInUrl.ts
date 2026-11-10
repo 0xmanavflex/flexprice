@@ -8,18 +8,15 @@ import { ENVIRONMENT_PARAM, parseEnvironmentParam } from './environmentParam'
 export { ENVIRONMENT_PARAM, parseEnvironmentParam }
 
 /**
- * Keeps the address and the environment in step, from the shell.
+ * Honours a link's environment, then takes it out of the address.
  *
  * - A link that names an environment the person can reach switches the console
  *   there once, on arrival, and says so ("Switched to Production"). An
  *   environment they cannot reach is ignored: the page opens in their own.
- * - After that the address follows the console: it always names the
- *   environment in use, including after a switch from the switcher, so a link
- *   copied from the address bar opens the same view for whoever receives it.
- *
- * The id is carried across navigation by the shell route's
- * `retainSearchParams`, so in-app links need not add it; the replace below only
- * corrects the address when it is missing or stale.
+ * - Once the console is in the right environment (or the link's cannot be
+ *   reached) `?env=` is removed, so it does not ride along on every address
+ *   afterwards. Links built for someone else (a payment link's return address)
+ *   still add it themselves.
  */
 export function useEnvironmentInUrl({ environments, current, select }: UseEnvironments) {
   const navigate = useNavigate()
@@ -29,7 +26,7 @@ export function useEnvironmentInUrl({ environments, current, select }: UseEnviro
   >
   const linked = parseEnvironmentParam(search).env
   // The link's environment is honoured once, on arrival: after that the
-  // switcher and the address follow the console, not the other way round.
+  // switcher decides, and a stale `?env=` is only cleared.
   const arrived = useRef(false)
 
   useEffect(() => {
@@ -46,18 +43,19 @@ export function useEnvironmentInUrl({ environments, current, select }: UseEnviro
             description: 'The link you opened is in this environment.',
             toasterId: ENVIRONMENT_TOASTER_ID,
           })
+          // The param comes off once the switch lands and `current` follows.
           return
         }
       }
     }
 
-    if (linked !== current.id) {
+    if (linked !== undefined) {
       void navigate({
         to: '.',
-        search: (previous: Record<string, unknown>) => ({
-          ...previous,
-          [ENVIRONMENT_PARAM]: current.id,
-        }),
+        search: (previous: Record<string, unknown>) => {
+          const { [ENVIRONMENT_PARAM]: _environment, ...rest } = previous
+          return rest
+        },
         replace: true,
       } as never)
     }

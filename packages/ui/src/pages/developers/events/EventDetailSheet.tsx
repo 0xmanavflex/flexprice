@@ -50,6 +50,8 @@ export interface EventDetailSheetProps {
   onOpenSubscription?: ((subscriptionId: string) => void) | undefined
   /** Opens the feature an event was counted for. */
   onOpenFeature?: ((featureId: string) => void) | undefined
+  /** Opens the Flexprice customer the event was matched to. */
+  onOpenCustomer?: ((customerId: string) => void) | undefined
   /** Customer id → name, for the processed usage cards. Unknown ids show as ids. */
   customerNames?: Readonly<Record<string, string>> | undefined
   /** Feature id → name, for the processed usage cards. */
@@ -66,6 +68,7 @@ export function EventDetailSheet({
   onRetryDebug,
   onOpenSubscription,
   onOpenFeature,
+  onOpenCustomer,
   customerNames = {},
   featureNames = {},
 }: EventDetailSheetProps) {
@@ -120,12 +123,18 @@ export function EventDetailSheet({
                   },
                   {
                     label: 'Flexprice customer',
-                    value: (
+                    value: openLink(
                       <span className="font-mono text-xs">
                         {flexpriceCustomer
-                          ? (customerNames[flexpriceCustomer] ?? flexpriceCustomer)
+                          ? (customerNames[flexpriceCustomer] ??
+                            (debug?.customer?.id === flexpriceCustomer && debug.customer.name
+                              ? debug.customer.name
+                              : flexpriceCustomer))
                           : 'Not matched'}
-                      </span>
+                      </span>,
+                      flexpriceCustomer,
+                      onOpenCustomer,
+                      'customer',
                     ),
                   },
                 ]}
@@ -174,6 +183,7 @@ export function EventDetailSheet({
                       featureName={featureNames[usage.featureId] ?? ''}
                       {...(onOpenSubscription ? { onOpenSubscription } : {})}
                       {...(onOpenFeature ? { onOpenFeature } : {})}
+                      {...(onOpenCustomer ? { onOpenCustomer } : {})}
                     />
                   ))}
                 </section>
@@ -230,6 +240,28 @@ export function EventDetailSheet({
   )
 }
 
+/** A value that opens its record, with the arrow that says so; plain when nothing can open it. */
+function openLink(
+  content: ReactNode,
+  value: string,
+  open: ((value: string) => void) | undefined,
+  label: string,
+): ReactNode {
+  return value && open ? (
+    <button
+      type="button"
+      onClick={() => open(value)}
+      aria-label={`Open ${label} ${value}`}
+      className="hover:text-primary flex max-w-full min-w-0 items-center gap-1 text-left underline-offset-2 hover:underline"
+    >
+      <span className="min-w-0">{content}</span>
+      <ArrowUpRightIcon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
+    </button>
+  ) : (
+    content
+  )
+}
+
 /**
  * One line item the event was billed against: V1's "Processed usage #n" card.
  *
@@ -245,6 +277,7 @@ function ProcessedUsageCard({
   featureName,
   onOpenSubscription,
   onOpenFeature,
+  onOpenCustomer,
 }: {
   usage: ProcessedUsage
   index: number
@@ -253,6 +286,7 @@ function ProcessedUsageCard({
   featureName: string
   onOpenSubscription?: ((subscriptionId: string) => void) | undefined
   onOpenFeature?: ((featureId: string) => void) | undefined
+  onOpenCustomer?: ((customerId: string) => void) | undefined
 }) {
   const id = (value: string) => (
     <span className="block truncate font-mono text-xs" title={value || undefined}>
@@ -270,34 +304,33 @@ function ProcessedUsageCard({
     ) : (
       id(value)
     )
-  const link = (
-    content: ReactNode,
-    value: string,
-    open: ((value: string) => void) | undefined,
-    label: string,
-  ) =>
-    value && open ? (
-      <button
-        type="button"
-        onClick={() => open(value)}
-        aria-label={`Open ${label} ${value}`}
-        className="hover:text-primary flex max-w-full min-w-0 items-center gap-1 text-left underline-offset-2 hover:underline"
-      >
-        <span className="min-w-0">{content}</span>
-        <ArrowUpRightIcon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
-      </button>
-    ) : (
-      content
-    )
   const rows: { label: string; value: ReactNode }[] = [
-    { label: 'Customer', value: named(customerName, usage.customerId) },
+    {
+      label: 'Customer',
+      value: openLink(
+        named(customerName, usage.customerId),
+        usage.customerId,
+        onOpenCustomer,
+        'customer',
+      ),
+    },
     {
       label: 'Contract',
-      value: link(id(usage.subscriptionId), usage.subscriptionId, onOpenSubscription, 'contract'),
+      value: openLink(
+        id(usage.subscriptionId),
+        usage.subscriptionId,
+        onOpenSubscription,
+        'contract',
+      ),
     },
     {
       label: 'Feature',
-      value: link(named(featureName, usage.featureId), usage.featureId, onOpenFeature, 'feature'),
+      value: openLink(
+        named(featureName, usage.featureId),
+        usage.featureId,
+        onOpenFeature,
+        'feature',
+      ),
     },
     { label: 'Line item', value: id(usage.lineItemId) },
     { label: 'Meter', value: id(usage.meterId) },

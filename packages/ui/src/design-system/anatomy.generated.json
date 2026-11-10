@@ -1170,6 +1170,16 @@
       "usedBy": [],
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
     },
+    "ChangePasswordDialog": {
+      "file": "src/pages/auth/ChangePasswordDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Field",
+        "FormDialog"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/auth/ChangePasswordDialog.stories.tsx"
+    },
     "ChargeAlertForm": {
       "file": "src/pages/contracts/ChargeAlertForm.tsx",
       "layer": "surface",
@@ -3964,6 +3974,7 @@
         "AutoTopupDialog",
         "BillingEntityField",
         "CardLinkDialog",
+        "ChangePasswordDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ChargeForm",
@@ -3996,6 +4007,7 @@
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
         "OnboardingScreen",
+        "PasswordLinkDialog",
         "PayInvoiceDialog",
         "PaymentStatusDialog",
         "PriceOverrideForm",
@@ -4380,6 +4392,7 @@
         "AddonScheduleFields",
         "AutoTopupDialog",
         "CardLinkDialog",
+        "ChangePasswordDialog",
         "ChargeCommitmentDialog",
         "ChargeCouponDialog",
         "ContractBenefitsEditor",
@@ -6170,6 +6183,15 @@
         "LoadingRows"
       ],
       "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
+    },
+    "PasswordLinkDialog": {
+      "file": "src/pages/auth/PasswordLinkDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Field"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/auth/PasswordLinkDialog.stories.tsx"
     },
     "Pattern": {
       "file": "src/components/examples/c-badge-20.tsx",
@@ -10046,6 +10068,13 @@
         "AcceptInvitationForm"
       ]
     },
+    "./src/pages/auth/ChangePasswordDialog.stories.tsx": {
+      "title": "Pages/Auth/ChangePasswordDialog",
+      "component": "ChangePasswordDialog",
+      "uses": [
+        "ChangePasswordDialog"
+      ]
+    },
     "./src/pages/auth/ForgotPasswordForm.stories.tsx": {
       "title": "App/Sign-in/Forgot password form",
       "component": "ForgotPasswordForm",
@@ -10058,6 +10087,13 @@
       "component": "OnboardingScreen",
       "uses": [
         "OnboardingScreen"
+      ]
+    },
+    "./src/pages/auth/PasswordLinkDialog.stories.tsx": {
+      "title": "Pages/Auth/PasswordLinkDialog",
+      "component": "PasswordLinkDialog",
+      "uses": [
+        "PasswordLinkDialog"
       ]
     },
     "./src/pages/auth/RegionField.stories.tsx": {
@@ -11474,6 +11510,15 @@
     },
     "ResetPasswordPage": {
       "file": "apps/console/src/pages/auth/ResetPasswordPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "AuthFrame",
+        "SetPasswordForm"
+      ]
+    },
+    "SetPasswordPage": {
+      "file": "apps/console/src/pages/auth/SetPasswordPage.tsx",
       "pattern": "Other",
       "route": null,
       "uses": [

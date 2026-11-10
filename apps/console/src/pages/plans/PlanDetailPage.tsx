@@ -66,6 +66,7 @@ import {
   CatalogCreditGrantsSection,
   CatalogEntitlementsSection,
 } from '../shared/CatalogSections'
+import { PlanPriceSyncTab } from './PlanPriceSyncTab'
 
 /**
  * A plan's detail page: the hub where a plan is completed.
@@ -80,15 +81,16 @@ import {
  */
 
 /**
- * Two tabs, not four.
+ * Overview, Information and Price sync: not the old four.
  *
  * Charges, Entitlements and Credit grants were a tab each, holding one table
  * apiece, so seeing what a plan actually contains meant three clicks and
  * remembering the first two. They are all on Overview now, beside the
  * customer's-eye rail: the same shape the feature detail page uses, and what
- * the redesign shows.
+ * the redesign shows. Price sync lists this plan's "Sync to contracts" runs,
+ * which were otherwise only visible under Workflows.
  */
-export const PLAN_TABS = ['overview', 'information'] as const
+export const PLAN_TABS = ['overview', 'information', 'price-sync'] as const
 export type PlanTab = (typeof PLAN_TABS)[number]
 
 /**
@@ -264,45 +266,50 @@ export function PlanDetailPage({
         tabs={[
           { value: 'overview', label: 'Overview' },
           { value: 'information', label: 'Information' },
+          { value: 'price-sync', label: 'Price sync' },
         ]}
       />
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex min-w-0 flex-col gap-5">
-          {tab === 'overview' ? <OverviewTab planId={planId} readOnly={isArchived} /> : null}
-          {tab === 'information' ? (
-            <InformationTab
-              integrationControls={mappings.controls}
-              planId={planId}
-              name={record.name}
-              lookupKey={record.lookupKey}
-              description={record.description}
-              metadata={record.metadata}
-              createdAt={record.createdAt}
-              updatedAt={record.updatedAt}
-              readOnly={isArchived}
-              onSave={(patch) =>
-                update.mutateAsync({
-                  id: planId,
-                  draft: {
-                    name: record.name,
-                    lookupKey: record.lookupKey,
-                    description: record.description,
-                    ...patch,
-                  },
-                })
-              }
-            />
-          ) : null}
+      {tab === 'price-sync' ? <PlanPriceSyncTab planId={planId} /> : null}
+
+      {tab === 'price-sync' ? null : (
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="flex min-w-0 flex-col gap-5">
+            {tab === 'overview' ? <OverviewTab planId={planId} readOnly={isArchived} /> : null}
+            {tab === 'information' ? (
+              <InformationTab
+                integrationControls={mappings.controls}
+                planId={planId}
+                name={record.name}
+                lookupKey={record.lookupKey}
+                description={record.description}
+                metadata={record.metadata}
+                createdAt={record.createdAt}
+                updatedAt={record.updatedAt}
+                readOnly={isArchived}
+                onSave={(patch) =>
+                  update.mutateAsync({
+                    id: planId,
+                    draft: {
+                      name: record.name,
+                      lookupKey: record.lookupKey,
+                      description: record.description,
+                      ...patch,
+                    },
+                  })
+                }
+              />
+            ) : null}
+          </div>
+          <SavedPlanPreview
+            plan={{ id: planId, name: record.name, description: record.description }}
+            onJump={(target) => {
+              setJumpTarget(target)
+              onTabChange('overview')
+            }}
+          />
         </div>
-        <SavedPlanPreview
-          plan={{ id: planId, name: record.name, description: record.description }}
-          onJump={(target) => {
-            setJumpTarget(target)
-            onTabChange('overview')
-          }}
-        />
-      </div>
+      )}
 
       <DuplicatePlanDialog
         plan={duplicating ? record : null}

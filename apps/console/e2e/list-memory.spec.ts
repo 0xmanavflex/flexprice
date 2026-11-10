@@ -104,9 +104,12 @@ test("a shared link to another environment's list does not get this one's filter
     .getByRole('menuitem')
     .filter({ hasNot: page.locator('[aria-current]') })
     .first()
+  const otherName = ((await other.textContent()) ?? '').trim()
   await other.click()
-  await expect.poll(() => new URL(page.url()).pathname).toBe('/features')
-  const linked = new URL(page.url()).searchParams.get('env') ?? ''
+  await expect.poll(() => shell.currentEnvironment()).toBe(otherName)
+  // Switching stores the environment's id; the address no longer carries it.
+  const linked =
+    (await page.evaluate(() => window.localStorage.getItem('flexprice.environment'))) ?? ''
   await shell.switchEnvironment(homeName)
 
   // Back home the remembered filter is restored; the shared link must not take it.
