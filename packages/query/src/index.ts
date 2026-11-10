@@ -24,6 +24,7 @@ export {
   MAX_RETRY_AFTER_MS,
   createQueryClient,
   createQueryKeyHash,
+  isEnvironmentScopedQuery,
   retryDelay,
   shouldRetry,
   shouldThrowOnError,

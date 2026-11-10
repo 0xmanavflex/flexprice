@@ -745,7 +745,7 @@ export const IntegrationsCard: Story = {
     await expect(within(integrations).getByText('in_1UXlX7demo')).toBeVisible()
     await expect(within(integrations).getByText('Not mapped')).toBeVisible()
     await expect(within(integrations).queryByText('Last sync')).toBeNull()
-    await userEvent.click(within(integrations).getByRole('button', { name: 'Manage Stripe' }))
+    await userEvent.click(within(integrations).getByRole('button', { name: 'Manage Stripe integration' }))
     await expect(await screen.findByRole('menuitem', { name: 'Push to Stripe' })).toBeVisible()
     await userEvent.keyboard('{Escape}')
     await userEvent.click(within(integrations).getByRole('button', { name: 'Integration actions' }))

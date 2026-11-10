@@ -270,7 +270,7 @@ export function ContractIntegrations({
                 </span>
                 <DropdownMenu>
                   <DropdownMenuTrigger
-                    aria-label={`Manage ${connection.providerName}`}
+                    aria-label={`Manage ${connection.providerName} integration`}
                     className="text-muted-foreground hover:bg-muted focus-visible:outline-ring flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:outline-2"
                   >
                     <MoreHorizontalIcon aria-hidden className="size-4" />
