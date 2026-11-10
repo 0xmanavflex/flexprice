@@ -204,10 +204,18 @@ describe('a tab that left for a gateway', () => {
       setItem: (key: string, value: string) => void store.set(key, value),
       removeItem: (key: string) => void store.delete(key),
     })
+    vi.stubGlobal('localStorage', {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    })
+    rememberForReturn('tok_mine')
     markLeavingForGateway()
-    expect(consumeLeftForGateway()).toBe(true)
+    // Another customer's checkout in another tab overwrites the shared slot, never this tab's.
+    expect(consumeLeftForGateway()).toBe('tok_mine')
     // Cleared for the next load, and a re-read in this load agrees.
     expect(sessionStorage.getItem('flexprice.portal.leftForGateway')).toBeNull()
-    expect(consumeLeftForGateway()).toBe(true)
+    expect(sessionStorage.getItem('flexprice.portal.tabToken')).toBeNull()
+    expect(consumeLeftForGateway()).toBe('tok_mine')
   })
 })

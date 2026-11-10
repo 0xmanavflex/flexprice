@@ -163,6 +163,12 @@ export function rememberForReturn(token: string, now = Date.now()) {
   } catch {
     // Storage blocked: the returned tab asks the customer to go back instead.
   }
+  try {
+    // This tab's own token, which another tab's checkout cannot overwrite.
+    sessionStorage.setItem(TAB_TOKEN_KEY, token)
+  } catch {
+    // Blocked storage: a same-tab return without our marker shows the notice instead.
+  }
 }
 
 export function tokenForReturn(now = Date.now()): string | null {
@@ -184,6 +190,8 @@ export function tokenForReturn(now = Date.now()): string | null {
 
 /** Set in a tab that sends itself to a gateway; that same tab finds it on return. */
 const LEFT_FOR_GATEWAY_KEY = 'flexprice.portal.leftForGateway'
+/** The token of the session this tab left with, kept in the tab's own storage. */
+const TAB_TOKEN_KEY = 'flexprice.portal.tabToken'
 
 /**
  * Note that this tab is going to a gateway and will come back. Session storage
@@ -201,16 +209,24 @@ export function markLeavingForGateway() {
 }
 
 /** Read once per page load, so a second read (React's strict-mode re-run) agrees. */
-let leftForGateway: boolean | null = null
+let leftForGateway: { token: string | null } | null = null
 
-/** True when this page load is the tab that left for a gateway coming back. Clears the note. */
-export function consumeLeftForGateway(): boolean {
-  if (leftForGateway !== null) return leftForGateway
+/**
+ * When this page load is the tab that left for a gateway coming back: the token
+ * it left with, from its own session storage. Never the origin-wide slot, which
+ * another customer's checkout in another tab may have overwritten. Clears both.
+ */
+export function consumeLeftForGateway(): string | null {
+  if (leftForGateway !== null) return leftForGateway.token
+  let token: string | null = null
   try {
-    leftForGateway = sessionStorage.getItem(LEFT_FOR_GATEWAY_KEY) !== null
+    if (sessionStorage.getItem(LEFT_FOR_GATEWAY_KEY) !== null)
+      token = sessionStorage.getItem(TAB_TOKEN_KEY)?.trim() || null
     sessionStorage.removeItem(LEFT_FOR_GATEWAY_KEY)
+    sessionStorage.removeItem(TAB_TOKEN_KEY)
   } catch {
-    leftForGateway = false
+    token = null
   }
-  return leftForGateway
+  leftForGateway = { token }
+  return token
 }

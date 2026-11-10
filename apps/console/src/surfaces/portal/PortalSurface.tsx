@@ -95,10 +95,10 @@ export function PortalSurface({
   const [token] = useState(
     () =>
       location?.token ??
-      // This tab's own trip to a gateway (marker or not), or a gateway tab carrying our marker.
-      (consumeLeftForGateway() || new URLSearchParams(window.location.search).has(RETURNED_PARAM)
-        ? tokenForReturn()
-        : null),
+      // This tab's own trip to a gateway (marker or not) restores the token it left with;
+      // only a gateway tab carrying our marker falls back to the shared slot.
+      consumeLeftForGateway() ??
+      (new URLSearchParams(window.location.search).has(RETURNED_PARAM) ? tokenForReturn() : null),
   )
   useEffect(() => {
     if (!token || !location || location.token) return
