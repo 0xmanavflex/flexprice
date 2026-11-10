@@ -822,9 +822,9 @@ export const Branded: Story = {
 }
 
 /**
- * Back from checkout in a browser with no portal session: the illustration takes
- * the icon tile's place (the console passes its animated success mark), and the
- * copy points back to the portal without claiming how the payment went.
+ * Back from checkout in a browser with no portal session, and the gateway's
+ * return says the payment went through: the illustration takes the icon tile's
+ * place (the console passes its animated success mark).
  */
 export const CheckoutReturnNoSession: Story = {
   render: () => (
@@ -854,6 +854,26 @@ export const CheckoutReturnFailed: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'Back to billing' })).toBeVisible()
+    await expect(canvas.queryByText('You’re all set!')).toBeNull()
+  },
+}
+
+/**
+ * Back from a checkout whose return states no outcome (Stripe, Paddle, our own
+ * marker): the customer may have left without paying, so the card claims
+ * neither success nor failure.
+ */
+export const CheckoutReturnUnknown: Story = {
+  render: () => (
+    <PortalNotice
+      icon={<CreditCardIcon />}
+      title="You’re back from checkout"
+      body="If you completed a payment, it’s being applied to your account. Head back to your billing portal to see your latest billing details."
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'You’re back from checkout' })).toBeVisible()
     await expect(canvas.queryByText('You’re all set!')).toBeNull()
   },
 }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   consumeLeftForGateway,
   gatewayReturnFailed,
+  gatewayReturnPaid,
   isGatewayReturn,
   markLeavingForGateway,
   parsePortalLocation,
@@ -239,5 +240,26 @@ describe('gatewayReturnFailed', () => {
     '?_ptxn=txn_1',
   ])('does not read %s as a failure', (search) => {
     expect(gatewayReturnFailed(search)).toBe(false)
+  })
+})
+
+describe('gatewayReturnPaid', () => {
+  it.each([
+    '?id=pay_1&status=paid',
+    '?id=pay_1&status=Captured',
+    '?razorpay_payment_link_id=plink_1&razorpay_payment_link_status=paid',
+  ])('reads %s as a paid payment', (search) => {
+    expect(gatewayReturnPaid(search)).toBe(true)
+  })
+
+  it.each([
+    // Our marker and Stripe/Paddle returns come back whether or not the customer paid.
+    '?returned=1',
+    '?session_id=cs_1',
+    '?_ptxn=txn_1',
+    '?id=pay_1&status=failed',
+    '?razorpay_payment_link_id=plink_1&razorpay_payment_link_status=expired',
+  ])('does not read %s as paid', (search) => {
+    expect(gatewayReturnPaid(search)).toBe(false)
   })
 })

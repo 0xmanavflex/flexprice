@@ -162,6 +162,25 @@ export function gatewayReturnFailed(search: string): boolean {
   )
 }
 
+/**
+ * Outcomes a gateway writes into the return address when the payment went
+ * through: Moyasar's `status`, Razorpay's payment-link status. Stripe, Paddle and
+ * our own `returned` marker say nothing, so a return from them is not a success:
+ * the customer may have left checkout without paying.
+ */
+const GATEWAY_PAID_STATUS: readonly (readonly [string, readonly string[]])[] = [
+  ['status', ['paid', 'captured']],
+  ['razorpay_payment_link_status', ['paid']],
+]
+
+/** True only when the gateway's own return parameters say the payment went through. */
+export function gatewayReturnPaid(search: string): boolean {
+  const params = new URLSearchParams(search)
+  return GATEWAY_PAID_STATUS.some(([name, paid]) =>
+    paid.includes((params.get(name) ?? '').toLowerCase()),
+  )
+}
+
 /** The query parameters the portal itself reads; anything else a gateway added. */
 const PORTAL_PARAMS = new Set(['invoice', 'range', 'from', 'to'])
 
