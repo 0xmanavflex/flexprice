@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import successConfetti from './success-confetti.svg'
 import {
   NO_USAGE_FILTER,
   isUsageFiltered,
@@ -141,8 +142,9 @@ export function PortalSurface({
     // payment, not this page, so it must not read as a broken link.
     return isGatewayReturn(window.location.search) ? (
       <PortalNotice
-        title="You’re back from checkout"
-        body="If you paid, it’s being added to your account. Go back to the billing tab you came from, or open your billing link again to see it."
+        illustration={<img src={successConfetti} alt="" aria-hidden="true" className="size-28" />}
+        title="You’re all set!"
+        body="Head back to your billing portal to view your latest billing details."
       />
     ) : (
       <Expired />
