@@ -3492,12 +3492,13 @@ export const handlers = [
 
   /*
    * `GET /customers/portal/{external_id}`: a portal session. The token is
-   * what the portal mocks accept (anything but "expired"), so "Open customer
-   * portal" lands on a working portal.
+   * what the portal mocks accept (anything but "expired"). Like the API, it
+   * answers the full portal link, which the console copies and opens: here the
+   * mocked app's own portal, so "Open customer portal" lands on a working one.
    */
   http.get(`${BASE}/customers/portal/:externalId`, ({ params }) =>
     HttpResponse.json({
-      url: `https://portal.example/?token=demo-${String(params['externalId'])}`,
+      url: `${window.location.origin}/p?token=demo-${String(params['externalId'])}`,
       token: `demo-${String(params['externalId'])}`,
       expires_at: new Date(Date.now() + 6 * 3_600_000).toISOString(),
     }),
@@ -5572,11 +5573,24 @@ export const handlers = [
     const body = (await request.json().catch(() => ({}))) as {
       entity_type?: string
       entity_id?: string
+      connection_id?: string
     }
     if (!body.entity_type || !body.entity_id) {
       return HttpResponse.json(
         { code: 'validation_error', message: 'entity_type and entity_id are required' },
         { status: 400 },
+      )
+    }
+    // As the API: a named connection must exist and be published, and only it syncs.
+    if (
+      body.connection_id !== undefined &&
+      !connectionRows.some(
+        (row) => row['id'] === body.connection_id && row['connection_status'] === 'published',
+      )
+    ) {
+      return HttpResponse.json(
+        { code: 'not_found', message: 'connection not found' },
+        { status: 404 },
       )
     }
     return HttpResponse.json({ message: 'sync triggered' })

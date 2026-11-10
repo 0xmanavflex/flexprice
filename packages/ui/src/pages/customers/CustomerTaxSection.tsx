@@ -324,9 +324,7 @@ export function TaxDialog({
       : taxRates
   const rateOptions = [
     ...rates.map((rate) => ({ value: rate.code, label: rate.label })),
-    ...(rates.length === 0 && onCreateTaxRate
-      ? [{ value: CREATE, label: 'Create tax rate' }]
-      : []),
+    ...(rates.length === 0 && onCreateTaxRate ? [{ value: CREATE, label: 'Create tax rate' }] : []),
   ]
 
   const nameField = rateForm.register('name', {
@@ -340,178 +338,180 @@ export function TaxDialog({
 
   return (
     <>
-    <FormDialog
-      open={open && !creating}
-      onOpenChange={(next) => (next ? undefined : onClose())}
-      title={mode === 'add' ? 'Add tax rate' : 'Edit tax rate'}
-    >
-      <Composer
-        submitLabel={mode === 'add' ? 'Add tax rate' : 'Save changes'}
-        onCancel={onClose}
-        submitting={pending}
-        onSubmit={() => {
-          const parsed =
-            mode === 'add'
-              ? createTaxAssociationSchema.safeParse(draft)
-              : editTaxAssociationSchema.safeParse(draft)
-          if (!parsed.success)
-            return setProblem(parsed.error.issues[0]?.message ?? 'Check the form')
-          setProblem(null)
-          onSubmit(draft)
-        }}
+      <FormDialog
+        open={open && !creating}
+        onOpenChange={(next) => (next ? undefined : onClose())}
+        title={mode === 'add' ? 'Add tax rate' : 'Edit tax rate'}
       >
-        <div className="flex flex-col gap-2">
-          <LabelWithHint htmlFor="tax-rate" hint={`The tax rate to apply to this ${subject}.`}>
-            Tax rate
-          </LabelWithHint>
-          <OptionSelect
-            id="tax-rate"
-            value={draft.taxRateCode}
-            onValueChange={(taxRateCode) => {
-              if (taxRateCode === CREATE) {
-                rateForm.reset(emptyTaxRate())
-                setCreateError(null)
-                setCreating(true)
-                return
-              }
-              set({ taxRateCode })
-            }}
-            options={rateOptions}
-            placeholder={rates.length === 0 ? 'Create tax rate' : 'Select…'}
-            disabled={mode === 'edit'}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <LabelWithHint
-            htmlFor="tax-behavior"
-            hint="Whether prices already include the tax or the tax is added on top."
-          >
-            Behavior
-          </LabelWithHint>
-          <OptionSelect
-            id="tax-behavior"
-            value={draft.taxBehavior}
-            onValueChange={(taxBehavior) => set({ taxBehavior: taxBehavior as TaxBehavior })}
-            options={BEHAVIOR_OPTIONS}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <LabelWithHint
-            htmlFor="tax-priority"
-            hint="When several rates apply, the lower number is applied first."
-          >
-            Priority
-          </LabelWithHint>
-          <Input
-            id="tax-priority"
-            inputMode="numeric"
-            value={draft.priority}
-            onChange={(event) => set({ priority: event.target.value })}
-          />
-        </div>
-        {showAutoApply ? (
-          <div className="flex items-center justify-between gap-4">
-            <LabelWithHint
-              htmlFor="tax-auto"
-              hint="Adds this rate to every new invoice for the customer without further steps."
-            >
-              Apply automatically to new invoices
+        <Composer
+          submitLabel={mode === 'add' ? 'Add tax rate' : 'Save changes'}
+          onCancel={onClose}
+          submitting={pending}
+          onSubmit={() => {
+            const parsed =
+              mode === 'add'
+                ? createTaxAssociationSchema.safeParse(draft)
+                : editTaxAssociationSchema.safeParse(draft)
+            if (!parsed.success)
+              return setProblem(parsed.error.issues[0]?.message ?? 'Check the form')
+            setProblem(null)
+            onSubmit(draft)
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <LabelWithHint htmlFor="tax-rate" hint={`The tax rate to apply to this ${subject}.`}>
+              Tax rate
             </LabelWithHint>
-            <Switch
-              id="tax-auto"
-              checked={draft.autoApply}
-              onCheckedChange={(autoApply) => set({ autoApply })}
+            <OptionSelect
+              id="tax-rate"
+              value={draft.taxRateCode}
+              onValueChange={(taxRateCode) => {
+                if (taxRateCode === CREATE) {
+                  rateForm.reset(emptyTaxRate())
+                  setCreateError(null)
+                  setCreating(true)
+                  return
+                }
+                set({ taxRateCode })
+              }}
+              options={rateOptions}
+              placeholder={rates.length === 0 ? 'Create tax rate' : 'Select…'}
+              disabled={mode === 'edit'}
             />
           </div>
-        ) : null}
-        {problem || error ? (
-          <p role="alert" className="text-destructive text-sm">
-            {problem ?? error}
-          </p>
-        ) : null}
-      </Composer>
-    </FormDialog>
-    <FormDialog
-      open={creating}
-      onOpenChange={(next) => (next ? undefined : setCreating(false))}
-      title="Create tax rate"
-      // A create in flight cannot be abandoned: closing would not stop the
-      // request, and the rate would be saved with nothing to attach it to.
-      isPending={createPending}
-    >
-      <Composer
-        submitLabel="Create tax rate"
-        onCancel={() => setCreating(false)}
-        submitting={createPending}
-        onSubmit={() => {
-          void rateForm.handleSubmit(async (values) => {
-            if (!onCreateTaxRate) return
-            setCreatePending(true)
-            setCreateError(null)
-            try {
-              const rate = await onCreateTaxRate(values)
-              setCreated(rate)
-              set({ taxRateCode: rate.code })
-              setCreating(false)
-            } catch (caught) {
-              setCreateError(caught instanceof Error ? caught.message : 'Could not create the tax rate.')
-            } finally {
-              setCreatePending(false)
-            }
-          })()
-        }}
+          <div className="flex flex-col gap-2">
+            <LabelWithHint
+              htmlFor="tax-behavior"
+              hint="Whether prices already include the tax or the tax is added on top."
+            >
+              Behavior
+            </LabelWithHint>
+            <OptionSelect
+              id="tax-behavior"
+              value={draft.taxBehavior}
+              onValueChange={(taxBehavior) => set({ taxBehavior: taxBehavior as TaxBehavior })}
+              options={BEHAVIOR_OPTIONS}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <LabelWithHint
+              htmlFor="tax-priority"
+              hint="When several rates apply, the lower number is applied first."
+            >
+              Priority
+            </LabelWithHint>
+            <Input
+              id="tax-priority"
+              inputMode="numeric"
+              value={draft.priority}
+              onChange={(event) => set({ priority: event.target.value })}
+            />
+          </div>
+          {showAutoApply ? (
+            <div className="flex items-center justify-between gap-4">
+              <LabelWithHint
+                htmlFor="tax-auto"
+                hint="Adds this rate to every new invoice for the customer without further steps."
+              >
+                Apply automatically to new invoices
+              </LabelWithHint>
+              <Switch
+                id="tax-auto"
+                checked={draft.autoApply}
+                onCheckedChange={(autoApply) => set({ autoApply })}
+              />
+            </div>
+          ) : null}
+          {problem || error ? (
+            <p role="alert" className="text-destructive text-sm">
+              {problem ?? error}
+            </p>
+          ) : null}
+        </Composer>
+      </FormDialog>
+      <FormDialog
+        open={creating}
+        onOpenChange={(next) => (next ? undefined : setCreating(false))}
+        title="Create tax rate"
+        // A create in flight cannot be abandoned: closing would not stop the
+        // request, and the rate would be saved with nothing to attach it to.
+        isPending={createPending}
       >
-        <div className="flex flex-col gap-2">
-          <LabelWithHint htmlFor="new-tax-name" hint="What the tax rate is called on invoices.">
-            Name
-          </LabelWithHint>
-          <Input id="new-tax-name" disabled={createPending} {...nameField} />
-          {rateErrors.name?.message ? (
-            <p className="text-destructive text-sm">{rateErrors.name.message}</p>
+        <Composer
+          submitLabel="Create tax rate"
+          onCancel={() => setCreating(false)}
+          submitting={createPending}
+          onSubmit={() => {
+            void rateForm.handleSubmit(async (values) => {
+              if (!onCreateTaxRate) return
+              setCreatePending(true)
+              setCreateError(null)
+              try {
+                const rate = await onCreateTaxRate(values)
+                setCreated(rate)
+                set({ taxRateCode: rate.code })
+                setCreating(false)
+              } catch (caught) {
+                setCreateError(
+                  caught instanceof Error ? caught.message : 'Could not create the tax rate.',
+                )
+              } finally {
+                setCreatePending(false)
+              }
+            })()
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <LabelWithHint htmlFor="new-tax-name" hint="What the tax rate is called on invoices.">
+              Name
+            </LabelWithHint>
+            <Input id="new-tax-name" disabled={createPending} {...nameField} />
+            {rateErrors.name?.message ? (
+              <p className="text-destructive text-sm">{rateErrors.name.message}</p>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-2">
+            <LabelWithHint htmlFor="new-tax-code" hint="Letters, numbers, hyphens and underscores.">
+              Code
+            </LabelWithHint>
+            <Input id="new-tax-code" disabled={createPending} {...rateForm.register('code')} />
+            {rateErrors.code?.message ? (
+              <p className="text-destructive text-sm">{rateErrors.code.message}</p>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-2">
+            <LabelWithHint htmlFor="new-tax-rate" hint="The percentage added to taxable amounts.">
+              Rate (%)
+            </LabelWithHint>
+            <Input
+              id="new-tax-rate"
+              inputMode="decimal"
+              placeholder="18"
+              disabled={createPending}
+              {...rateForm.register('percentageValue')}
+            />
+            {rateErrors.percentageValue?.message ? (
+              <p className="text-destructive text-sm">{rateErrors.percentageValue.message}</p>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-2">
+            <LabelWithHint htmlFor="new-tax-description" hint="An internal note. Optional.">
+              Description
+            </LabelWithHint>
+            <Textarea
+              id="new-tax-description"
+              rows={3}
+              disabled={createPending}
+              {...rateForm.register('description')}
+            />
+          </div>
+          {createError ? (
+            <p role="alert" className="text-destructive text-sm">
+              {createError}
+            </p>
           ) : null}
-        </div>
-        <div className="flex flex-col gap-2">
-          <LabelWithHint htmlFor="new-tax-code" hint="Letters, numbers, hyphens and underscores.">
-            Code
-          </LabelWithHint>
-          <Input id="new-tax-code" disabled={createPending} {...rateForm.register('code')} />
-          {rateErrors.code?.message ? (
-            <p className="text-destructive text-sm">{rateErrors.code.message}</p>
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-2">
-          <LabelWithHint htmlFor="new-tax-rate" hint="The percentage added to taxable amounts.">
-            Rate (%)
-          </LabelWithHint>
-          <Input
-            id="new-tax-rate"
-            inputMode="decimal"
-            placeholder="18"
-            disabled={createPending}
-            {...rateForm.register('percentageValue')}
-          />
-          {rateErrors.percentageValue?.message ? (
-            <p className="text-destructive text-sm">{rateErrors.percentageValue.message}</p>
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-2">
-          <LabelWithHint htmlFor="new-tax-description" hint="An internal note. Optional.">
-            Description
-          </LabelWithHint>
-          <Textarea
-            id="new-tax-description"
-            rows={3}
-            disabled={createPending}
-            {...rateForm.register('description')}
-          />
-        </div>
-        {createError ? (
-          <p role="alert" className="text-destructive text-sm">
-            {createError}
-          </p>
-        ) : null}
-      </Composer>
-    </FormDialog>
+        </Composer>
+      </FormDialog>
     </>
   )
 }

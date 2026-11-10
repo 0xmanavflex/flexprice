@@ -415,13 +415,18 @@ function quietPlayer(url: string): string {
  * pressed), then a way out to the video's own page. Closing is always there.
  */
 function VideoAnnouncement({
-  entry,
+  entry: current,
   onClose,
 }: {
   entry: ShellChangelogEntry | null
   onClose: () => void
 }) {
   const [started, setStarted] = useState(false)
+  // The dialog animates out after `current` goes null: keep showing the entry it
+  // had, so it never closes as an empty, unnamed dialog.
+  const [last, setLast] = useState(current)
+  if (current !== null && current !== last) setLast(current)
+  const entry = current ?? last
   const copy = entry?.announcement ?? {
     eyebrow: "What's new",
     title: entry?.title ?? '',
@@ -432,7 +437,7 @@ function VideoAnnouncement({
     onClose()
   }
   return (
-    <Dialog open={entry !== null} onOpenChange={(open) => (open ? undefined : close())}>
+    <Dialog open={current !== null} onOpenChange={(open) => (open ? undefined : close())}>
       <DialogContent className="gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-3xl">
         <DialogHeader className="gap-1.5 px-6 pt-6 pb-4">
           <p className="text-primary text-[11px] font-medium tracking-wider uppercase">

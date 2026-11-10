@@ -49,6 +49,9 @@ import { isSafeNavigationUrl } from '../safeUrl'
 import type { ApiUrls } from '../publicApi'
 import {
   RETURNED_PARAM,
+  consumeLeftForGateway,
+  isGatewayReturn,
+  markLeavingForGateway,
   type PortalLocation,
   parsePortalLocation,
   portalHref,
@@ -92,6 +95,9 @@ export function PortalSurface({
   const [token] = useState(
     () =>
       location?.token ??
+      // This tab's own trip to a gateway (marker or not) restores the token it left with;
+      // only a gateway tab carrying our marker falls back to the shared slot.
+      consumeLeftForGateway() ??
       (new URLSearchParams(window.location.search).has(RETURNED_PARAM) ? tokenForReturn() : null),
   )
   useEffect(() => {
@@ -129,12 +135,14 @@ export function PortalSurface({
     )
   }
   if (!token) {
-    // Back from a payment page in its own tab: the portal is still open in the
-    // tab the customer came from, and refreshes there.
-    return new URLSearchParams(window.location.search).has(RETURNED_PARAM) ? (
+    // Back from a gateway with no session kept in this browser: the payment page
+    // opened in another browser (on a phone, a link tapped in an app pays in
+    // Safari), or the kept session expired. The gateway's webhook settles the
+    // payment, not this page, so it must not read as a broken link.
+    return isGatewayReturn(window.location.search) ? (
       <PortalNotice
-        title="You can close this tab"
-        body="Go back to the billing tab you came from. It updates on its own."
+        title="You’re back from checkout"
+        body="If you paid, it’s being added to your account. Go back to the billing tab you came from, or open your billing link again to see it."
       />
     ) : (
       <Expired />
@@ -309,7 +317,7 @@ function Portal({
       }),
     onOpenInvoice: (invoiceId) => navigate({ ...location, invoiceId }),
     payInvoice: (invoice, provider) =>
-      inNewTab(() =>
+      toGateway(() =>
         pay.run({
           invoiceId: invoice.id,
           provider,
@@ -338,9 +346,9 @@ function Portal({
         if (!isSafeNavigationUrl(next)) throw new Error(GENERIC_ERROR)
         return next
       }
-      // Another checkout already open: no new tab, the dialog asks what to do.
+      // Another checkout already open: the customer stays here, and the dialog asks what to do.
       let alreadyOpen: PortalOpenCheckout | null = null
-      const url = await inNewTab(async () => {
+      const url = await toGateway(async () => {
         const outcome = await topUp.run({
           ...request,
           provider: via.provider,
@@ -352,7 +360,7 @@ function Portal({
       return alreadyOpen ? { alreadyOpen } : url
     },
     addCard: (provider) =>
-      inNewTab(() => addCard.run({ provider, returnUrl: returnHere() }), {
+      toGateway(() => addCard.run({ provider, returnUrl: returnHere() }), {
         required: true,
       }),
     removeCard: async (card) => {
@@ -447,6 +455,45 @@ async function settle(run: () => Promise<unknown>): Promise<null> {
     return null
   } catch (cause) {
     throw new Error(messageOf(cause), { cause })
+  }
+}
+
+/**
+ * Runs a write that may answer with a gateway page, and sends this tab there.
+ * The gateway sends the customer back to this same tab (`returnHere`), which
+ * picks the session up again and follows the checkout, so they never end up
+ * with a second copy of the portal. Framed in another site's page, where a
+ * gateway refuses to load, the page opens in a new tab instead (`inNewTab`).
+ * The URL is handed back so the dialog keeps the link on screen until the page
+ * has gone. `required`: no page in the answer is an error.
+ */
+async function toGateway(
+  run: () => Promise<string | null>,
+  options: { required?: boolean } = {},
+): Promise<string | null> {
+  if (isFramed()) return inNewTab(run, options)
+  let url: string | null
+  try {
+    url = await run()
+  } catch (cause) {
+    throw new Error(messageOf(cause), { cause })
+  }
+  if (url === null) {
+    if (options.required) throw new Error(GENERIC_ERROR)
+    return null
+  }
+  if (!isSafeNavigationUrl(url)) throw new Error(GENERIC_ERROR)
+  markLeavingForGateway()
+  window.location.assign(url)
+  return url
+}
+
+function isFramed(): boolean {
+  try {
+    return window.top !== window.self
+  } catch {
+    // A cross-origin parent cannot be read, which itself means framed.
+    return true
   }
 }
 

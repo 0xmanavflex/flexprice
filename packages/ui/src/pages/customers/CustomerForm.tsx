@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -12,6 +13,7 @@ import {
   emptyCustomer,
   KEY_PREFIX,
   suggestKey,
+  EMAIL_CANNOT_CLEAR,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
@@ -54,6 +56,8 @@ export interface CustomerFormProps {
   onCancel: () => void
   isSubmitting?: boolean
   submitError?: string | null
+  /** The API's complaints about single fields, shown under each field. */
+  fieldErrors?: Partial<Record<keyof CreateCustomer, string>> | null
   trail: DetailCrumb[]
   /** Create only, while entities are enabled: adds the Billing entity picker, the default entity preselected. */
   billingEntities?: readonly Pick<BillingEntity, 'id' | 'name' | 'isDefault'>[] | undefined
@@ -86,6 +90,7 @@ export function CustomerForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  fieldErrors = null,
   trail,
   billingEntities,
 }: CustomerFormProps) {
@@ -94,11 +99,13 @@ export function CustomerForm({
     resolver: standardSchemaResolver(createCustomerSchema) as Resolver<CreateCustomer>,
     defaultValues: defaultValue ?? emptyCustomer(),
   })
+  // The id follows the name while creating. Once saved it is fixed: shown, not editable.
+  const followsName = !isEdit
 
   const nameField = form.register('name', {
     onChange: (event: { target: { value: string } }) => {
       // The externalId follows the name until the person types one of their own.
-      if (!isEdit && !form.getFieldState('externalId').isDirty) {
+      if (followsName && !form.getFieldState('externalId').isDirty) {
         form.setValue('externalId', suggestKey(KEY_PREFIX.customer, event.target.value), {
           shouldValidate: form.formState.isSubmitted,
         })
@@ -107,6 +114,14 @@ export function CustomerForm({
   })
 
   const errors = form.formState.errors
+
+  // A save the API refused field by field: put each reason under its field.
+  useEffect(() => {
+    if (!fieldErrors) return
+    for (const [name, message] of Object.entries(fieldErrors)) {
+      if (message) form.setError(name as keyof CreateCustomer, { type: 'server', message })
+    }
+  }, [fieldErrors, form])
 
   const [addressCountry = '', addressState = '', addressCity = ''] = form.watch([
     'addressCountry',
@@ -125,13 +140,30 @@ export function CustomerForm({
   })
 
   const entityPicker = !isEdit && billingEntities ? billingEntities : undefined
-  const submitAll = form.handleSubmit((values) =>
+  const savedCountry = defaultValue?.addressCountry?.trim() ?? ''
+  const savedEmail = defaultValue?.email?.trim() ?? ''
+  const submitAll = form.handleSubmit((values) => {
+    // A blank country is not a clear: the API rejects '' (`len=2`), and leaving
+    // the key out would keep the saved country while reporting success.
+    let blocked = false
+    if (isEdit && savedCountry && !values.addressCountry?.trim()) {
+      form.setError('addressCountry', {
+        message: "The API can't remove a country; replace it instead.",
+      })
+      blocked = true
+    }
+    // Same for the email: the API rejects '' (`omitempty,email` on a pointer).
+    if (isEdit && savedEmail && !values.email?.trim()) {
+      form.setError('email', { message: EMAIL_CANNOT_CLEAR })
+      blocked = true
+    }
+    if (blocked) return
     onSubmit(
       entityPicker
         ? { ...values, billingEntityId: effectiveEntityId(values, entityPicker) }
         : values,
-    ),
-  )
+    )
+  })
 
   const detailsRows = (
     <>
@@ -146,11 +178,20 @@ export function CustomerForm({
       <FormRow
         label="External ID"
         required
-        hint="Your own identifier. Usage events are matched to the customer by it."
+        hint={
+          isEdit
+            ? 'Usage events are matched to the customer by it. It cannot be changed once the customer is saved.'
+            : 'Your own identifier. Usage events are matched to the customer by it.'
+        }
         error={errors.externalId?.message}
       >
         {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('externalId')} />
+          <Input
+            id={id}
+            disabled={isSubmitting || isEdit}
+            {...field}
+            {...form.register('externalId')}
+          />
         )}
       </FormRow>
       <FormRow

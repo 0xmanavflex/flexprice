@@ -1423,6 +1423,7 @@ export const EditASetAsideAddon: Story = {
         { id: 'addon_support', name: 'Priority support' },
         { id: 'addon_sso', name: 'SSO' },
       ],
+      addonCharges: () => [],
     },
   },
   play: async ({ canvasElement, args }) => {
@@ -1435,23 +1436,24 @@ export const EditASetAsideAddon: Story = {
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'SSO' }))
 
-    // Back to the first: SSO goes aside, Priority support opens with its settings.
-    await userEvent.click(dialog.getByRole('button', { name: 'Edit Priority support' }))
+    // The add-on set aside keeps its own settings, editable in place before saving.
     const staged = within(dialog.getByRole('list', { name: 'Add-ons to attach' }))
-    await expect(staged.getByText('SSO')).toBeVisible()
-    await expect(staged.queryByText('Priority support')).toBeNull()
-    await userEvent.click(dialog.getByRole('combobox', { name: /Starts/ }))
-    await userEvent.click(
-      await screen.findByRole('option', { name: 'At the end of the current period' }),
-    )
-    await userEvent.click(dialog.getByRole('button', { name: 'Advanced options' }))
-    await userEvent.click(dialog.getByRole('combobox', { name: 'Proration' }))
+    await expect(staged.getByText('Priority support')).toBeVisible()
+    await userEvent.click(staged.getByRole('combobox', { name: /Starts/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /End of current period/ }))
+    await userEvent.click(staged.getByRole('button', { name: 'Advanced options' }))
+    await userEvent.click(staged.getByRole('combobox', { name: /Proration/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'No proration' }))
+    await expect(staged.getByText(/starts at period end · not prorated/)).toBeVisible()
     await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
-        { addonId: 'addon_sso', changeAt: 'immediate', prorate: true },
-        { addonId: 'addon_support', changeAt: 'end_of_period', prorate: false },
+        expect.objectContaining({
+          addonId: 'addon_support',
+          changeAt: 'end_of_period',
+          prorate: false,
+        }),
+        expect.objectContaining({ addonId: 'addon_sso', changeAt: 'immediate' }),
       ]),
     )
   },
@@ -1497,6 +1499,7 @@ export const ConfigureAddon: Story = {
 /** V1's timing: an add-on can start at period end without proration, and removals say when. */
 export const AddonTimingAndRemoval: Story = {
   parameters: menuA11y,
+  args: { sectionOptions: { ...SECTION_OPTIONS, addonCharges: () => [] } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('button', { name: 'Modify add-ons' }))
@@ -1504,16 +1507,18 @@ export const AddonTimingAndRemoval: Story = {
     await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
     await userEvent.click(dialog.getByRole('combobox', { name: /Starts/ }))
-    await userEvent.click(
-      await screen.findByRole('option', { name: 'At the end of the current period' }),
-    )
+    await userEvent.click(await screen.findByRole('option', { name: /End of current period/ }))
     await userEvent.click(dialog.getByRole('button', { name: 'Advanced options' }))
-    await userEvent.click(dialog.getByRole('combobox', { name: 'Proration' }))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Proration/ }))
     await userEvent.click(await screen.findByRole('option', { name: 'No proration' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Apply add-on changes' }))
     await waitFor(() =>
       expect(args.onAddAddon).toHaveBeenCalledWith([
-        { addonId: 'addon_support', changeAt: 'end_of_period', prorate: false },
+        expect.objectContaining({
+          addonId: 'addon_support',
+          changeAt: 'end_of_period',
+          prorate: false,
+        }),
       ]),
     )
   },
@@ -1766,7 +1771,8 @@ export const HeaderIntegrations: Story = {
     const tip = within(details)
     await expect(tip.getByText('Created')).toBeVisible()
     await expect(tip.getByText('Updated')).toBeVisible()
-    await expect(tip.getByText('Sep 18, 2026', { exact: false })).toBeVisible()
+    // The year shows only for a date outside this one, so match the day alone.
+    await expect(tip.getByText(/^Sep 18/)).toBeVisible()
   },
 }
 

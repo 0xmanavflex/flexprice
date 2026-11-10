@@ -7,7 +7,12 @@ import {
   useUpdateCustomer,
   serverReason,
 } from '@fp/query'
-import { BillingEntityMode, customerToEdit, type CreateCustomer } from '@fp/domain'
+import {
+  BillingEntityMode,
+  customerToEdit,
+  toCustomerFieldErrors,
+  type CreateCustomer,
+} from '@fp/domain'
 import { CustomerForm } from '@fp/ui/pages'
 import { detailGate } from '../shared/detailGate'
 
@@ -41,8 +46,9 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
         billingEntities={entitiesOn ? entities.data : undefined}
         onCancel={onCancel}
         isSubmitting={create.isPending}
-        // The API's refusal is a toast (MutationToasts); validation stays in the form.
+        // The API's refusal is a toast (MutationToasts); a field it names is also marked.
         submitError={null}
+        fieldErrors={fieldErrorsOf(create.error)}
         onSubmit={(draft: CreateCustomer) =>
           create.mutate(draft, {
             // A created customer with no id cannot be opened: land on the list instead of /customers/.
@@ -84,6 +90,7 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
       onCancel={onCancel}
       isSubmitting={update.isPending}
       submitError={toSubmitError(update.error)}
+      fieldErrors={fieldErrorsOf(update.error)}
       onSubmit={(draft: CreateCustomer) =>
         update.mutate({ id: customer.id, draft }, { onSuccess: () => props.onDone(customer.id) })
       }
@@ -92,12 +99,19 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
 }
 
 /** A save failure, as a sentence the form can show inline. */
+/** The fields the API refused, each with a reason the form shows under it. */
+function fieldErrorsOf(error: unknown) {
+  return error instanceof ApiError ? toCustomerFieldErrors(error.details) : null
+}
+
 function toSubmitError(error: unknown): string | null {
   if (!error) return null
 
   if (error instanceof ApiError) {
     switch (error.kind) {
       case 'invalid':
+        // "Request validation failed" says nothing; the fields themselves say what.
+        if (fieldErrorsOf(error)) return 'Some details need fixing. Check the highlighted fields.'
         return error.message || 'Check the details and try again.'
       case 'forbidden':
         return serverReason(error) ?? 'You do not have permission to change customers here.'

@@ -220,17 +220,19 @@ test.describe('a customer detail page', () => {
     await reread
   })
 
-  test('pushes the customer to its outbound integrations from Related', async ({ page }) => {
+  test('pushes the customer to the one integration chosen in Related', async ({ page }) => {
     await openFirstCustomer(page)
     await page.getByRole('tab', { name: 'Information' }).click()
     const sync = page.waitForRequest(
       (request) => request.url().endsWith('/integrations/sync') && request.method() === 'POST',
     )
-    // One push reaches every provider syncing customers outbound, so it is one
-    // action on the card rather than an item in a single provider's menu.
-    await page.getByRole('button', { name: /^Push to .*Stripe/ }).click()
+    // Each integration has its own Push, which names its connection so only it is synced.
+    await page.getByRole('button', { name: 'Manage Stripe integration' }).click()
+    await page.getByRole('menuitem', { name: 'Push to Stripe' }).click()
     const body = (await sync).postDataJSON() as Record<string, unknown>
     expect(body).toMatchObject({ entity_type: 'customer', method: 'push' })
+    // Stripe's own connection, not any connection: a push routed elsewhere fails here.
+    expect(body['connection_id']).toBe('conn_stripe')
     await expect(page.getByText('Pushing customer to Stripe')).toBeVisible()
   })
 

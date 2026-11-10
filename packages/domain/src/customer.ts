@@ -214,6 +214,55 @@ export const customerEmailSchema = z
   .trim()
   .pipe(z.union([z.literal(''), z.email('Enter a valid email address')]))
 
+/** Shown when a saved email is blanked: the API has no way to remove one (`omitempty,email` rejects ''). */
+export const EMAIL_CANNOT_CLEAR = "The API can't remove an email; replace it instead."
+
+/** The API's field names (Go struct fields) → the draft's. */
+const API_CUSTOMER_FIELDS: Record<string, keyof CreateCustomer> = {
+  ExternalID: 'externalId',
+  Name: 'name',
+  Email: 'email',
+  Contact: 'phone',
+  Timezone: 'timezone',
+  BillingCurrency: 'billingCurrency',
+  AddressLine1: 'addressLine1',
+  AddressLine2: 'addressLine2',
+  AddressCity: 'addressCity',
+  AddressState: 'addressState',
+  AddressPostalCode: 'addressPostalCode',
+  AddressCountry: 'addressCountry',
+}
+
+/** What each failed validator means, said to a person rather than as Go's validator tag. */
+const API_RULE_MESSAGES: Record<string, string> = {
+  email: 'Enter a valid email address',
+  required: 'This field is required',
+  max: 'This is too long',
+  len: 'Use a two-letter country code',
+  iso3166_1_alpha2: 'Choose a country from the list',
+  timezone: 'Choose a timezone from the list',
+}
+
+/**
+ * A customer save the API refused field by field, as messages for the form.
+ * `details` is the API's `{ Email: "Key: 'UpdateCustomerRequest.Email' Error:Field
+ * validation for 'Email' failed on the 'email' tag" }`; fields the form does not
+ * have are left out, so the caller can still show a general message for them.
+ */
+export function toCustomerFieldErrors(
+  details: Record<string, string> | undefined,
+): Partial<Record<keyof CreateCustomer, string>> | null {
+  if (!details) return null
+  const errors: Partial<Record<keyof CreateCustomer, string>> = {}
+  for (const [key, raw] of Object.entries(details)) {
+    const field = API_CUSTOMER_FIELDS[key.split('.').pop() ?? key]
+    if (!field) continue
+    const rule = /failed on the '([^']+)' tag/.exec(raw)?.[1]
+    errors[field] = (rule && API_RULE_MESSAGES[rule]) ?? 'Check this field'
+  }
+  return Object.keys(errors).length ? errors : null
+}
+
 /**
  * A customer draft: what V1's drawer collects, plus the timezone and metadata
  * the backend accepts. `externalId` and `name` are the only required fields.

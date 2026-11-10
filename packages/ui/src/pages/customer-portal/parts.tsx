@@ -246,9 +246,9 @@ export function RadioRows({
 }
 
 /**
- * Shown once a hosted checkout or payment link is open: the page is in a new
- * tab, and the link stays here, because the tab may have been blocked or the
- * portal may be embedded in an iframe.
+ * Shown while the portal sends this tab to a hosted checkout or payment link
+ * (a new tab when the portal is framed). The link stays here in case the page
+ * does not open.
  */
 export function CheckoutLinkPanel({
   url,
@@ -280,19 +280,19 @@ export function CheckoutLinkPanel({
         <div className="flex flex-col gap-1 text-[13px]">
           <p className="text-sm font-medium">
             {card ? (
-              'Enter your card details on the secure card form'
+              'Taking you to the secure card form'
             ) : confirm ? (
               <>Your bank asks you to confirm{amount ? <> {amount}</> : null}</>
             ) : (
-              <>Finish paying{amount ? <> {amount}</> : null} in the new tab</>
+              <>Taking you to the payment page{amount ? <> for {amount}</> : null}</>
             )}
           </p>
           <p className="text-muted-foreground">
             {card
-              ? 'If the secure card form didn’t open, use the link below. Nothing is charged now; your card shows here once it is saved.'
+              ? 'If it doesn’t open, use the link below. Nothing is charged now; you come back here once your card is saved.'
               : confirm
                 ? 'Open the confirmation page to approve the charge on your card. Your credits are added once the bank approves it.'
-                : 'We opened the payment page in a new tab. If it didn’t open, use the link below. This page updates by itself once the payment goes through.'}
+                : 'If it doesn’t open, use the link below. You come back here once you’ve paid, and this page updates by itself.'}
           </p>
         </div>
       </div>
@@ -310,7 +310,8 @@ export function CheckoutLinkPanel({
           variant="outline"
           className="h-8 px-3"
           nativeButton={false}
-          render={<a href={url} target="_blank" rel="noopener noreferrer" role="link" />}
+          // This tab, which the gateway sends back to; a framed portal leaves its frame.
+          render={<a href={url} target="_top" rel="noreferrer" role="link" />}
         >
           <ExternalLinkIcon aria-hidden="true" />
           {card ? 'Open card form' : confirm ? 'Open confirmation page' : 'Open payment page'}

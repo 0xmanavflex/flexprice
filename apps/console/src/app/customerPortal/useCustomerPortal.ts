@@ -19,8 +19,11 @@ const portalHost = configuredPortalHost(import.meta.env.VITE_SURFACE_HOSTS as st
 export function useCustomerPortal() {
   const session = useCreateCustomerPortalSession()
 
+  // The link the API built for this customer (its region's portal, with the session
+  // token). Built here only when the API sends none.
   const linkFor = async (externalId: string) => {
-    const { token } = await session.mutateAsync(externalId)
+    const { token, url } = await session.mutateAsync(externalId)
+    if (url) return url
     return customerPortalLink(token, {
       origin: window.location.origin,
       region: env.region,

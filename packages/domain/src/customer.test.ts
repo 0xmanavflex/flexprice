@@ -3,6 +3,7 @@ import {
   DEFAULT_CUSTOMER_QUERY,
   createCustomerSchema,
   customerEmailSchema,
+  toCustomerFieldErrors,
   emptyCustomer,
   isCustomerQueryFiltered,
 } from './customer'
@@ -122,5 +123,26 @@ describe('isCustomerQueryFiltered', () => {
         filters: [{ field: 'status', op: 'in', value: ['archived'] }],
       }),
     ).toBe(true)
+  })
+})
+
+describe('toCustomerFieldErrors', () => {
+  it('puts the API refusal on the field, in words', () => {
+    expect(
+      toCustomerFieldErrors({
+        Email:
+          "Key: 'UpdateCustomerRequest.Email' Error:Field validation for 'Email' failed on the 'email' tag",
+        AddressCountry:
+          "Key: 'UpdateCustomerRequest.AddressCountry' Error:Field validation for 'AddressCountry' failed on the 'len' tag",
+      }),
+    ).toEqual({
+      email: 'Enter a valid email address',
+      addressCountry: 'Use a two-letter country code',
+    })
+  })
+
+  it('leaves out fields the form does not have', () => {
+    expect(toCustomerFieldErrors({ Metadata: 'bad' })).toBeNull()
+    expect(toCustomerFieldErrors(undefined)).toBeNull()
   })
 })

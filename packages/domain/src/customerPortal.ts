@@ -1109,9 +1109,7 @@ export interface PortalUsageFilter {
 export const NO_USAGE_FILTER: PortalUsageFilter = { featureIds: [], properties: {} }
 
 export function isUsageFiltered(filter: PortalUsageFilter): boolean {
-  return (
-    filter.featureIds.length > 0 || Object.values(filter.properties).some((v) => v.length > 0)
-  )
+  return filter.featureIds.length > 0 || Object.values(filter.properties).some((v) => v.length > 0)
 }
 
 /** Cost over usage, to eight places: a tiered price's effective rate. Null with no usage. */

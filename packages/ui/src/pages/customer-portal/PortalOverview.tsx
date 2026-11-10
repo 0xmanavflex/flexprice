@@ -78,7 +78,7 @@ export interface PortalOverviewProps {
   onPay: (invoice: PortalInvoice) => void
   onViewInvoice: (invoice: PortalInvoice) => void
   onAddCredits: () => void
-  /** Opens `provider`'s secure card form (in a new tab, on the click itself). */
+  /** Opens `provider`'s secure card form (this tab goes to it and comes back). */
   onAddCard: (provider: string) => void
   onRemoveCard: (card: PortalPaymentMethod) => void
   onMakeDefault: (card: PortalPaymentMethod) => void
@@ -194,7 +194,9 @@ function AccountSummary({
 
   const card = 'bg-background flex h-full flex-col rounded-xl border'
   return (
-    <div className={parts.creditBalance ? 'grid gap-4 sm:grid-cols-3' : 'grid gap-4 sm:grid-cols-2'}>
+    <div
+      className={parts.creditBalance ? 'grid gap-4 sm:grid-cols-3' : 'grid gap-4 sm:grid-cols-2'}
+    >
       <section className={card}>
         {data.subscriptions.status !== 'ready' ? (
           <CellSkeleton />
@@ -223,50 +225,50 @@ function AccountSummary({
         )}
       </section>
       <section className={card}>
-          {data.invoices.status !== 'ready' ? (
-            <CellSkeleton />
-          ) : due ? (
-            <SummaryCell
-              icon={<ReceiptIcon />}
-              label="Amount due"
-              value={money(due.amount)}
-              hint={
-                overdue
-                  ? 'Overdue'
-                  : firstPayable?.dueAt
-                    ? `Due ${formatDate(firstPayable.dueAt, locale)}`
-                    : 'Unpaid'
-              }
-              tone={overdue ? 'danger' : 'muted'}
-              action={
-                due.count + due.others > 1 && canGo('invoices')
-                  ? { label: 'See unpaid invoices', run: () => onGoTo('invoices') }
-                  : firstPayable
-                    ? { label: 'Pay now', run: () => onPay(firstPayable) }
-                    : undefined
-              }
-            />
-          ) : (
-            <SummaryCell
-              icon={<ReceiptIcon />}
-              label="Amount due"
-              value={
-                <>
-                  <CircleCheckIcon
-                    className="text-success-foreground dark:text-success size-5"
-                    aria-hidden="true"
-                  />
-                  {invoices.length ? 'All paid up' : 'Nothing due'}
-                </>
-              }
-              hint={invoices.length ? 'Every invoice is paid' : 'No invoices yet'}
-              action={
-                invoices.length && canGo('invoices')
-                  ? { label: 'View invoices', run: () => onGoTo('invoices') }
+        {data.invoices.status !== 'ready' ? (
+          <CellSkeleton />
+        ) : due ? (
+          <SummaryCell
+            icon={<ReceiptIcon />}
+            label="Amount due"
+            value={money(due.amount)}
+            hint={
+              overdue
+                ? 'Overdue'
+                : firstPayable?.dueAt
+                  ? `Due ${formatDate(firstPayable.dueAt, locale)}`
+                  : 'Unpaid'
+            }
+            tone={overdue ? 'danger' : 'muted'}
+            action={
+              due.count + due.others > 1 && canGo('invoices')
+                ? { label: 'See unpaid invoices', run: () => onGoTo('invoices') }
+                : firstPayable
+                  ? { label: 'Pay now', run: () => onPay(firstPayable) }
                   : undefined
-              }
-            />
-          )}
+            }
+          />
+        ) : (
+          <SummaryCell
+            icon={<ReceiptIcon />}
+            label="Amount due"
+            value={
+              <>
+                <CircleCheckIcon
+                  className="text-success-foreground dark:text-success size-5"
+                  aria-hidden="true"
+                />
+                {invoices.length ? 'All paid up' : 'Nothing due'}
+              </>
+            }
+            hint={invoices.length ? 'Every invoice is paid' : 'No invoices yet'}
+            action={
+              invoices.length && canGo('invoices')
+                ? { label: 'View invoices', run: () => onGoTo('invoices') }
+                : undefined
+            }
+          />
+        )}
       </section>
       {parts.creditBalance ? (
         <section className={card}>

@@ -347,6 +347,8 @@ export {
   CUSTOMER_FILTERS,
   createCustomerSchema,
   customerEmailSchema,
+  EMAIL_CANNOT_CLEAR,
+  toCustomerFieldErrors,
   editCustomerSchema,
   emptyCustomer,
   customerToEdit,

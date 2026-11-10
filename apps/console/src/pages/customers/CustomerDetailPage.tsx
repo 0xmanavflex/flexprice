@@ -243,9 +243,12 @@ export function CustomerDetailPage({
                   const integration = (integrations.data ?? []).find(
                     (item) => item.providerType === link.providerType,
                   )
-                  const connectionId = integration
-                    ? customerConnection(integration)?.id
-                    : undefined
+                  const connectionId = integration ? customerConnection(integration)?.id : undefined
+                  // Without its connection the push would go to every provider; say so instead.
+                  if (!connectionId) {
+                    toast.error(`Could not find the ${link.name} connection for this customer.`)
+                    return
+                  }
                   pushCustomer.mutate(connectionId, {
                     onSuccess: () => {
                       syncWatch.watch([link.name])

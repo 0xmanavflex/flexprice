@@ -91,7 +91,7 @@ function copy(url: string, onCopied: () => void) {
 
 /* ---- Pay an invoice ------------------------------------------------------ */
 
-/** `POST /invoices/{id}/pay`: a payment page from the chosen gateway, in a new tab. */
+/** `POST /invoices/{id}/pay`: a payment page from the chosen gateway, in this tab. */
 export function PayInvoiceDialog({
   invoice,
   gateways,
@@ -372,7 +372,7 @@ export function AddCreditsDialog({
       value: g.provider,
       media: <GatewayMark provider={g.provider} label={g.label} />,
       label: `${g.label} checkout`,
-      description: `Pay on ${g.label}’s page in a new tab`,
+      description: `Pay on ${g.label}’s secure page`,
     })),
   ]
   const close = () => {
@@ -789,9 +789,9 @@ function AutoTopupForm({
 /* ---- Cards --------------------------------------------------------------- */
 
 /**
- * After "Add card": the gateway's secure card form was opened in a new tab on
- * the click itself (V1's flow, no step before it). This keeps its link on
- * screen in case the tab was blocked, and "I've added it" refreshes the cards.
+ * After "Add card": the portal is on its way to the gateway's secure card form
+ * (V1's flow, no step before it). This keeps its link on screen in case the
+ * page does not open, and "I've added it" refreshes the cards.
  */
 export function CardLinkDialog({
   url,

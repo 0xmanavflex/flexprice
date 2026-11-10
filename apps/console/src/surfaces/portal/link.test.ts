@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  consumeLeftForGateway,
+  isGatewayReturn,
+  markLeavingForGateway,
   parsePortalLocation,
   portalHref,
   rememberForReturn,
@@ -153,6 +156,24 @@ describe('returnUrl', () => {
   })
 })
 
+describe('isGatewayReturn', () => {
+  it.each([
+    '?returned=1',
+    '?razorpay_payment_id=pay_1&razorpay_signature=x',
+    '?razorpay_payment_link_id=plink_1',
+    '?session_id=cs_test_1',
+    '?_ptxn=txn_1',
+    // A connection-level redirect drops our marker; Moyasar's own parameters remain.
+    '?id=pay_1&status=paid',
+  ])('recognises %s', (search) => {
+    expect(isGatewayReturn(search)).toBe(true)
+  })
+
+  it.each(['', '?invoice=inv_1', '?id=only_an_id'])('treats %s as an ordinary visit', (search) => {
+    expect(isGatewayReturn(search)).toBe(false)
+  })
+})
+
 describe('the session kept for a gateway return', () => {
   it('drops the token and any gateway parameters from the return address', () => {
     expect(
@@ -172,5 +193,29 @@ describe('the session kept for a gateway return', () => {
     expect(tokenForReturn(1_000 + 61 * 60_000)).toBeNull()
     expect(tokenForReturn(1_000)).toBeNull()
     vi.unstubAllGlobals()
+  })
+})
+
+describe('a tab that left for a gateway', () => {
+  it('knows on return that the kept session is its own, even without our marker', () => {
+    const store = new Map<string, string>()
+    vi.stubGlobal('sessionStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+      removeItem: (key: string) => void store.delete(key),
+    })
+    vi.stubGlobal('localStorage', {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    })
+    rememberForReturn('tok_mine')
+    markLeavingForGateway()
+    // Another customer's checkout in another tab overwrites the shared slot, never this tab's.
+    expect(consumeLeftForGateway()).toBe('tok_mine')
+    // Cleared for the next load, and a re-read in this load agrees.
+    expect(sessionStorage.getItem('flexprice.portal.leftForGateway')).toBeNull()
+    expect(sessionStorage.getItem('flexprice.portal.tabToken')).toBeNull()
+    expect(consumeLeftForGateway()).toBe('tok_mine')
   })
 })

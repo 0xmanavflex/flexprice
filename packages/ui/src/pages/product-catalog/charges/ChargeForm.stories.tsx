@@ -304,7 +304,8 @@ export const UsageWindowOffered: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: /^Advanced/ }))
-    await expect(await canvas.findByText('Usage window')).toBeVisible()
+    // The label names the field; the Advanced summary repeats the words.
+    await expect(await canvas.findByLabelText(/^Usage window/)).toBeVisible()
   },
 }
 
@@ -320,7 +321,7 @@ export const UsageWindowOwnedByTheMeter: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: /^Advanced/ }))
-    await expect(await canvas.findByText('Usage window')).toBeVisible()
+    await expect(await canvas.findByLabelText(/^Usage window/)).toBeVisible()
     await expect(canvas.getByText(/Set on the Peak seats feature itself/)).toBeVisible()
   },
 }

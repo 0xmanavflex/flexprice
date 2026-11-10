@@ -123,6 +123,26 @@ export function returnUrl(href: string): string {
   return url.toString()
 }
 
+/**
+ * Parameters gateways add on the way back. A gateway that redirects to an address
+ * saved on its connection (Moyasar's `success_url`, Paddle's `redirect_url`)
+ * drops our marker, and these are then the only sign the visit is a return.
+ */
+const GATEWAY_RETURN_PARAMS: readonly (readonly string[])[] = [
+  ['razorpay_payment_id'],
+  ['razorpay_payment_link_id'],
+  ['session_id'],
+  ['_ptxn'],
+  ['id', 'status'],
+]
+
+/** True when this visit is a gateway sending the customer back. */
+export function isGatewayReturn(search: string): boolean {
+  const params = new URLSearchParams(search)
+  if (params.has(RETURNED_PARAM)) return true
+  return GATEWAY_RETURN_PARAMS.some((names) => names.every((name) => params.has(name)))
+}
+
 /** The query parameters the portal itself reads; anything else a gateway added. */
 const PORTAL_PARAMS = new Set(['invoice', 'range', 'from', 'to'])
 
@@ -143,6 +163,12 @@ export function rememberForReturn(token: string, now = Date.now()) {
   } catch {
     // Storage blocked: the returned tab asks the customer to go back instead.
   }
+  try {
+    // This tab's own token, which another tab's checkout cannot overwrite.
+    sessionStorage.setItem(TAB_TOKEN_KEY, token)
+  } catch {
+    // Blocked storage: a same-tab return without our marker shows the notice instead.
+  }
 }
 
 export function tokenForReturn(now = Date.now()): string | null {
@@ -160,4 +186,47 @@ export function tokenForReturn(now = Date.now()): string | null {
   } catch {
     return null
   }
+}
+
+/** Set in a tab that sends itself to a gateway; that same tab finds it on return. */
+const LEFT_FOR_GATEWAY_KEY = 'flexprice.portal.leftForGateway'
+/** The token of the session this tab left with, kept in the tab's own storage. */
+const TAB_TOKEN_KEY = 'flexprice.portal.tabToken'
+
+/**
+ * Note that this tab is going to a gateway and will come back. Session storage
+ * belongs to the tab and survives its round trip, so on return the portal knows
+ * it is this tab's own session to restore even when the gateway dropped our
+ * `returned` marker (a redirect address saved on the gateway's connection). It
+ * starts empty in any other tab, so a bare visit never picks up a kept session.
+ */
+export function markLeavingForGateway() {
+  try {
+    sessionStorage.setItem(LEFT_FOR_GATEWAY_KEY, '1')
+  } catch {
+    // Blocked storage: the return still restores the session when the marker survives.
+  }
+}
+
+/** Read once per page load, so a second read (React's strict-mode re-run) agrees. */
+let leftForGateway: { token: string | null } | null = null
+
+/**
+ * When this page load is the tab that left for a gateway coming back: the token
+ * it left with, from its own session storage. Never the origin-wide slot, which
+ * another customer's checkout in another tab may have overwritten. Clears both.
+ */
+export function consumeLeftForGateway(): string | null {
+  if (leftForGateway !== null) return leftForGateway.token
+  let token: string | null = null
+  try {
+    if (sessionStorage.getItem(LEFT_FOR_GATEWAY_KEY) !== null)
+      token = sessionStorage.getItem(TAB_TOKEN_KEY)?.trim() || null
+    sessionStorage.removeItem(LEFT_FOR_GATEWAY_KEY)
+    sessionStorage.removeItem(TAB_TOKEN_KEY)
+  } catch {
+    token = null
+  }
+  leftForGateway = { token }
+  return token
 }
