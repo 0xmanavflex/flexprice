@@ -28,6 +28,7 @@ import {
   PaymentStatus,
   compareMoney,
   customerEmailSchema,
+  EMAIL_CANNOT_CLEAR,
   formatMoney,
   isZeroMoney,
   SubscriptionStatus,
@@ -1598,7 +1599,9 @@ function InformationTab({
               value: customer.email,
               placeholder: 'No email',
               validate: (next) =>
-                customerEmailSchema.safeParse(next).error?.issues[0]?.message ?? null,
+                customer.email && !next.trim()
+                  ? EMAIL_CANNOT_CLEAR
+                  : (customerEmailSchema.safeParse(next).error?.issues[0]?.message ?? null),
             },
             {
               key: 'phone',

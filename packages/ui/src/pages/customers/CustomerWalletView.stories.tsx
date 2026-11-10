@@ -432,7 +432,13 @@ export const AwaitingPayment: Story = {
   args: {
     transactions: [
       PENDING_TOP_UP,
-      { ...PENDING_TOP_UP, id: 'wtx_failed', credits: '100', creditsAvailable: '100', status: 'failed' },
+      {
+        ...PENDING_TOP_UP,
+        id: 'wtx_failed',
+        credits: '100',
+        creditsAvailable: '100',
+        status: 'failed',
+      },
     ],
   },
   play: async ({ canvasElement }) => {

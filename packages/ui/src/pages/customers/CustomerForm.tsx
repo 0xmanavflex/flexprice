@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -12,6 +13,7 @@ import {
   emptyCustomer,
   KEY_PREFIX,
   suggestKey,
+  EMAIL_CANNOT_CLEAR,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
@@ -54,6 +56,8 @@ export interface CustomerFormProps {
   onCancel: () => void
   isSubmitting?: boolean
   submitError?: string | null
+  /** The API's complaints about single fields, shown under each field. */
+  fieldErrors?: Partial<Record<keyof CreateCustomer, string>> | null
   trail: DetailCrumb[]
   /** Create only, while entities are enabled: adds the Billing entity picker, the default entity preselected. */
   billingEntities?: readonly Pick<BillingEntity, 'id' | 'name' | 'isDefault'>[] | undefined
@@ -86,6 +90,7 @@ export function CustomerForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  fieldErrors = null,
   trail,
   billingEntities,
 }: CustomerFormProps) {
@@ -114,6 +119,14 @@ export function CustomerForm({
 
   const errors = form.formState.errors
 
+  // A save the API refused field by field: put each reason under its field.
+  useEffect(() => {
+    if (!fieldErrors) return
+    for (const [name, message] of Object.entries(fieldErrors)) {
+      if (message) form.setError(name as keyof CreateCustomer, { type: 'server', message })
+    }
+  }, [fieldErrors, form])
+
   const [addressCountry = '', addressState = '', addressCity = ''] = form.watch([
     'addressCountry',
     'addressState',
@@ -132,15 +145,23 @@ export function CustomerForm({
 
   const entityPicker = !isEdit && billingEntities ? billingEntities : undefined
   const savedCountry = defaultValue?.addressCountry?.trim() ?? ''
+  const savedEmail = defaultValue?.email?.trim() ?? ''
   const submitAll = form.handleSubmit((values) => {
     // A blank country is not a clear: the API rejects '' (`len=2`), and leaving
     // the key out would keep the saved country while reporting success.
+    let blocked = false
     if (isEdit && savedCountry && !values.addressCountry?.trim()) {
       form.setError('addressCountry', {
         message: "The API can't remove a country; replace it instead.",
       })
-      return
+      blocked = true
     }
+    // Same for the email: the API rejects '' (`omitempty,email` on a pointer).
+    if (isEdit && savedEmail && !values.email?.trim()) {
+      form.setError('email', { message: EMAIL_CANNOT_CLEAR })
+      blocked = true
+    }
+    if (blocked) return
     onSubmit(
       entityPicker
         ? { ...values, billingEntityId: effectiveEntityId(values, entityPicker) }

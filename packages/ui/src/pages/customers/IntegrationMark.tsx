@@ -29,7 +29,11 @@ export function IntegrationMark({
       {src ? (
         <>
           <img src={src} alt="" className="max-h-full max-w-full object-contain dark:hidden" />
-          <img src={darkSrc} alt="" className="hidden max-h-full max-w-full object-contain dark:block" />
+          <img
+            src={darkSrc}
+            alt=""
+            className="hidden max-h-full max-w-full object-contain dark:block"
+          />
         </>
       ) : (
         <span aria-hidden className="text-[10px] font-medium">

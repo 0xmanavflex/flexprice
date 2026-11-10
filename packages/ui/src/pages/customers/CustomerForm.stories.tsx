@@ -159,6 +159,45 @@ export const EditGeneratedIdFollowsName: Story = {
   },
 }
 
+/** A saved email can't be blanked (the API refuses ''), so the form says so instead of failing the save. */
+export const EditBlankEmail: Story = {
+  args: {
+    mode: 'edit',
+    customerName: 'Test2',
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
+    defaultValue: { externalId: 'cust-test2', name: 'Test2', email: 'test@flexprice.io' },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.clear(canvas.getByRole('textbox', { name: /^email/i }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
+    await expect(
+      await canvas.findByText("The API can't remove an email; replace it instead."),
+    ).toBeVisible()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+  },
+}
+
+/** A field the API refused shows its reason under the field. */
+export const EditServerFieldError: Story = {
+  args: {
+    mode: 'edit',
+    customerName: 'Test2',
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
+    defaultValue: { externalId: 'cust-test2', name: 'Test2', email: 'test@flexprice.io' },
+    submitError: 'Some details need fixing. Check the highlighted fields.',
+    fieldErrors: { email: 'Enter a valid email address' },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Enter a valid email address')).toBeVisible()
+    await expect(canvas.getByRole('textbox', { name: /^email/i })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+  },
+}
+
 /** An address without a domain ending is refused under the field, and the save waits for a real one. */
 export const InvalidEmail: Story = {
   args: {
