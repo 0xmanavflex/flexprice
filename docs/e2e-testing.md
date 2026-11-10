@@ -10,10 +10,10 @@ The journey inventory: every journey, what it does and its last recorded result:
 | Specs             | `apps/console/e2e/*.spec.ts` except `live-*`                                                               | `apps/console/e2e/live-*.spec.ts`                         |
 | System under test | the console built with `VITE_USE_MOCKS=true` (MSW fixtures), served by the runner                          | the **deployed production frontend** and its API          |
 | Workflow          | `.github/workflows/e2e.yml`                                                                                | `.github/workflows/e2e-release.yml`                       |
-| Runs on           | pull requests, pushes to `develop` / `feat/v2-foundation` / `ci/**`, and Pipeline's Verify stage on `main` | **only** after Pipeline has deployed `main` to production |
+| Runs on           | pull requests (not drafts or docs-only), pushes to `ci/**`, and nightly on `develop` | **only** after Pipeline has deployed `main` to production |
 | Slack             | never                                                                                                      | one report per release                                    |
 
-The mocked suite is the existing CI check and is unchanged in when it runs; it tests the
+The mocked suite is the existing CI check; it tests the
 application, not a deployment, and posts nothing. Everything below is about the live,
 release-triggered suite unless it says otherwise.
 
@@ -21,7 +21,7 @@ release-triggered suite unless it says otherwise.
 
 ```
 push to main
-  → Pipeline: Check (lint, unit, build) → Deploy (Deploy main = deploy.yml `vercel deploy --prod`, regions) → Verify (mocked suites)
+  → Pipeline: Check (lint, unit, build) → Deploy (Deploy main = deploy.yml `vercel deploy --prod`, regions)
   → Pipeline completes
   → E2E release verification (workflow_run on Pipeline, branch main)
        1. reads that Pipeline run's jobs: continues only if the "Deploy main" job
@@ -40,8 +40,8 @@ run whose deploy failed, was skipped (no Vercel secrets) or was cancelled by a n
 
 It cannot affect a release. Pipeline has already finished when it starts, nothing in
 Pipeline `needs:` it, and it never calls or re-runs a deploy, so a failure can only fail
-_this_ workflow. Pipeline's own conclusion is deliberately not used as the signal: its last
-stage (mocked suites) runs after the deploy, so it can go red while the release is live.
+_this_ workflow. Pipeline's own conclusion is deliberately not used as the signal: a job that
+fails after the deploy step (a region, say) can turn it red while the release is live.
 
 Concurrency is one run per released commit (`e2e-release-<sha>`, queued, not cancelled), so
 a re-run never races the first on the shared test account.

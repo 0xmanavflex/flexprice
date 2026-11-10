@@ -90,6 +90,10 @@ test('a link that names a filter wins over the remembered one', async ({ page })
 test("a shared link to another environment's list does not get this one's filters", async ({
   page,
 }) => {
+  // Two environment switches and a reload: on a two-core CI runner this ran
+  // 32s against the 30s default and was cut off mid-assertion. The waits
+  // inside are unchanged; only the overall budget is.
+  test.setTimeout(60_000)
   await filterFeatures(page, 'api')
   const shell = new ShellPage(page)
   const homeName = await shell.currentEnvironment()

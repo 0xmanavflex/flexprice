@@ -19,9 +19,9 @@ name: E2E release verification
 # Vercel secrets), a failed or cancelled one, a PR, a branch push or any other
 # workflow never reaches the journeys.
 #
-# Pipeline's own conclusion is deliberately not the test: its last stage runs
-# the mocked suites *after* the deploy, so a red storybook can fail Pipeline
-# while the release is live — and the live release is what needs verifying.
+# Pipeline's own conclusion is deliberately not the test: a failure after the
+# deploy step (a region, say) can fail Pipeline while the release is live — and
+# the live release is what needs verifying.
 #
 # ## Independent of the deploy
 #
@@ -212,7 +212,7 @@ jobs:
 
       # The live specs (`e2e/live-*.spec.ts`): the only journeys that exercise a
       # real deployment. The mocked journeys assert fixture data, so they run
-      # in Pipeline's Verify stage and on pull requests (`e2e.yml`) instead.
+      # on pull requests and nightly on develop (`e2e.yml`) instead.
       - name: Run the journeys against production
         id: journeys
         env:

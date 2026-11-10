@@ -9,6 +9,7 @@ import {
   money,
 } from '@fp/domain'
 import { CustomerPortalView } from './CustomerPortalView'
+import { CreditCardIcon } from '@ui/icons'
 import { PortalNotice } from './PortalNotice'
 import {
   PORTAL_NOW,
@@ -818,6 +819,77 @@ export const MerchantCreditsSettings: Story = {
 /** The merchant's brand colour repaints the mark, the active tab and primary buttons. */
 export const Branded: Story = {
   args: { brandColor: '#0d6e66' },
+}
+
+/**
+ * Back from checkout in a browser with no portal session, and the gateway's
+ * return says the payment went through: the illustration takes the icon tile's
+ * place (the console passes its animated success mark).
+ */
+export const CheckoutReturnNoSession: Story = {
+  render: () => (
+    <PortalNotice
+      illustration={<span data-testid="return-illustration" className="size-28" />}
+      title="You’re all set!"
+      body="Head back to your billing portal to view your latest billing details."
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'You’re all set!' })).toBeVisible()
+    await expect(canvas.getByTestId('return-illustration')).toBeInTheDocument()
+    await expect(canvas.getByText(/view your latest billing details/)).toBeVisible()
+  },
+}
+
+/** Back from a checkout the gateway says failed: a neutral card, never the success tick. */
+export const CheckoutReturnFailed: Story = {
+  render: () => (
+    <PortalNotice
+      icon={<CreditCardIcon />}
+      title="Back to billing"
+      body="Your checkout session has ended. Head back to your billing portal to view your latest billing details."
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'Back to billing' })).toBeVisible()
+    await expect(canvas.queryByText('You’re all set!')).toBeNull()
+  },
+}
+
+/**
+ * Back from a checkout whose return states no outcome (Stripe, Paddle, our own
+ * marker): the customer may have left without paying, so the card claims
+ * neither success nor failure.
+ */
+export const CheckoutReturnUnknown: Story = {
+  render: () => (
+    <PortalNotice
+      icon={<CreditCardIcon />}
+      title="You’re back from checkout"
+      body="If you completed a payment, it’s being applied to your account. Head back to your billing portal to see your latest billing details."
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'You’re back from checkout' })).toBeVisible()
+    await expect(canvas.queryByText('You’re all set!')).toBeNull()
+  },
+}
+
+/** A notice that is not about the link takes its own icon in the tile. */
+export const NoticeWithIcon: Story = {
+  render: () => (
+    <PortalNotice
+      icon={<span data-testid="notice-icon" />}
+      title="Billing is unavailable"
+      body="Try again in a few minutes."
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByTestId('notice-icon')).toBeInTheDocument()
+  },
 }
 
 /** The link has expired: say so, and who to ask. Never a sign-in page. */

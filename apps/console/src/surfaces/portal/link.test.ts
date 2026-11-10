@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   consumeLeftForGateway,
+  gatewayReturnFailed,
+  gatewayReturnPaid,
   isGatewayReturn,
   markLeavingForGateway,
   parsePortalLocation,
@@ -217,5 +219,47 @@ describe('a tab that left for a gateway', () => {
     expect(sessionStorage.getItem('flexprice.portal.leftForGateway')).toBeNull()
     expect(sessionStorage.getItem('flexprice.portal.tabToken')).toBeNull()
     expect(consumeLeftForGateway()).toBe('tok_mine')
+  })
+})
+
+describe('gatewayReturnFailed', () => {
+  it.each([
+    '?id=pay_1&status=failed',
+    '?id=pay_1&status=Cancelled',
+    '?razorpay_payment_link_id=plink_1&razorpay_payment_link_status=expired',
+  ])('reads %s as a failed payment', (search) => {
+    expect(gatewayReturnFailed(search)).toBe(true)
+  })
+
+  it.each([
+    '?returned=1',
+    '?id=pay_1&status=paid',
+    '?razorpay_payment_link_id=plink_1&razorpay_payment_link_status=paid',
+    // Stripe and Paddle say nothing about the outcome in the address.
+    '?session_id=cs_1',
+    '?_ptxn=txn_1',
+  ])('does not read %s as a failure', (search) => {
+    expect(gatewayReturnFailed(search)).toBe(false)
+  })
+})
+
+describe('gatewayReturnPaid', () => {
+  it.each([
+    '?id=pay_1&status=paid',
+    '?id=pay_1&status=Captured',
+    '?razorpay_payment_link_id=plink_1&razorpay_payment_link_status=paid',
+  ])('reads %s as a paid payment', (search) => {
+    expect(gatewayReturnPaid(search)).toBe(true)
+  })
+
+  it.each([
+    // Our marker and Stripe/Paddle returns come back whether or not the customer paid.
+    '?returned=1',
+    '?session_id=cs_1',
+    '?_ptxn=txn_1',
+    '?id=pay_1&status=failed',
+    '?razorpay_payment_link_id=plink_1&razorpay_payment_link_status=expired',
+  ])('does not read %s as paid', (search) => {
+    expect(gatewayReturnPaid(search)).toBe(false)
   })
 })

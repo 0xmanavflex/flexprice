@@ -1,6 +1,6 @@
 # CI
 
-Thirteen workflows, each answering one question, so a red check names the problem
+Each workflow answers one question, so a red check names the problem
 before you open it.
 
 | Workflow                       | Gates                                                                                                                                                                              | Roughly  |
@@ -8,7 +8,7 @@ before you open it.
 | `lint.yml`                     | ESLint and TypeScript across every package                                                                                                                                         | 2–4 min  |
 | `test.yml`                     | Unit tests — domain, query, URL codecs, fixtures                                                                                                                                   | 2–3 min  |
 | `storybook.yml`                | Every story as a browser test, **plus accessibility**; and the static workbench build                                                                                              | 8–12 min |
-| `e2e.yml`                      | Playwright journeys against a mock-backed console                                                                                                                                  | 5–10 min |
+| `e2e.yml`                      | Playwright journeys against a mock-backed console. PRs and nightly on `develop` only                                                                                               | 15–20 min |
 | `visual.yml`                   | Screenshot regression: every route against its committed baseline                                                                                                                  | 5–10 min |
 | `build.yml`                    | The production bundle, and its size in the summary                                                                                                                                 | 2–4 min  |
 | `sast.yml`                     | Semgrep. Soft-fail in phase 1                                                                                                                                                      | 2–5 min  |
@@ -101,9 +101,35 @@ Require these checks: `ESLint and types`, `Unit`, `Stories (browser + a11y)`,
 `Journeys`, `Production bundle`. Leave `Semgrep` and `Vercel` advisory while
 they are soft-failing and unconfigured respectively.
 
+## When the slow suites run
+
+`storybook.yml`, `e2e.yml` and `visual.yml` take 8–20 minutes each and test the
+mocked app, so they run on **pull requests** and **once a night on `develop`**
+(02:00 IST), not on every push. `heavy-gate.yml` decides per event and skips:
+
+- a draft pull request (it runs when marked ready for review),
+- a pull request that changes only `docs/**` or Markdown files,
+- a night with no new commit on `develop`.
+
+The gate is a job, not `paths-ignore`, because these are required checks: a
+skipped job reports "skipped", which branch protection accepts, while a
+workflow filtered out never reports and leaves the pull request waiting.
+
+Pushes to `develop` that skip a pull request are covered by the nightly run.
+Run any of the three by hand from the Actions tab (`workflow_dispatch`).
+
+A red `Journeys` check lists the failing journeys in the run summary and as
+annotations on the spec lines (`.github/scripts/e2e-summary.mjs`).
+
+Before this, the three suites ran on every push to `develop`, on every pull
+request push and a third time on `main` after deploy: about 4,000 of 6,100
+billed minutes in the week of 4–10 November 2026, half of them cancelled or
+failing.
+
 ## The `develop` branch
 
-Every check above also runs on pushes to `develop` (and on pull requests into it). `deploy-develop.yml` publishes each push to `develop` as that Vercel project's production deployment.
+Lint, unit tests, build and Semgrep also run on pushes to `develop` (and on
+pull requests into it). `deploy-develop.yml` publishes each push to `develop` as that Vercel project's production deployment.
 
 1. In Vercel, create a project for the develop environment and copy its **Project ID**.
 2. Add the repository secret `VERCEL_DEVELOP_PROJECT_ID`. `VERCEL_TOKEN` and `VERCEL_ORG_ID` are the ones `deploy.yml` already uses.

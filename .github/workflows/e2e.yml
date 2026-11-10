@@ -10,30 +10,45 @@ name: E2E
 # The deployed frontend is tested by `e2e-release.yml`, which runs only after a
 # successful production deploy from `main` and sends the one Slack report per
 # release (docs/e2e-journeys.md).
+#
+# ## When it runs
+#
+# On pull requests, and once a night against `develop`. Not on every push to
+# `develop`: that branch took ~50 pushes in a week, each a 15-minute run that
+# the next push usually cancelled half way. The nightly run catches what lands
+# on `develop` without a pull request. `heavy-gate.yml` skips drafts,
+# documentation-only changes, and a night with no new commit.
 on:
-  # Called by `pipeline.yml` on a push to main, so main runs these in order
-  # rather than all at once. The triggers below still fire on their own for
-  # every other branch and every pull request.
   workflow_call:
   push:
     branches:
-      - develop
-      - feat/v2-foundation
       # A change to CI should prove itself on its own branch, before it reaches
       # one where a mistake blocks everyone.
       - 'ci/**'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    # 02:00 IST.
+    - cron: '30 20 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  gate:
+    name: Gate
+    uses: ./.github/workflows/heavy-gate.yml
+
   journeys:
     name: Journeys
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -41,6 +56,9 @@ jobs:
         with:
           filter: tree:0
           fetch-depth: 0
+          # The nightly run tests develop; a schedule otherwise checks out the
+          # default branch.
+          ref: ${{ github.event_name == 'schedule' && 'develop' || '' }}
 
       - uses: pnpm/action-setup@v4
 
@@ -53,12 +71,37 @@ jobs:
         env:
           HUSKY: 0
 
+      # The browser download is the same for every run of one Playwright
+      # version, so it is cached; the system libraries are installed each time.
+      - name: Read the Playwright version
+        id: playwright
+        run: echo "version=$(pnpm --filter console exec playwright --version | sed -n 's/^Version //p' | tail -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the Playwright browser
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+
       - name: Install the Playwright browser
+        if: steps.browser-cache.outputs.cache-hit != 'true'
         run: pnpm --filter console exec playwright install --with-deps chromium
+
+      - name: Install the browser's system libraries
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter console exec playwright install-deps chromium
 
       - name: Run the journeys against the mocked console
         id: journeys
         run: pnpm --filter console test:e2e
+
+      # The failing journeys by name, in the run summary and as annotations on
+      # the pull request, so a red check says what broke without downloading
+      # an artifact.
+      - name: Name the failing journeys
+        if: always() && steps.journeys.outcome != 'skipped'
+        run: node .github/scripts/e2e-summary.mjs apps/console/playwright-results.json
 
       # One report per journey (`e2e/reporters/journey-reporter.ts`), kept
       # whatever happened — evidence inside it exists only for journeys that

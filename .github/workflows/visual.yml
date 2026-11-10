@@ -12,28 +12,40 @@ name: Visual
 # Text renders slightly differently on a laptop or a dev container than on this
 # runner, enough to fail a text-heavy page, so baselines are made on this runner:
 # see `visual-update.yml`.
+#
+# Runs on pull requests and once a night against `develop`, not on every push
+# to `develop`; `heavy-gate.yml` skips drafts, documentation-only changes and a
+# night with no new commit. See `e2e.yml` for why.
 on:
-  # Called by `pipeline.yml` on a push to main, so main runs these in order
-  # rather than all at once. The triggers below still fire on their own for
-  # every other branch and every pull request.
   workflow_call:
   push:
     branches:
-      - develop
-      - feat/v2-foundation
+      # A change to CI should prove itself on its own branch first.
       - 'ci/**'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    # 02:00 IST.
+    - cron: '30 20 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: visual-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  gate:
+    name: Gate
+    uses: ./.github/workflows/heavy-gate.yml
+
   screenshots:
     name: Screenshots
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     # Pinned, not ubuntu-latest: that label is moving to Ubuntu 26, and a
     # baseline made on one image fails on the other.
     runs-on: ubuntu-24.04
@@ -43,6 +55,9 @@ jobs:
         with:
           filter: tree:0
           fetch-depth: 0
+          # The nightly run tests develop; a schedule otherwise checks out the
+          # default branch.
+          ref: ${{ github.event_name == 'schedule' && 'develop' || '' }}
 
       - uses: pnpm/action-setup@v4
 
@@ -55,8 +70,26 @@ jobs:
         env:
           HUSKY: 0
 
+      - name: Read the Playwright version
+        id: playwright
+        run: echo "version=$(pnpm --filter console exec playwright --version | sed -n 's/^Version //p' | tail -1)" >> "$GITHUB_OUTPUT"
+
+      # The browser download is the same for every run of one Playwright
+      # version, so it is cached; the system libraries are installed each time.
+      - name: Restore the Playwright browser
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+
       - name: Install the Playwright browser
+        if: steps.browser-cache.outputs.cache-hit != 'true'
         run: pnpm --filter console exec playwright install --with-deps chromium
+
+      - name: Install the browser's system libraries
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter console exec playwright install-deps chromium
 
       - name: Compare every route with its baseline
         run: pnpm test:visual

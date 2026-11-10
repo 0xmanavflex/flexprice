@@ -5,6 +5,7 @@ import {
   MAX_RETRY_AFTER_MS,
   createQueryClient,
   createQueryKeyHash,
+  isEnvironmentScopedQuery,
   retryDelay,
   shouldRetry,
   shouldThrowOnError,
@@ -92,6 +93,14 @@ describe('query keys', () => {
 
   it('is stable for the same filter, so a re-render does not refetch', () => {
     expect(queryKeys.customers.list({ page: 1 })).toEqual(queryKeys.customers.list({ page: 1 }))
+  })
+
+  // An environment switch cancels only scoped queries; cancelling a session
+  // read left the access check loading for good.
+  it('leaves session and tenant queries out of the environment scope', () => {
+    expect(isEnvironmentScopedQuery(queryKeys.customers.all())).toBe(true)
+    expect(isEnvironmentScopedQuery(['session', 'me'])).toBe(false)
+    expect(isEnvironmentScopedQuery(['tenant', 'info'])).toBe(false)
   })
 })
 

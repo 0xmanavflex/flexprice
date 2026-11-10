@@ -24,13 +24,12 @@ test('invoice mapping stays consistent across Integrations, header and list', as
   await expect(
     integrations.getByRole('button', { name: /ID external_invoice_mapping$/ }),
   ).toBeVisible()
+  // The link sits on its connection's row, whose menu names the provider.
   const manage = integrations.getByRole('button', { name: /^Manage .* integration$/ })
   const provider = (await manage.getAttribute('aria-label'))!
     .replace(/^Manage /, '')
     .replace(/ integration$/, '')
-  await expect(
-    page.getByRole('button', { name: `${provider} integration`, exact: true }),
-  ).toBeVisible()
+  await expect(integrations.getByText(provider, { exact: true }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Invoices', exact: true }).first().click()
   await expect(page.getByLabel(/invoice ID external_invoice_mapping/)).toBeVisible()
   await page

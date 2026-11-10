@@ -93,6 +93,18 @@ export function shouldThrowOnError(
  */
 const UNSCOPED_ROOTS: ReadonlySet<unknown> = new Set(['session', 'tenant'])
 
+/**
+ * Whether a query belongs to one environment.
+ *
+ * `session` and `tenant` queries are the same in every environment, so an
+ * environment switch must leave them running. Cancelling one mid-flight left it
+ * pending with no data and nothing to start it again: `/users/me` or the role
+ * catalogue never answered, and the page sat on "Checking your access".
+ */
+export function isEnvironmentScopedQuery(queryKey: QueryKey): boolean {
+  return !UNSCOPED_ROOTS.has(queryKey[0])
+}
+
 export interface QueryClientOptions {
   /**
    * The environment requests are being sent to, read synchronously.

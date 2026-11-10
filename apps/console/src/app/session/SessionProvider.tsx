@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { isEnvironmentScopedQuery } from '@fp/query'
 import {
   clearEnvironmentId,
   clearSession,
@@ -179,9 +180,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
        *
        * Guarded on a real change: the initial null→id defaulting (a fresh tab
        * choosing its first environment) is not a switch.
+       *
+       * Only environment-scoped queries are cancelled. Who is signed in and
+       * what they may do are the same in every environment; cancelling a first
+       * read of either left it with no data and no retry, so a shared link to
+       * another environment could sit on "Checking your access" for good.
        */
       if (previous !== null && previous !== id) {
-        void queryClient.cancelQueries()
+        void queryClient.cancelQueries({
+          predicate: (query) => isEnvironmentScopedQuery(query.queryKey),
+        })
         void queryClient.invalidateQueries({ refetchType: 'none' })
         // Filters name rows: a customer, a plan, a status that exists here
         // and not there. Carried across a switch they would silently empty
