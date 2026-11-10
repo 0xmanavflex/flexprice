@@ -132,7 +132,7 @@ export const Edit: Story = {
     await expect(canvas.getByRole('textbox', { name: /^name/i })).toHaveValue('Acme Corp')
     await expect(canvas.queryByRole('complementary')).toBeNull()
     await expect(canvas.getByRole('textbox', { name: /city/i })).toBeInTheDocument()
-    // A custom external ID stays when the name changes.
+    // A saved customer's external ID stays when the name changes.
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
     await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue('acme')
     await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
@@ -140,21 +140,30 @@ export const Edit: Story = {
   },
 }
 
-/** An ID generated from the saved name follows a rename, as it does while creating. */
-export const EditGeneratedIdFollowsName: Story = {
+/** A saved customer's external ID cannot change: it is shown, disabled, and saved as it was. */
+export const EditExternalIdLocked: Story = {
   args: {
     mode: 'edit',
     customerName: 'Test2',
     trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
     defaultValue: { externalId: suggestKey(KEY_PREFIX.customer, 'Test2'), name: 'Test2' },
   },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
+    const id = canvas.getByRole('textbox', { name: /external id/i })
+    await expect(id).toBeDisabled()
     const name = canvas.getByRole('textbox', { name: /^name/i })
     await userEvent.clear(name)
     await userEvent.type(name, 'Acme Ltd')
-    await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue(
-      suggestKey(KEY_PREFIX.customer, 'Acme Ltd'),
+    await expect(id).toHaveValue(suggestKey(KEY_PREFIX.customer, 'Test2'))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Acme Ltd',
+          externalId: suggestKey(KEY_PREFIX.customer, 'Test2'),
+        }),
+      ),
     )
   },
 }

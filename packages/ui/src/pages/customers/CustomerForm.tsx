@@ -99,12 +99,8 @@ export function CustomerForm({
     resolver: standardSchemaResolver(createCustomerSchema) as Resolver<CreateCustomer>,
     defaultValues: defaultValue ?? emptyCustomer(),
   })
-  // A generated id follows the name, on edit too. A custom one (not the suggestion
-  // for the saved name) stays. Usage events match on this ID, so a renamed customer's
-  // events must be sent with the new one.
-  const followsName =
-    !isEdit ||
-    (defaultValue?.externalId ?? '') === suggestKey(KEY_PREFIX.customer, defaultValue?.name ?? '')
+  // The id follows the name while creating. Once saved it is fixed: shown, not editable.
+  const followsName = !isEdit
 
   const nameField = form.register('name', {
     onChange: (event: { target: { value: string } }) => {
@@ -182,11 +178,20 @@ export function CustomerForm({
       <FormRow
         label="External ID"
         required
-        hint="Your own identifier. Usage events are matched to the customer by it."
+        hint={
+          isEdit
+            ? 'Usage events are matched to the customer by it. It cannot be changed once the customer is saved.'
+            : 'Your own identifier. Usage events are matched to the customer by it.'
+        }
         error={errors.externalId?.message}
       >
         {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('externalId')} />
+          <Input
+            id={id}
+            disabled={isSubmitting || isEdit}
+            {...field}
+            {...form.register('externalId')}
+          />
         )}
       </FormRow>
       <FormRow
