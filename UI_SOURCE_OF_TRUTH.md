@@ -56,6 +56,13 @@ pagination). Empty state is `EmptyState`.
 **Create / edit**: `FormPage` with `FormCard` sections and `FormActions`, or `FormDialog` for short edits.
 Steppers only when the workflow really has stages (`WorkflowStepper`).
 
+**Document workflow**: full window (no sidebar), `WorkspaceBar` with a `WorkflowStepper` (`showTitles`), then
+`SplitWorkspace`: the source document (`DocumentViewer`, pdf.js pages) on the left, the step on the right. Files come in through `FileDropzone` and are shown as a
+`FileRow`. What was read from the document is marked on its pages (`DocumentViewer` `highlights`): green behind
+confident terms, yellow and dashed behind terms to check, never colour alone. While AI reads, the pages carry the
+`ai-scan` line; the found terms then draw in (`ai-found`). First used by contract upload; see
+`docs/design-changes/2026-11-14-contract-upload-workspace.md` and `2026-11-14-contract-term-highlights.md`.
+
 **Settings**: the ReUI `settings-7` layout (`SettingsShell`): a "Settings" heading, a vertical rail of sections
 with the active section's tabs nested under it (no second nav above the content), and a content column of `Section`s of
 `Properties` / `settingsSurface` cards. This replaced the reference's line-tab strip by design change `docs/design-changes/2026-10-05-settings-7-layout.md`.

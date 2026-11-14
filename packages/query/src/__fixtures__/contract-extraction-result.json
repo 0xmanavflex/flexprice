@@ -1,0 +1,696 @@
+{
+  "term": {
+    "auto_renew": {
+      "note": "",
+      "page": 12,
+      "boxes": [
+        {
+          "top": 0.4947569113441373,
+          "left": 0.20080862533692723,
+          "page": 12,
+          "width": 0.6504941599281222,
+          "height": 0.011121703209405783
+        }
+      ],
+      "quote": "false",
+      "value": "false",
+      "options": [],
+      "confidence": 56
+    },
+    "notice_days": {
+      "note": "",
+      "page": 2,
+      "boxes": [
+        {
+          "top": 0.2041335453100159,
+          "left": 0.36359550561797754,
+          "page": 2,
+          "width": 0.029662921348314608,
+          "height": 0.012400635930047699
+        }
+      ],
+      "quote": "(30)",
+      "value": "30",
+      "options": [],
+      "confidence": 97
+    },
+    "signed_date": {
+      "note": "",
+      "page": 1,
+      "boxes": [
+        {
+          "top": 0.16873212583412775,
+          "left": 0.5754716981132075,
+          "page": 1,
+          "width": 0.10242587601078167,
+          "height": 0.010168414362885288
+        },
+        {
+          "top": 0.6866857324435971,
+          "left": 0.8247978436657682,
+          "page": 10,
+          "width": 0.055705300988319856,
+          "height": 0.012074992055926279
+        }
+      ],
+      "quote": "2026-06-25",
+      "value": "2026-06-25",
+      "options": [],
+      "confidence": 99
+    },
+    "term_months": {
+      "note": "",
+      "page": 2,
+      "boxes": [
+        {
+          "top": 0.13513513513513514,
+          "left": 0.45662921348314606,
+          "page": 2,
+          "width": 0.03101123595505617,
+          "height": 0.012082670906200327
+        },
+        {
+          "top": 0.5084207181442644,
+          "left": 0.2605570530098832,
+          "page": 11,
+          "width": 0.012129380053908356,
+          "height": 0.010168414362885288
+        },
+        {
+          "top": 0.5904610492845787,
+          "left": 0.7492134831460674,
+          "page": 11,
+          "width": 0.03325842696629211,
+          "height": 0.013672496025437186
+        }
+      ],
+      "quote": "(12)",
+      "value": "12",
+      "options": [],
+      "confidence": 99
+    },
+    "cancellation": {
+      "note": "",
+      "page": 2,
+      "boxes": [
+        {
+          "top": 0.22116301239275502,
+          "left": 0.2124887690925427,
+          "page": 2,
+          "width": 0.6675651392632524,
+          "height": 0.010486177311725452
+        },
+        {
+          "top": 0.23800444868128376,
+          "left": 0.21338724168912848,
+          "page": 2,
+          "width": 0.215633423180593,
+          "height": 0.010168414362885288
+        },
+        {
+          "top": 0.2897998093422307,
+          "left": 0.21338724168912848,
+          "page": 2,
+          "width": 0.6662174303683738,
+          "height": 0.010486177311725452
+        },
+        {
+          "top": 0.30791229742612014,
+          "left": 0.21428571428571427,
+          "page": 2,
+          "width": 0.367026055705301,
+          "height": 0.010803940260565617
+        },
+        {
+          "top": 0.6358436606291706,
+          "left": 0.2138364779874214,
+          "page": 2,
+          "width": 0.6684636118598383,
+          "height": 0.009532888465204958
+        },
+        {
+          "top": 0.6533206228153797,
+          "left": 0.2138364779874214,
+          "page": 2,
+          "width": 0.2641509433962264,
+          "height": 0.010803940260565617
+        }
+      ],
+      "quote": "Client may terminate for convenience on at least 30 days' written notice; either party may terminate immediately for specified events or for uncured material breach.",
+      "value": "Client may terminate for convenience on at least 30 days' written notice; either party may terminate immediately for specified events or for uncured material breach.",
+      "options": [],
+      "confidence": 96
+    },
+    "effective_date": {
+      "note": "",
+      "page": 1,
+      "boxes": [
+        {
+          "top": 0.16873212583412775,
+          "left": 0.8203054806828391,
+          "page": 1,
+          "width": 0.06019766397124888,
+          "height": 0.010168414362885288
+        },
+        {
+          "top": 0.4502700985065141,
+          "left": 0.35489667565139266,
+          "page": 11,
+          "width": 0.03638814016172507,
+          "height": 0.009532888465204958
+        }
+      ],
+      "quote": "2026-06-25",
+      "value": "2026-06-25",
+      "options": [],
+      "confidence": 99
+    },
+    "renewal_term_months": {
+      "note": "",
+      "page": 0,
+      "quote": "",
+      "value": "",
+      "options": [],
+      "confidence": 0
+    },
+    "renewal_price_change": {
+      "note": "",
+      "page": 12,
+      "boxes": [
+        {
+          "top": 0.5119161105815062,
+          "left": 0.20080862533692723,
+          "page": 12,
+          "width": 0.6504941599281222,
+          "height": 0.02732761360025421
+        }
+      ],
+      "quote": "After the Initial Term, pricing, usage limits, and platform fees may be revised based on usage, scale, and business requirements.",
+      "value": "After the Initial Term, pricing, usage limits, and platform fees may be revised based on usage, scale, and business requirements.",
+      "options": [],
+      "confidence": 69
+    }
+  },
+  "doubts": [],
+  "billing": {
+    "tax": {
+      "note": "",
+      "page": 12,
+      "boxes": [
+        {
+          "top": 0.5598983158563712,
+          "left": 0.20080862533692723,
+          "page": 12,
+          "width": 0.6446540880503144,
+          "height": 0.030505243088655862
+        }
+      ],
+      "quote": "Fees are exclusive of applicable taxes, which are borne by the Customer.",
+      "value": "Fees are exclusive of applicable taxes, which are borne by the Customer.",
+      "options": [],
+      "confidence": 97
+    },
+    "currency": {
+      "note": "",
+      "page": 11,
+      "boxes": [
+        {
+          "top": 0.639745627980922,
+          "left": 0.7042696629213483,
+          "page": 11,
+          "width": 0.03955056179775285,
+          "height": 0.013672496025437186
+        }
+      ],
+      "quote": "USD",
+      "value": "USD",
+      "options": [],
+      "confidence": 100
+    },
+    "late_fee": {
+      "note": "",
+      "page": 0,
+      "quote": "",
+      "value": "",
+      "options": [],
+      "confidence": 0
+    },
+    "structure": {
+      "note": "",
+      "page": 11,
+      "boxes": [
+        {
+          "top": 0.7708929138862408,
+          "left": 0.316711590296496,
+          "page": 11,
+          "width": 0.16486972147349505,
+          "height": 0.011757229107086114
+        }
+      ],
+      "quote": "subscription fee",
+      "value": "subscription fee",
+      "options": [],
+      "confidence": 55
+    },
+    "invoice_day": {
+      "note": "",
+      "page": 3,
+      "boxes": [
+        {
+          "top": 0.6524642289348171,
+          "left": 0.461123595505618,
+          "page": 3,
+          "width": 0.06247191011235953,
+          "height": 0.012400635930047699
+        }
+      ],
+      "quote": "monthly",
+      "value": "monthly",
+      "options": [],
+      "confidence": 94
+    },
+    "payment_terms": {
+      "note": "",
+      "page": 4,
+      "boxes": [
+        {
+          "top": 0.22084524944391484,
+          "left": 0.5808625336927223,
+          "page": 4,
+          "width": 0.07951482479784366,
+          "height": 0.010803940260565617
+        },
+        {
+          "top": 0.16682554814108674,
+          "left": 0.587151841868823,
+          "page": 12,
+          "width": 0.08490566037735849,
+          "height": 0.011121703209405783
+        }
+      ],
+      "quote": "Net 45",
+      "value": "Net 45",
+      "options": [],
+      "confidence": 98
+    }
+  },
+  "charges": [
+    {
+      "kind": "recurring_fixed",
+      "name": {
+        "note": "",
+        "page": 11,
+        "boxes": [
+          {
+            "top": 0.7220985691573927,
+            "left": 0.31820224719101126,
+            "page": 11,
+            "width": 0.2265168539325843,
+            "height": 0.013672496025437186
+          }
+        ],
+        "quote": "discounted subscription fee",
+        "value": "discounted subscription fee",
+        "options": [],
+        "confidence": 75
+      },
+      "unit": {
+        "note": "",
+        "page": 11,
+        "boxes": [
+          {
+            "top": 0.802543720190779,
+            "left": 0.27685393258426966,
+            "page": 11,
+            "width": 0.14786516853932585,
+            "height": 0.013354531001589898
+          }
+        ],
+        "quote": "cumulative billing",
+        "value": "cumulative billing",
+        "options": [],
+        "confidence": 28
+      },
+      "tiers": [],
+      "amount": {
+        "note": "",
+        "page": 11,
+        "boxes": [
+          {
+            "top": 0.7220985691573927,
+            "left": 0.7487640449438202,
+            "page": 11,
+            "width": 0.03730337078651691,
+            "height": 0.013672496025437186
+          }
+        ],
+        "quote": "1200",
+        "value": "1200",
+        "options": [],
+        "confidence": 92
+      },
+      "trigger": {
+        "note": "",
+        "page": 0,
+        "quote": "",
+        "value": "",
+        "options": [],
+        "confidence": 0
+      },
+      "tier_mode": {
+        "note": "",
+        "page": 0,
+        "quote": "",
+        "value": "",
+        "options": [],
+        "confidence": 0
+      },
+      "amount_period": {
+        "note": "",
+        "page": 11,
+        "boxes": [
+          {
+            "top": 0.7394343819510645,
+            "left": 0.6150044923629829,
+            "page": 11,
+            "width": 0.05211141060197664,
+            "height": 0.009850651414045123
+          }
+        ],
+        "quote": "MONTHLY",
+        "value": "MONTHLY",
+        "options": [],
+        "confidence": 90
+      },
+      "billing_period": {
+        "note": "",
+        "page": 3,
+        "boxes": [
+          {
+            "top": 0.6524642289348171,
+            "left": 0.461123595505618,
+            "page": 3,
+            "width": 0.06247191011235953,
+            "height": 0.012400635930047699
+          }
+        ],
+        "quote": "monthly",
+        "value": "MONTHLY",
+        "options": [],
+        "confidence": 93
+      },
+      "billing_timing": {
+        "note": "",
+        "page": 12,
+        "boxes": [
+          {
+            "top": 0.1507154213036566,
+            "left": 0.5779775280898877,
+            "page": 12,
+            "width": 0.06426966292134828,
+            "height": 0.013672496025437214
+          }
+        ],
+        "quote": "advance",
+        "value": "advance",
+        "options": [],
+        "confidence": 93
+      },
+      "included_quantity": {
+        "note": "",
+        "page": 11,
+        "boxes": [
+          {
+            "top": 0.787281399046105,
+            "left": 0.4368539325842697,
+            "page": 11,
+            "width": 0.09977528089887638,
+            "height": 0.013036565977742498
+          }
+        ],
+        "quote": "$10,000,000",
+        "value": "10000000",
+        "options": [],
+        "confidence": 89
+      },
+      "revenue_recognition": {
+        "note": "",
+        "page": 0,
+        "quote": "",
+        "value": "",
+        "options": [],
+        "confidence": 0
+      }
+    }
+  ],
+  "credits": [],
+  "derived": {
+    "end_date": {
+      "note": "",
+      "page": 0,
+      "quote": "",
+      "value": "2027-06-24",
+      "derived": true,
+      "options": [],
+      "confidence": 99
+    },
+    "notice_deadline": {
+      "note": "",
+      "page": 0,
+      "quote": "",
+      "value": "2027-05-25",
+      "derived": true,
+      "options": [],
+      "confidence": 97
+    },
+    "invoice_schedules": [
+      {
+        "dates": [
+          "2026-06-25",
+          "2026-07-25",
+          "2026-08-25",
+          "2026-09-25",
+          "2026-10-25",
+          "2026-11-25",
+          "2026-12-25",
+          "2027-01-25",
+          "2027-02-25",
+          "2027-03-25",
+          "2027-04-25",
+          "2027-05-25"
+        ],
+        "charge_name": "discounted subscription fee",
+        "charge_index": 0,
+        "amount_per_invoice": "1200.00"
+      }
+    ]
+  },
+  "customer": {
+    "legal_name": {
+      "note": "",
+      "page": 1,
+      "boxes": [
+        {
+          "top": 0.21971383147853737,
+          "left": 0.1662921348314607,
+          "page": 1,
+          "width": 0.4085393258426967,
+          "height": 0.012082670906200327
+        },
+        {
+          "top": 0.3751987281399046,
+          "left": 0.15775280898876404,
+          "page": 11,
+          "width": 0.40539325842696633,
+          "height": 0.011764705882352955
+        }
+      ],
+      "quote": "ACME ANALYTICS PRIVATE LIMITED",
+      "value": "ACME ANALYTICS PRIVATE LIMITED",
+      "options": [],
+      "confidence": 100
+    },
+    "billing_email": {
+      "note": "",
+      "page": 8,
+      "boxes": [
+        {
+          "top": 0.6527821939586645,
+          "left": 0.29797752808988764,
+          "page": 8,
+          "width": 0.17438202247191015,
+          "height": 0.012400635930047699
+        }
+      ],
+      "quote": "finance@example.com",
+      "value": "finance@example.com",
+      "options": [],
+      "confidence": 99
+    },
+    "billing_address": {
+      "note": "",
+      "page": 3,
+      "boxes": [
+        {
+          "top": 0.705751509374007,
+          "left": 0.21428571428571427,
+          "page": 3,
+          "width": 0.10377358490566038,
+          "height": 0.009215125516364792
+        },
+        {
+          "top": 0.6006359300476948,
+          "left": 0.23775280898876405,
+          "page": 8,
+          "width": 0.6426966292134831,
+          "height": 0.027344992050874373
+        }
+      ],
+      "quote": "12 Example Park, Sector 1, Example City-100001, India",
+      "value": "12 Example Park, Sector 1, Example City-100001, India",
+      "options": [],
+      "confidence": 99
+    },
+    "primary_contact": {
+      "note": "",
+      "page": 8,
+      "boxes": [
+        {
+          "top": 0.5669316375198729,
+          "left": 0.31685393258426964,
+          "page": 8,
+          "width": 0.10022471910112363,
+          "height": 0.0111287758346581
+        }
+      ],
+      "quote": "Alex Doe",
+      "value": "Alex Doe",
+      "options": [],
+      "confidence": 99
+    }
+  },
+  "to_check": {
+    "total": 7,
+    "billing": 3,
+    "charges": 4,
+    "customer": 0
+  },
+  "documents": [
+    {
+      "type": "msa",
+      "title": "SERVICES AGREEMENT",
+      "page_end": 10,
+      "page_start": 1
+    },
+    {
+      "type": "order_form",
+      "title": "Order Form",
+      "page_end": 12,
+      "page_start": 11
+    },
+    {
+      "type": "other",
+      "title": "Exhibit B Support Services",
+      "page_end": 13,
+      "page_start": 13
+    }
+  ],
+  "commitments": [],
+  "contract_type": {
+    "note": "",
+    "page": 1,
+    "boxes": [
+      {
+        "top": 0.13473149030823006,
+        "left": 0.389937106918239,
+        "page": 1,
+        "width": 0.2178796046720575,
+        "height": 0.009532888465204958
+      },
+      {
+        "top": 0.16873212583412775,
+        "left": 0.16486972147349505,
+        "page": 1,
+        "width": 0.004492362982929021,
+        "height": 0.009850651414045123
+      }
+    ],
+    "quote": "new",
+    "value": "new",
+    "options": [],
+    "confidence": 99
+  },
+  "service_levels": [
+    {
+      "description": {
+        "note": "",
+        "page": 13,
+        "boxes": [
+          {
+            "top": 0.4017800381436745,
+            "left": 0.08400718778077268,
+            "page": 13,
+            "width": 0.6302785265049416,
+            "height": 0.009853782581055308
+          },
+          {
+            "top": 0.41735537190082644,
+            "left": 0.07097933513027853,
+            "page": 13,
+            "width": 0.651392632524708,
+            "height": 0.01048951048951049
+          }
+        ],
+        "quote": "Uptime Commitment of at least 99.95%, measured on a calendar-month basis.",
+        "value": "Uptime Commitment of at least 99.95%, measured on a calendar-month basis.",
+        "options": [],
+        "confidence": 95
+      }
+    },
+    {
+      "description": {
+        "note": "",
+        "page": 13,
+        "boxes": [
+          {
+            "top": 0.629688493324857,
+            "left": 0.7794249775381851,
+            "page": 13,
+            "width": 0.13701707097933513,
+            "height": 0.01112523839796567
+          },
+          {
+            "top": 0.6468531468531469,
+            "left": 0.16172506738544473,
+            "page": 13,
+            "width": 0.42362982929020665,
+            "height": 0.010171646535282899
+          }
+        ],
+        "quote": "For uptime or response failure, a 10% credit of the monthly subscription fee ($101.66) for every 1% drop below target uptime or for missed response windows.",
+        "value": "For uptime or response failure, a 10% credit of the monthly subscription fee ($101.66) for every 1% drop below target uptime or for missed response windows.",
+        "options": [],
+        "confidence": 95
+      }
+    },
+    {
+      "description": {
+        "note": "",
+        "page": 13,
+        "boxes": [
+          {
+            "top": 0.6613672496025437,
+            "left": 0.28359550561797753,
+            "page": 13,
+            "width": 0.5523595505617978,
+            "height": 0.012082670906200299
+          }
+        ],
+        "quote": "Total SLA credits in a single month are capped at 50% of that month's fee.",
+        "value": "Total SLA credits in a single month are capped at 50% of that month's fee.",
+        "options": [],
+        "confidence": 82
+      }
+    }
+  ]
+}

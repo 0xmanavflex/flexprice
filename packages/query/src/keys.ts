@@ -201,6 +201,10 @@ export const queryKeys = {
       ['dataExports', 'runs', id, filter] as const,
     counts: () => ['dataExports', 'counts'] as const,
   },
+  contractUploads: {
+    all: () => ['contractUploads'] as const,
+    detail: (id: string) => ['contractUploads', 'detail', id] as const,
+  },
   eventImports: {
     all: () => ['eventImports'] as const,
     list: (filter: Record<string, unknown>) => ['eventImports', 'list', filter] as const,

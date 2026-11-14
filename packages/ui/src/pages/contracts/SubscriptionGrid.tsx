@@ -6,6 +6,7 @@ import {
   LayersIcon,
   RepeatIcon,
   PlusIcon,
+  UploadIcon,
   UserIcon,
   XCircleIcon,
 } from '@ui/icons'
@@ -124,6 +125,8 @@ export interface SubscriptionGridProps {
   onCancelSubscription?: (subscription: Subscription) => void
   /** The primary create action; renders a "New contract" button beside the filter. */
   onCreate?: () => void
+  /** Renders an outline "Upload contract" button beside the create button. */
+  onUpload?: () => void
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Locale for dates. Supplied by the app, never read from a global. */
@@ -145,6 +148,7 @@ export function SubscriptionGrid({
   onOpenPlan,
   onCancelSubscription,
   onCreate,
+  onUpload,
   onClearFilters,
   locale,
 }: SubscriptionGridProps) {
@@ -296,11 +300,22 @@ export function SubscriptionGrid({
       rowActions={rowActions}
       exportFileName="subscriptions"
       primaryAction={
-        onCreate ? (
-          <Button onClick={onCreate}>
-            <PlusIcon aria-hidden className="size-4" />
-            New contract
-          </Button>
+        onCreate || onUpload ? (
+          <>
+            {onUpload ? (
+              // Outline: the page's one filled button stays "New contract".
+              <Button variant="outline" onClick={onUpload}>
+                <UploadIcon aria-hidden className="size-4" />
+                Upload contract
+              </Button>
+            ) : null}
+            {onCreate ? (
+              <Button onClick={onCreate}>
+                <PlusIcon aria-hidden className="size-4" />
+                New contract
+              </Button>
+            ) : null}
+          </>
         ) : undefined
       }
       {...(onSubscriptionClick ? { onRowClick: onSubscriptionClick } : {})}

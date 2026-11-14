@@ -256,6 +256,12 @@ export { SubscriptionForm, SubscriptionFormProvenance } from './contracts/Subscr
 export type { SubscriptionFormProps, SubscriptionPlanContext } from './contracts/SubscriptionForm'
 export { SubscriptionGrid, SubscriptionGridProvenance } from './contracts/SubscriptionGrid'
 export type { SubscriptionGridProps } from './contracts/SubscriptionGrid'
+export { CONTRACT_UPLOAD_STEPS, ContractUploadPage } from './contracts/upload/ContractUploadPage'
+export type { DocumentHighlightFilter } from '../compositions/layout/DocumentViewer'
+export type {
+  ContractUploadPageProps,
+  ContractUploadState,
+} from './contracts/upload/ContractUploadPage'
 export {
   SUBSCRIPTION_TABS,
   SubscriptionDetailView,

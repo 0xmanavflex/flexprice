@@ -64,6 +64,12 @@ const SubscriptionFormPage = lazy(() =>
   })),
 )
 import { DEFAULT_STEP, parseStep, toStepSearch } from './subscriptionSteps'
+const ContractUploadRoutePage = lazy(() =>
+  import('@/pages/subscriptions/ContractUploadRoutePage').then((m) => ({
+    default: m.ContractUploadRoutePage,
+  })),
+)
+import { type ContractUploadSearch, parseContractUploadSearch } from './contractUploadSearch'
 import { DEFAULT_FEATURE_QUERY, type FeatureQuery } from '@fp/domain'
 /**
  * Routes are split, from the first one.
@@ -380,10 +386,11 @@ import { OnboardingPage } from '@/pages/auth/OnboardingPage'
  * The environment list lives in `useEnvironments`, which is also the one place
  * that records why it is not yet a request: see the note there.
  */
-function ShellLayout() {
-  const navigate = useNavigate()
-  const { pathname, searchStr } = useRouterState({ select: (state) => state.location })
-  const params = useParams({ strict: false })
+/**
+ * The session, environment and access every signed-in layout needs: the shell
+ * with its sidebar, and the full-window workspaces without one.
+ */
+function useConsoleAccess() {
   const environments = useEnvironments()
   // Every page's address names its environment (`?env=`): a shared link opens there.
   useEnvironmentInUrl(environments)
@@ -396,7 +403,6 @@ function ShellLayout() {
    * below are the normal case there rather than an error state.
    */
   const currentUser = useCurrentUser(session?.token ?? null)
-  const user = currentUser.data
   // What the signed-in principal may see and do: roles from `/users/me`,
   // resolved against the role catalogue (V1's `useCurrentUserPermissions`).
   // Waits for an environment: the role catalogue needs X-Environment-ID.
@@ -408,6 +414,15 @@ function ShellLayout() {
     roleAccess,
     Boolean(selfBilling.data?.enabled && selfBilling.data.state === 'suspended'),
   )
+  return { environments, session, signOut, currentUser, signedIn, access }
+}
+
+function ShellLayout() {
+  const navigate = useNavigate()
+  const { pathname, searchStr } = useRouterState({ select: (state) => state.location })
+  const params = useParams({ strict: false })
+  const { environments, session, signOut, currentUser, signedIn, access } = useConsoleAccess()
+  const user = currentUser.data
 
   // Each list's filters, kept across a trip into a detail page and back.
   useListMemory()
@@ -610,6 +625,43 @@ const shellRoute = createRoute({
   },
   component: ShellLayout,
 })
+
+/**
+ * Full-window workspaces: signed in, same guard and access as the shell, but
+ * without the sidebar and header, so a document gets the whole width (contract
+ * upload). A pathless layout like `shellRoute`; a route parented here opts out
+ * of the sidebar only, never of the guard.
+ */
+const focusRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: '_focus',
+  validateSearch: (search: Record<string, unknown>) => parseEnvironmentParam(search),
+  beforeLoad: ({ location }) => {
+    if (needsSignIn()) {
+      throw redirect({ to: '/sign-in', search: { redirect: location.href, sso: undefined } })
+    }
+  },
+  component: FocusLayout,
+})
+
+function FocusLayout() {
+  const { environments, signedIn, access } = useConsoleAccess()
+  return (
+    <AccountLockProvider enabled={signedIn}>
+      <AccessProvider value={access}>
+        <div className="bg-background flex h-dvh flex-col">
+          <Suspense key={environments.current.id} fallback={<PageLoadingState />}>
+            <RouteAccessGate>
+              <Outlet />
+            </RouteAccessGate>
+          </Suspense>
+        </div>
+        <VersionCheck />
+        <EnvironmentToaster />
+      </AccessProvider>
+    </AccountLockProvider>
+  )
+}
 
 /**
  * Sign in: the one route outside the shell.
@@ -863,6 +915,39 @@ const subscriptionCreateRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({ step: parseStep(search['step']) }),
   component: SubscriptionCreateRouteComponent,
 })
+
+/**
+ * Contract upload: a signed contract in, Flexprice AI reads it, the user
+ * confirms. A static segment, so it wins over `/contracts/$subscriptionId`.
+ * The uploaded contract's id is in the URL, so a reload resumes the extraction.
+ */
+const contractUploadRoute = createRoute({
+  // Full window: the contract needs the width the sidebar would take.
+  getParentRoute: () => focusRoute,
+  path: '/contracts/upload',
+  validateSearch: (search: Record<string, unknown>): ContractUploadSearch =>
+    parseContractUploadSearch(search),
+  component: ContractUploadRouteComponent,
+})
+
+function ContractUploadRouteComponent() {
+  const search = contractUploadRoute.useSearch()
+  const navigate = useNavigate()
+
+  return (
+    <ContractUploadRoutePage
+      contractId={search.contract ?? null}
+      onContractChange={(contract) =>
+        void navigate({
+          to: '/contracts/upload',
+          search: { ...(search.step ? { step: search.step } : {}), ...(contract ? { contract } : {}) },
+          replace: true,
+        })
+      }
+      onBack={() => void navigate({ to: '/contracts', search: {} as never })}
+    />
+  )
+}
 
 const subscriptionDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -2034,6 +2119,7 @@ function SubscriptionsRouteComponent() {
       query={query}
       onQueryChange={(next) => void navigate({ to: '/contracts', search: next, replace: true })}
       onCreate={() => void navigate({ to: '/contracts/new', search: {} as never })}
+      onUpload={() => void navigate({ to: '/contracts/upload', search: {} })}
       onOpen={(subscriptionId) =>
         void navigate({
           to: '/contracts/$subscriptionId',
@@ -3054,6 +3140,7 @@ export const routeTree = rootRoute.addChildren([
   setPasswordRoute,
   legacyAuthRoute,
   onboardingRoute,
+  focusRoute.addChildren([contractUploadRoute]),
   shellRoute.addChildren([
     ...legacyRoutes,
     customerContractRedirect,

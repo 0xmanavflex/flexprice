@@ -110,6 +110,9 @@ export type { ListCreditNotesParams } from './creditNotes'
  */
 export { createCustomer, getCustomer, searchCustomers } from './customers'
 export { getInvoice, getInvoicePdfUrl, searchInvoices } from './invoices'
+
+/** Contract upload and AI extraction, newer than the SDK. See `contractExtraction.ts`. */
+export { CONTRACT_UPLOAD_TIMEOUT_MS, getContract, uploadContract } from './contractExtraction'
 export { listPayments } from './payments'
 export type { ListPaymentsParams } from './payments'
 

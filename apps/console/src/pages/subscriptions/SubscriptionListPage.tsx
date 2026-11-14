@@ -17,6 +17,8 @@ export interface SubscriptionListPageProps {
   query: SubscriptionQuery
   onQueryChange: (query: SubscriptionQuery) => void
   onCreate: () => void
+  /** Upload a signed contract for Flexprice AI to read. */
+  onUpload?: () => void
   onOpen?: (subscriptionId: string) => void
   onOpenCustomer?: (customerId: string) => void
   onOpenPlan?: (planId: string) => void
@@ -32,6 +34,7 @@ export function SubscriptionListPage({
   query,
   onQueryChange,
   onCreate,
+  onUpload,
   onOpen,
   onOpenCustomer,
   onOpenPlan,
@@ -85,7 +88,16 @@ export function SubscriptionListPage({
           onClearFilters={() =>
             onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
           }
-          createAction={<Button onClick={onCreate}>New contract</Button>}
+          createAction={
+            <span className="flex items-center gap-2">
+              {onUpload ? (
+                <Button variant="outline" onClick={onUpload}>
+                  Upload contract
+                </Button>
+              ) : null}
+              <Button onClick={onCreate}>New contract</Button>
+            </span>
+          }
           emptyTitle="No contracts yet"
           emptyDescription="A contract puts a customer on a plan and starts their billing cycle."
         >
@@ -97,6 +109,7 @@ export function SubscriptionListPage({
             isFiltered={isFiltered}
             filterOptions={filterOptions}
             onCreate={onCreate}
+            {...(onUpload ? { onUpload } : {})}
             {...(onOpen ? { onSubscriptionClick: (subscription) => onOpen(subscription.id) } : {})}
             {...(onOpenCustomer ? { onOpenCustomer } : {})}
             {...(onOpenPlan ? { onOpenPlan } : {})}

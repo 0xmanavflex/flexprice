@@ -18,6 +18,7 @@ import {
   writeSession,
 } from './storage'
 import { resetAnalytics } from '../analytics/posthog'
+import { clearContractFiles } from '../contractFileStore'
 import { clearListMemory } from '../listMemory'
 import { setActiveEnvironmentId } from './activeEnvironment'
 import { endSupabaseSession } from './supabaseSession'
@@ -137,6 +138,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // data. They say what someone was looking for, which is not the next
     // user's business.
     clearListMemory(globalThis.sessionStorage)
+    // So are the contract files kept for the upload preview.
+    clearContractFiles()
     /*
      * The cache is the other half of signing out.
      *

@@ -7,6 +7,18 @@
  */
 export { WorkflowStepper, WorkflowStepperProvenance } from './forms/WorkflowStepper'
 export type { StepStatus, WorkflowStep, WorkflowStepperProps } from './forms/WorkflowStepper'
+export { FileDropzone, FileDropzoneProvenance, FileRow, formatFileSize } from './forms/FileDropzone'
+export type { FileDropzoneProps, FileRowProps } from './forms/FileDropzone'
+export { SplitWorkspace, SplitWorkspaceProvenance, WorkspaceBar } from './layout/SplitWorkspace'
+export type { SplitWorkspaceProps, WorkspaceBarProps } from './layout/SplitWorkspace'
+export { DocumentViewer, DocumentViewerProvenance } from './layout/DocumentViewer'
+export type {
+  DocumentBox,
+  DocumentHighlight,
+  DocumentHighlightFilter,
+  DocumentSource,
+  DocumentViewerProps,
+} from './layout/DocumentViewer'
 
 export { Field, FieldProvenance } from './forms/Field'
 export { InfoHint, InfoHintProvenance } from './forms/InfoHint'

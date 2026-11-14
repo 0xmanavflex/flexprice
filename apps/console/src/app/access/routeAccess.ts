@@ -90,6 +90,8 @@ export const ROUTE_ACCESS: Readonly<Record<string, RouteAccess>> = {
   '/contracts': read(E.Subscription),
   '/contracts/$subscriptionId': read(E.Subscription),
   '/contracts/new': write(E.Subscription),
+  // `POST /contracts/upload` is guarded by `write(ai)` on the backend.
+  '/contracts/upload': write(E.Ai),
   '/invoices': read(E.Invoice),
   '/invoices/$invoiceId': read(E.Invoice),
   '/invoices/new': write(E.Invoice),

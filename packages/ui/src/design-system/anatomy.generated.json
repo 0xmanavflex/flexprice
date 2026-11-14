@@ -583,6 +583,7 @@
       "usedBy": [
         "ChargeTable",
         "CheckoutReturnView",
+        "ContractUploadPage",
         "EnvironmentForm",
         "FormToolbar",
         "GuideGrid",
@@ -2013,6 +2014,22 @@
       "usedBy": [],
       "story": "./src/pages/contracts/ContractSummary.stories.tsx"
     },
+    "ContractUploadPage": {
+      "file": "src/pages/contracts/upload/ContractUploadPage.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowRightIcon",
+        "DocumentViewer",
+        "FileDropzone",
+        "FileRow",
+        "Pill",
+        "SplitWorkspace",
+        "WorkflowStepper",
+        "WorkspaceBar"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/contracts/upload/ContractUploadPage.stories.tsx"
+    },
     "ContractUsageEditForm": {
       "file": "src/pages/contracts/ContractUsageEditForm.tsx",
       "layer": "surface",
@@ -3128,6 +3145,15 @@
       "usedBy": [],
       "story": null
     },
+    "DocumentViewer": {
+      "file": "src/compositions/layout/DocumentViewer.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "ContractUploadPage"
+      ],
+      "story": "./src/compositions/layout/DocumentViewer.stories.tsx"
+    },
     "DollarIcon": {
       "file": "src/reui/icons/default/outline/dollar.tsx",
       "layer": "other",
@@ -4045,6 +4071,15 @@
       ],
       "story": "./src/compositions/feedback/Figures.stories.tsx"
     },
+    "FileDropzone": {
+      "file": "src/compositions/forms/FileDropzone.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "ContractUploadPage"
+      ],
+      "story": "./src/compositions/forms/FileDropzone.stories.tsx"
+    },
     "FileJson": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -4058,6 +4093,15 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "FileRow": {
+      "file": "src/compositions/forms/FileDropzone.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "ContractUploadPage"
+      ],
+      "story": "./src/compositions/forms/FileDropzone.stories.tsx"
     },
     "FileSheetIcon": {
       "file": "src/reui/icons/default/outline/file-sheet.tsx",
@@ -6402,6 +6446,7 @@
         "ConnectionExports",
         "ContractHierarchyEditor",
         "ContractIntegrations",
+        "ContractUploadPage",
         "CreditNoteDetailView",
         "CustomerActivityView",
         "CustomerDetail",
@@ -8167,6 +8212,15 @@
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
+    "SplitWorkspace": {
+      "file": "src/compositions/layout/SplitWorkspace.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "ContractUploadPage"
+      ],
+      "story": "./src/compositions/layout/SplitWorkspace.stories.tsx"
+    },
     "SquareArrowDownLineIcon": {
       "file": "src/reui/icons/default/outline/square-arrow-down-line.tsx",
       "layer": "other",
@@ -9360,10 +9414,20 @@
       "composes": [],
       "usedBy": [
         "ConnectIntegrationSheet",
+        "ContractUploadPage",
         "FormPage",
         "FormSteps"
       ],
       "story": "./src/compositions/forms/WorkflowStepper.stories.tsx"
+    },
+    "WorkspaceBar": {
+      "file": "src/compositions/layout/SplitWorkspace.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "ContractUploadPage"
+      ],
+      "story": "./src/compositions/layout/SplitWorkspace.stories.tsx"
     },
     "Wrench": {
       "file": "src/icons/index.ts",
@@ -9675,6 +9739,15 @@
         "Field"
       ]
     },
+    "./src/compositions/forms/FileDropzone.stories.tsx": {
+      "title": "Building blocks/Forms/FileDropzone",
+      "component": "FileDropzone",
+      "uses": [
+        "FileDropzone",
+        "FileRow",
+        "Pill"
+      ]
+    },
     "./src/compositions/forms/FormActions.stories.tsx": {
       "title": "Building blocks/Forms/FormActions",
       "component": "FormActions",
@@ -9846,6 +9919,13 @@
         "SimpleTable"
       ]
     },
+    "./src/compositions/layout/DocumentViewer.stories.tsx": {
+      "title": "Building blocks/Layout/DocumentViewer",
+      "component": "DocumentViewer",
+      "uses": [
+        "DocumentViewer"
+      ]
+    },
     "./src/compositions/layout/FitToWindow.stories.tsx": {
       "title": "Building blocks/Layout/FitToWindow",
       "component": "FitToWindow",
@@ -9877,6 +9957,13 @@
         "Panel",
         "Section",
         "SimpleTable"
+      ]
+    },
+    "./src/compositions/layout/SplitWorkspace.stories.tsx": {
+      "title": "Building blocks/Layout/SplitWorkspace",
+      "component": "SplitWorkspace",
+      "uses": [
+        "SplitWorkspace"
       ]
     },
     "./src/compositions/shell/AppShell.stories.tsx": {
@@ -10367,6 +10454,13 @@
       "component": "SubscriptionStatusBadge",
       "uses": [
         "SubscriptionStatusBadge"
+      ]
+    },
+    "./src/pages/contracts/upload/ContractUploadPage.stories.tsx": {
+      "title": "Master Services Agreement",
+      "component": null,
+      "uses": [
+        "ContractUploadPage"
       ]
     },
     "./src/pages/customer-portal/CustomerPortalView.stories.tsx": {
@@ -12139,6 +12233,14 @@
       "route": "/settings/billing-entities/new",
       "uses": [
         "BillingEntityForm"
+      ]
+    },
+    "ContractUploadRoutePage": {
+      "file": "apps/console/src/pages/subscriptions/ContractUploadRoutePage.tsx",
+      "pattern": "Other",
+      "route": "/contracts/upload",
+      "uses": [
+        "ContractUploadPage"
       ]
     },
     "CustomerSubscriptionFormPage": {

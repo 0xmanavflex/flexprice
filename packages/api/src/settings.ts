@@ -114,8 +114,14 @@ export async function request(
     method: string
     token: string
     environmentId: string
+    /**
+     * JSON-encoded unless it is `FormData`, which goes as multipart: the
+     * browser then writes the `Content-Type` with its boundary itself.
+     */
     body?: unknown
     signal?: AbortSignal
+    /** Overrides the default deadline, for a call that uploads a file. */
+    timeoutMs?: number
   },
 ): Promise<unknown> {
   if (init.environmentId.length === 0) {
@@ -133,20 +139,27 @@ export async function request(
   }
 
   const url = `${serverURL.replace(/\/+$/, '')}${path}`
+  const multipart = init.body instanceof FormData
   const headers = new Headers({
-    'Content-Type': 'application/json',
+    ...(multipart ? {} : { 'Content-Type': 'application/json' }),
     Authorization: `Bearer ${init.token}`,
     'X-Environment-ID': init.environmentId,
   })
+  const body =
+    init.body === undefined ? undefined : multipart ? init.body : JSON.stringify(init.body)
 
   let response: Response
   try {
-    response = await fetchWithTimeout(url, {
-      method: init.method,
-      headers,
-      ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
-      ...(init.signal ? { signal: init.signal } : {}),
-    })
+    response = await fetchWithTimeout(
+      url,
+      {
+        method: init.method,
+        headers,
+        ...(body === undefined ? {} : { body: body as BodyInit }),
+        ...(init.signal ? { signal: init.signal } : {}),
+      },
+      init.timeoutMs,
+    )
   } catch (cause) {
     // `fetch` rejects only for transport: offline, DNS, CORS, abort, deadline.
     // There is no status to classify, so the kind is read off the rejection.

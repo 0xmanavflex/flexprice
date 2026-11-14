@@ -25,10 +25,17 @@ export default defineConfig({
         // checks from `.storybook/preview.ts` applied as failures.
         plugins: [react(), tailwindcss(), storybookTest({ configDir: '.storybook' })],
         resolve: { alias },
-        // Shiki is loaded lazily per language, so Vite would only discover it
-        // mid-run and reload the browser, failing whatever story was running.
+        // Shiki is loaded lazily per language, and pdf.js on first use by
+        // DocumentViewer, so Vite would only discover them mid-run and reload
+        // the browser, failing whatever story was running.
         optimizeDeps: {
-          include: ['shiki/core', 'shiki/engine/javascript', 'shiki/themes/*', 'shiki/langs/*'],
+          include: [
+            'shiki/core',
+            'shiki/engine/javascript',
+            'shiki/themes/*',
+            'shiki/langs/*',
+            'pdfjs-dist',
+          ],
         },
         test: {
           name: 'storybook',

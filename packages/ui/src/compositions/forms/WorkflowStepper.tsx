@@ -72,6 +72,11 @@ export interface WorkflowStepperProps {
    * only, small enough for the form toolbar.
    */
   variant?: 'inline' | 'header'
+  /**
+   * `header` only: names each step beside its number ("1 Upload — 2 Customer"),
+   * for a bar with room for them, such as `WorkspaceBar`.
+   */
+  showTitles?: boolean
   'aria-label'?: string
 }
 
@@ -81,9 +86,11 @@ export function WorkflowStepper({
   onStepChange,
   children,
   variant = 'inline',
+  showTitles = false,
   'aria-label': ariaLabel = 'Progress',
 }: WorkflowStepperProps) {
   const header = variant === 'header'
+  const titled = !header || showTitles
   // ReUI addresses steps by 1-based index; ids are translated at this boundary
   // and nowhere else.
   const currentIndex = Math.max(1, steps.findIndex((step) => step.id === currentStep) + 1)
@@ -179,7 +186,11 @@ export function WorkflowStepper({
               >
                 {index + 1}
               </StepperIndicator>
-              {header ? null : <StepperTitle>{step.title}</StepperTitle>}
+              {titled ? (
+                <StepperTitle className={header ? 'text-[13px] whitespace-nowrap' : undefined}>
+                  {step.title}
+                </StepperTitle>
+              ) : null}
             </StepperTrigger>
             {index < steps.length - 1 ? (
               <StepperSeparator
@@ -192,7 +203,7 @@ export function WorkflowStepper({
         ))}
       </StepperNav>
 
-      {header ? (
+      {header && !showTitles ? (
         <p className="sr-only" aria-live="polite">
           {steps[currentIndex - 1]?.title}
         </p>
